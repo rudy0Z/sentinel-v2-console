@@ -83,11 +83,94 @@ const IC: Record<string, string> = {
 };
 const ic = (name: string, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 16 16" aria-hidden="true">${IC[name] ?? ''}</svg>`;
 
-/** TALON: a visor face with two slit eyes. Calm by default; mood and gaze are CSS states. */
-const FACE = 'M32 5 54 14q4 2 4 7v13q0 16-26 25Q6 50 6 34V21q0-5 4-7Z';
-const mascot = (mood = 'calm', id = '') =>
-  `<svg class="mascot" ${id ? `id="${id}"` : ''} viewBox="0 0 64 64" data-mood="${mood}" aria-hidden="true"><path d="${FACE}" fill="url(#talonFace)"/><path class="rim" d="${FACE}" fill="none" stroke-width="1.6"/><path class="rimglow" d="${FACE}" fill="none" stroke-width="3"/><g class="eyes"><g transform="rotate(-7 24 30.5)"><rect class="eye l" x="18.5" y="27" width="11" height="7" rx="3.5"/></g><g transform="rotate(7 40 30.5)"><rect class="eye r" x="34.5" y="27" width="11" height="7" rx="3.5"/></g></g></svg>`;
-const BRAND = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.8 14.6 12 7.6l5.2 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="16.6" r="1.4" fill="currentColor"/></svg>';
+/**
+ * TALON Point-Cloud Telemetry Core: 36 deterministic nodes that morph between
+ *   calm (idle)           — wave-modulated stippled ring
+ *   working (tool-call)   — 3D orthographic latitude/longitude point sphere
+ *   listening (streaming) — phase-shifted wave sphere
+ *   focused (needs you)   — 36-dot equilateral warning triangle
+ *   sheepish (revision)   — constellation node graph with vector edges
+ *   alert (critical gate) — serrated ring + inner triangle
+ * Geometry carries the meaning; colour (CSS .mascot) carries the state.
+ */
+const ORB_NODES = Array.from({ length: 36 }, (_, i) => {
+  const t = i / 36;
+  const a = t * Math.PI * 2 - Math.PI / 2;
+
+  // idle: stippled wave-modulated ring (36 radial ticks)
+  const rRing = 20.5 + 1.6 * Math.sin(a * 3 + 0.4) + 0.8 * Math.cos(a * 5);
+  const rx1 = 32 + Math.cos(a) * (rRing - 1.5);
+  const ry1 = 32 + Math.sin(a) * (rRing - 1.5);
+  const rx2 = 32 + Math.cos(a) * (rRing + 1.5);
+  const ry2 = 32 + Math.sin(a) * (rRing + 1.5);
+
+  // working/listening: 3D orthographic point-cloud sphere (6 rings x 6 columns)
+  const row = Math.floor(i / 6);
+  const col = i % 6;
+  const lat = ((row + 0.5) / 6 - 0.5) * Math.PI * 0.88;
+  const lon = (col / 6) * Math.PI * 2 + row * 0.28;
+  const R = 21;
+  const sx = 32 + R * Math.cos(lat) * Math.sin(lon);
+  const sy = 32 + R * Math.sin(lat) + 2.2 * Math.cos(lon) * Math.cos(lat);
+  const sz = Math.cos(lat) * Math.cos(lon); // depth [-1..1]
+  const sr = 0.85 + Math.max(0, sz + 0.5) * 0.85;
+  const sop = 0.28 + Math.max(0, sz + 0.6) * 0.55;
+
+  // focused (waiting-approval): crisp 36-dot equilateral triangle (12 dots/edge)
+  const V: [number, number][] = [[32, 10], [53, 48], [11, 48]];
+  const edge = Math.floor(i / 12);
+  const u = (i % 12) / 12;
+  const [ax, ay] = V[edge];
+  const [bx, by] = V[(edge + 1) % 3];
+  const tx = ax + (bx - ax) * u;
+  const ty = ay + (by - ay) * u;
+
+  // sheepish (model revision): constellation node scatter
+  const cr = 9 + ((i * 7) % 13);
+  const ca = a + ((i % 3) - 1) * 0.22;
+  const cx = 32 + Math.cos(ca) * cr;
+  const cy = 32 + Math.sin(ca) * cr;
+
+  // alert (critical gate): serrated outer ring
+  const rErr = 21.5 + 1.8 * Math.sin(a * 6);
+  const ex1 = 32 + Math.cos(a) * (rErr - 1.8);
+  const ey1 = 32 + Math.sin(a) * (rErr - 1.8);
+  const ex2 = 32 + Math.cos(a) * (rErr + 1.8);
+  const ey2 = 32 + Math.sin(a) * (rErr + 1.8);
+
+  return { i, rx1, ry1, rx2, ry2, sx, sy, sr, sop, tx, ty, cx, cy, ex1, ey1, ex2, ey2 };
+});
+const CONSTELLATION_EDGES = [
+  [0, 5], [5, 11], [11, 17], [17, 23], [23, 29], [29, 35], [35, 0],
+  [2, 14], [14, 26], [26, 2], [8, 20], [20, 32], [32, 8], [4, 22], [10, 28],
+];
+const mascot = (mood = 'calm', id = '') => {
+  const f = (n: number) => n.toFixed(1);
+  const ticks = ORB_NODES.map((p) => {
+    const x1 = mood === 'alert' ? p.ex1 : p.rx1;
+    const y1 = mood === 'alert' ? p.ey1 : p.ry1;
+    const x2 = mood === 'alert' ? p.ex2 : p.rx2;
+    const y2 = mood === 'alert' ? p.ey2 : p.ry2;
+    return `<line class="orb-tick" x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" style="--i:${p.i}"/>`;
+  }).join('');
+  const links = CONSTELLATION_EDGES.map(([a, b]) => {
+    const pa = ORB_NODES[a], pb = ORB_NODES[b];
+    return `<line class="orb-link" x1="${f(pa.cx)}" y1="${f(pa.cy)}" x2="${f(pb.cx)}" y2="${f(pb.cy)}"/>`;
+  }).join('');
+  const dots = ORB_NODES.map((p) => {
+    let x = p.sx, y = p.sy, r = p.sr, op = p.sop;
+    if (mood === 'focused' || mood === 'alert') { x = p.tx; y = p.ty; r = 1.35; op = 0.95; }
+    else if (mood === 'sheepish') { x = p.cx; y = p.cy; r = p.i % 3 === 0 ? 1.7 : 1.1; op = 0.9; }
+    return `<circle class="orb-dot" cx="${f(x)}" cy="${f(y)}" r="${f(r)}" style="--op:${f(op)};--i:${p.i}"/>`;
+  }).join('');
+  return `<svg class="mascot" ${id ? `id="${id}"` : ''} viewBox="0 0 64 64" data-mood="${mood}" aria-hidden="true"><g class="orb-links">${links}</g><g class="orb-ticks">${ticks}</g><g class="orb-dots">${dots}</g></svg>`;
+};
+/** FlytBase Sentinel brand mark: a convergence delta inside a docking coordinate frame. */
+const BRAND = `<svg viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".55"/>
+  <path d="M12 5.5 17.5 16.5 12 14l-5.5 2.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="12" cy="17.8" r="1.2" fill="var(--map-cyan)"/>
+</svg>`;
 
 const SITUATIONS = [
   { id: 'standby', sid: 'S-01', name: 'Standby', sub: 'No incident · Red Flag watch' },
@@ -142,6 +225,9 @@ export async function mountConsole(app: HTMLElement) {
   (window as unknown as Record<string, unknown>).engine = engine;
 
   app.insertAdjacentHTML('beforeend', SHELL);
+  // Degraded-comms cue: the console runs on local data, but say it if the link drops.
+  addEventListener('offline', () => toast('Network link down · console on local data only'));
+  addEventListener('online', () => toast('Network link restored'));
   const ui = {
     sit: (params.get('situation') === 'random' ? SITUATIONS[Math.floor(Math.random() * SITUATIONS.length)].id : params.get('situation')) ?? store.get('situation', 'wui-breakout'),
     // The chat card is on demand — the edge rail is the only persistent TALON surface (One reference). ?talon=open starts it open.
@@ -326,13 +412,14 @@ export async function mountConsole(app: HTMLElement) {
   function renderRail(ts: TalonState) {
     const mine = ts.open.filter((o) => !o.item.reraise).length;
     const active = ts.agents.filter((a) => a.status !== 'idle');
+    const orbMood = ui.listening ? 'listening' : ts.mood === 'calm' && active.some((a) => a.status === 'working') ? 'working' : ts.mood;
     const k = [ts.agents.map((a) => a.status), mine, ui.panel, ui.pop, ui.listening, ts.budget.used];
     if (!changed('rail', k)) return;
     $('#rail').innerHTML = `
       ${active.length ? `<button class="statuspill" data-act="pop" data-pop="agents" aria-haspopup="menu" aria-expanded="${ui.pop === 'agents'}" aria-label="TALON agents — ${mine ? `${mine} need${mine > 1 ? '' : 's'} you` : 'working'}">
         ${active.map((a) => `<span class="adot" data-tip="${esc(a.name)} · ${a.status === 'needs' ? 'needs you' : a.status}|${esc(a.line)}"><i class="dot ${a.status}"></i></span>`).join('')}
       </button>` : ''}
-      <button class="rbtn face" data-act="panel" aria-pressed="${ui.panel}" aria-label="TALON chat (T)" data-tip="TALON|thread · log · review (T)">${mascot(ui.listening ? 'listening' : ts.mood)}${mine ? `<span class="badge">${mine}</span>` : ''}</button>
+      <button class="rbtn face" data-act="panel" aria-pressed="${ui.panel}" aria-label="TALON chat (T)" data-tip="TALON|thread · log · review (T)">${mascot(orbMood)}${mine ? `<span class="badge">${mine}</span>` : ''}</button>
       <button class="rbtn mic" data-act="mic" aria-pressed="${ui.listening}" aria-label="Voice command (V)" data-tip="Voice command|press V">${ic('mic')}</button>
       <button class="rbtn" data-act="pop" data-pop="authority" aria-pressed="${ui.pop === 'authority'}" aria-label="What TALON may do" data-tip="Authority|what TALON may do alone">${ic('shield')}</button>
       <button class="rbtn" data-act="pop" data-pop="settings" aria-pressed="${ui.pop === 'settings'}" aria-label="Settings" data-tip="Settings · live model">${ic('gear')}</button>`;
@@ -347,8 +434,9 @@ export async function mountConsole(app: HTMLElement) {
     const head = [ts.mood, ui.listening, mine.length, ts.agents.filter((a) => a.status === 'working').length, ts.budget, ui.tab, ui.hoverEv ? 1 : 0, ui.review];
     if (changed('phead', head)) {
       const working = ts.agents.filter((a) => a.status === 'working').length;
+      const orbMood = ui.listening ? 'listening' : ts.mood === 'calm' && working ? 'working' : ts.mood;
       const line = ui.review ? 'After-action review · read-only' : mine.length ? `${mine.length} need${mine.length > 1 ? '' : 's'} you · cards on the map` : working ? `${working} agent${working > 1 ? 's' : ''} working · nothing needs you` : 'Watching · nothing needs you';
-      $('#phead').innerHTML = `${mascot(ui.listening ? 'listening' : ts.mood, 'talonFaceMain')}
+      $('#phead').innerHTML = `${mascot(orbMood, 'talonFaceMain')}
         <div><h1>TALON</h1><div class="line">${mine.length ? '<i class="dot needs"></i>' : working ? '<i class="dot working"></i>' : '<i class="dot done"></i>'}${esc(line)}</div></div>
         <div class="budget" title="Interrupt budget: at most ${ts.budget.max} per ${ts.budget.windowMin} min (ISA-18.2). Over budget, TALON holds an interrupt to an ask and logs it."><div class="pips">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</div><small>Interrupts ${ts.budget.used}/${ts.budget.max} · ${ts.budget.windowMin} min</small></div>`;
       $('#ptabs').innerHTML = (['now', 'log', 'review'] as const).map((t) => `<button role="tab" aria-selected="${ui.tab === t}" data-act="tab" data-tab="${t}">${t === 'now' ? 'Thread' : t === 'log' ? 'Log' : 'Review'}</button>`).join('');
@@ -801,9 +889,17 @@ export async function mountConsole(app: HTMLElement) {
       const b = player.boardAt<EvacBoard>('evac');
       k = [b, ps.committed];
       const sw: Record<string, string> = { z1: 'var(--map-red)', z2: 'var(--map-amber)', z3: 'var(--map-ok)' };
+      // the map keeps the earlier projection visible (cut-prev); the board echoes it
+      const cp = sit.layers.find((l) => l.id === 'cut-prev');
+      const cpSpec = cp?.spec as { type?: string; title?: string } | undefined;
+      const wasCut = cpSpec?.type === 'marker' ? /T\+\d{1,2}:\d{2}/.exec(cpSpec.title ?? '')?.[0] : undefined;
+      const revKnown = !!wasCut && !!growth && growth.switchAt !== null && (ps.t >= growth.switchAt || ps.hindsight);
       html = b
         ? `${(b.zones ?? []).map((z) => `<div class="zrow"><b><i class="sw" style="background:${sw[z.id] ?? 'var(--text-3)'}"></i>${esc(z.name)} · ${esc(z.kind)}${z.state === 'proposed' ? ' <span class="chip" style="height:18px">proposed</span>' : ''}</b><small>${z.households ? `${z.households} homes` : ''}${typeof z.cleared === 'number' ? ` · <b class="num" style="display:inline;color:var(--text-1)">${z.cleared}%</b>` : ''}</small>${typeof z.cleared === 'number' ? `<div class="bar"><i style="width:${z.cleared}%"></i></div>` : ''}</div>`).join('')}
-          ${(b.routes ?? []).map((r) => `<div class="srow"><i class="dot ${r.level ?? 'muted'}"></i><span style="color:var(--text-1)">${esc(r.name)}</span><span style="margin-left:auto">${esc(r.status)}</span></div>`).join('')}
+          ${(b.routes ?? []).map((r) => {
+            const was = wasCut && revKnown && /T\+/i.test(r.status) && !r.status.includes(wasCut) ? ` <span class="was">(was ${wasCut})</span>` : '';
+            return `<div class="srow"><i class="dot ${r.level ?? 'muted'}"></i><span style="color:var(--text-1)">${esc(r.name)}</span><span style="margin-left:auto">${esc(r.status)}${was}</span></div>`;
+          }).join('')}
           ${b.choke ? `<div class="srow"><i class="dot ${b.choke.level}"></i>${esc(b.choke.text)}</div>` : ''}${b.alerts ? `<div class="srow"><i class="dot ${b.alerts.level}"></i>${esc(b.alerts.text)}</div>` : ''}`
         : '<div class="empty">No evacuation plan exists.</div>';
       const z1 = b?.zones?.find((z) => typeof z.cleared === 'number');
@@ -823,7 +919,8 @@ export async function mountConsole(app: HTMLElement) {
       const shown = structOpen ? rows : rows.filter((x) => x.t > now).slice(0, 8);
       const remain = structOpen ? 0 : rows.filter((x) => x.t > now).length - shown.length;
       html = rows.length
-        ? `${reached ? `<div class="srow"><i class="dot bad"></i><span style="color:var(--text-1)">${reached} reached</span></div>` : ''}
+        ? `<div class="dots" title="One dot per structure in the projection · red reached · amber inside +60 min">${rows.map((x) => `<i${x.t <= now ? ' class="bad"' : x.t <= now + 60 ? ' class="warn"' : ''}></i>`).join('')}</div>
+           ${reached ? `<div class="srow"><i class="dot bad"></i><span style="color:var(--text-1)">${reached} reached</span></div>` : ''}
            ${shown.length ? shown.map((x) => x.t <= now
              ? `<div class="srow"><i class="dot bad"></i><span>H-${x.i} · reached ${fmtT(x.t)}</span></div>`
              : `<div class="srow"><i class="dot warn"></i><span>H-${x.i}</span><span style="margin-left:auto" class="num">${fmtDur(x.t - now)}</span></div>`).join('') : '<div class="empty">No structure inside the projection.</div>'}
@@ -1134,11 +1231,22 @@ export async function mountConsole(app: HTMLElement) {
     toast(`${opt.toggle ? 'Proposal edited' : 'Recorded'}: ${opt.label}`);
   }
 
+  // A refusal you can feel: typed approvals and unknown calls bounce the composer.
+  const shakeField = () => {
+    const f = $('.field');
+    f.addEventListener('animationend', () => f.classList.remove('invalid'), { once: true });
+    f.classList.remove('invalid');
+    void f.offsetWidth;
+    f.classList.add('invalid');
+  };
+
   function command(text: string) {
     const ps = player.getState();
     const st = engine.getFieldStats();
     const facts = { acres: st ? st.reachedArea / 4046.86 : undefined, threatened: st?.threatened, destroyed: st?.destroyed, phase: SITUATIONS.find((s) => s.id === ui.sit)?.name ?? '', wall: sit.meta.epoch ? player.wallClock(ps.t) : fmtT(ps.t), units: ps.units, boards: { evac: player.boardAt('evac') }, lastSeen: ui.lastSeen };
     ui.lastSeen = ps.t;
+    // Typed approvals never execute (talon.ts refuses them) — the composer says so physically.
+    if (/^(approve|authori[sz]e|reject|confirm|dismiss|yes|no|ok)\b/.test(text.trim().toLowerCase())) shakeField();
     if (ui.ai?.key) {
       // Live model: the operator's message goes on the record now; the model answers
       // through the adapter — grounded in the snapshot, held by the truth guard.
@@ -1155,6 +1263,7 @@ export async function mountConsole(app: HTMLElement) {
       return schedule();
     }
     const res = talon.command(text, facts, ps.t);
+    if (/^No unit or TALON agent called/.test(res.reply ?? '')) shakeField();
     if (res.evidence?.length) {
       ui.hoverEv = { ev: res.evidence, label: res.evidence[0].label };
       setTimeout(() => {
@@ -1798,6 +1907,23 @@ function growthChart(g: GrowthSeries, ps: PlayerState): string {
   const ticks = [0, 0.5, 1].map((k) => Math.round((g.max * k) / 10) * 10);
   const tT = [g.t[0], Math.round((g.t[0] + end) / 2), end];
   const nowV = cur[g.t.findIndex((t) => t >= now)] ?? 0;
+  // the projection's honest uncertainty: ±18% widening from now, clamped to the chart
+  let band = '';
+  if (end - now > 1e-6) {
+    const up: string[] = [], dn: string[] = [];
+    for (let i = 0; i < g.t.length; i++) {
+      const t = g.t[i];
+      if (t < now - 1e-6) continue;
+      const u = (t - now) / (end - now);
+      const v = cur[i];
+      up.push(`${up.length ? 'L' : 'M'}${x(t).toFixed(1)},${y(Math.min(v * (1 + 0.18 * u), g.max * 1.05)).toFixed(1)}`);
+      dn.push(`L${x(t).toFixed(1)},${y(Math.max(v * (1 - 0.18 * u), 0)).toFixed(1)}`);
+    }
+    band = `<path d="${up.join('')}${dn.reverse().join('')}Z" fill="color-mix(in srgb, var(--viz-1) 12%, transparent)"/>`;
+  }
+  // why the projection jumped: the T+89 spot fire, marked on the chart itself
+  const swX = g.switchAt !== null && g.switchAt >= g.t[0] && g.switchAt <= end ? x(g.switchAt) : null;
+  const flag = known && swX !== null ? `<line class="evflag" x1="${swX.toFixed(1)}" x2="${swX.toFixed(1)}" y1="${T}" y2="${H - B}"/><text class="evflag-lbl" x="${(swX + (swX > W - 44 ? -3 : 3)).toFixed(1)}" y="${T + 8}" text-anchor="${swX > W - 44 ? 'end' : 'start'}">SPOT-1</text>` : '';
   const legend = known && g.b ? `<div class="clegend"><span><i style="background:var(--viz-1)"></i>Projection now</span><span><i style="background:var(--viz-2)"></i>Earlier projection</span></div>` : `<div class="clegend"><span><i style="background:var(--viz-1)"></i>Burned area · projected after now (dashed)</span></div>`;
   return `<div style="display:grid;grid-template-rows:auto 1fr;height:100%;gap:4px"><div style="display:flex;align-items:baseline;gap:8px"><b class="num" style="font-size:var(--fs-heading)">${fmtN(nowV)} ac</b><span style="color:var(--text-3);font-size:var(--fs-micro)">at ${fmtT(ps.t)}</span><span class="grow"></span>${legend}</div>
     <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Burned area over time, ${fmtN(nowV)} acres now">
@@ -1805,8 +1931,10 @@ function growthChart(g: GrowthSeries, ps: PlayerState): string {
       ${tT.map((t) => `<text class="axis" x="${x(t)}" y="${H - 3}" text-anchor="middle">${fmtT(t)}</text>`).join('')}
       <path class="s1f" d="${area}"/>
       ${known && g.b ? `<path class="s2" d="${path(g.a, g.switchAt ?? g.t[0], end)}"/>` : ''}
+      ${band}
       <path class="s1" d="${path(cur, g.t[0], now)}"/><path class="s1 proj" d="${path(cur, now, end)}"/>
       <line class="now" x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H - B}"/>
+      ${flag}
       <circle class="hdot" cx="${x(now)}" cy="${y(nowV)}" r="4" fill="var(--viz-1)"/>
     </svg></div>`;
 }
