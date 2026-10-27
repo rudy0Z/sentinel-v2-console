@@ -77,6 +77,11 @@ export class Talon {
         for (const x of out) {
             if (x.level !== 'interrupt')
                 continue;
+            // Life-safety interrupts are a separate tier: never demoted, never capped (ADR-1).
+            if (x.it.priority === 'life-safety') {
+                granted.push(x.L.at);
+                continue;
+            }
             const inWin = granted.filter((g) => g > x.L.at - INTERRUPT_BUDGET.windowMin + 1e-6).length;
             if (inWin >= INTERRUPT_BUDGET.max) {
                 x.level = x.it.options?.length ? 'ask' : 'feed';
@@ -100,6 +105,13 @@ export class Talon {
             log.push({ id: it.id, t: L.at, seq: 0, agent: it.agent, who: 'talon', level, kind: it.kind, title: this.text(it.title, t), body: this.text(it.body, t), authority: it.authority, standing: it.standing, itemId: it.id, evidence: it.evidence, to: it.reraise?.to });
             if (demoted)
                 log.push({ id: `dem:${it.id}`, t: L.at, seq: 1, agent: null, who: 'system', level: 'log', kind: 'demoted', title: `Interrupt held to an ${level}: budget is ${INTERRUPT_BUDGET.max} per ${INTERRUPT_BUDGET.windowMin} min`, itemId: it.id });
+            // Closed loop: a receiving authority acknowledges actions and escalations (ADR-3).
+            if (it.ack) {
+                const ackT = L.at + (it.ack.after ?? 0.3);
+                const ans = (it.kind === 'ask' || it.kind === 'proposal') ? P.answerOf(it.id, t) : null;
+                if (t >= ackT && !(ans && ans.at < ackT - 1e-6))
+                    log.push({ id: `ack:${it.id}`, t: ackT, seq: 2, agent: it.agent, who: 'system', level: 'feed', kind: 'ack', title: 'Acknowledged · standing by on Command-1', itemId: it.id, decider: it.ack.by });
+            }
             const prev = lastByAgent.get(it.agent);
             if (!prev || L.at >= prev.at)
                 lastByAgent.set(it.agent, { at: L.at, it, busyUntil: L.at + (it.busy ?? 0) });

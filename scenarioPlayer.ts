@@ -144,6 +144,8 @@ export interface Situation {
     epoch?: string | { day: string; night: string };
     tz?: string;
     feedDrone?: string;
+    /** Cross-incident references: how this incident cites (or is cited by) others in the sector log. */
+    refs?: string[];
   };
   clock: { start: number; end: number };
   phases: PhaseDef[];

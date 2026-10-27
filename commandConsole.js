@@ -14,7 +14,7 @@
  * Exercise controls (clock, autopilot, holds) are harness, drawn in a dashed "EXERCISE"
  * group and kept out of the product surfaces. The incident flow is never shown as steps.
  */
-import { createTerrainEngine, loadWorldData } from './terrainEngine.js';
+import { createTerrainEngine, loadWorldData, GeoProjection } from './terrainEngine.js';
 import { createScenarioPlayer } from './scenarioPlayer.js';
 import { createTalon, fmtDur, fmtT, layerPoint } from './talon.js';
 import { createTalonAgent } from './talonAgent.js';
@@ -203,6 +203,12 @@ const LAYER_GROUPS = [
     ['assets', 'Docks & sensors', 'Drone docks, thermal masts'],
 ];
 const BASE_LAYERS = [['units', 'Ground units'], ['drones', 'Drones'], ['vegetation', 'Vegetation'], ['roads', 'Roads'], ['buildings', 'Structures'], ['contours', 'Contours'], ['labels', 'Place names']];
+/** One-keystroke doctrinal dissent reasons (Q/W/E) — the verbatim note stays optional. */
+const DISSENT_CHIPS = [
+    ['Q', 'Field / radio intel supersedes the projection.'],
+    ['W', 'Crew or aircraft safety margin.'],
+    ['E', 'Local terrain or fuel factor.'],
+];
 export async function mountConsole(app) {
     const params = new URLSearchParams(location.search);
     const $ = (s, el = app) => el.querySelector(s);
@@ -210,6 +216,9 @@ export async function mountConsole(app) {
     const world = await loadWorldData('./data/');
     const engine = createTerrainEngine($('#map'), { world, view: 'perspective', lighting: params.get('lighting') === 'day' ? 'day' : 'night', hud: false, pipOnUnitClick: false });
     engine.setVerticalExaggeration(2, 0);
+    // Radio-grade WGS84 for any world point (same projection the engine draws with).
+    const geo = new GeoProjection(world.frame);
+    const latlon = (p) => { const { lat, lon } = geo.toLatLon(p[0], p[1]); return geo.format(lat, lon); };
     window.engine = engine;
     app.insertAdjacentHTML('beforeend', SHELL);
     // Degraded-comms cue: the console runs on local data, but say it if the link drops.
@@ -395,7 +404,7 @@ export async function mountConsole(app) {
       </button>
       <div class="grow"></div>
       ${ui.ai?.key ? `<span class="chip working" title="Live model · grounded in the situation, held by the truth guard, never executing">AI · ${esc(ui.ai.model)}</span>` : ''}
-      <div class="clock" title="Scene time · wall clock"><span class="live ${mode}">${mode === 'live' ? 'LIVE' : mode === 'review' ? 'REVIEW' : 'VIEWING'}</span><b>${fmtT(ps.t)}</b><span>${esc(wall)}</span></div>
+      <div class="clock" title="Scene time · wall clock"><span class="live ${mode}" ${mode !== 'live' ? `title="Read-only record · the live head is ${fmtT(ui.liveT)} — decisions happen only at live"` : ''}>${mode === 'live' ? 'LIVE' : mode === 'review' ? 'REVIEW' : 'VIEWING'}</span><b>${fmtT(ps.t)}</b><span>${esc(wall)}</span></div>
       <div class="op" title="Operator on authority"><i class="dot done"></i><b>A. Rao</b><span>Operator on authority</span></div>
       ${mode === 'past' ? `<button class="btn sm" data-act="golive">${ic('live', 'xs')}Back to live</button>` : ''}
       <button class="btn icon ghost" data-act="scrub" aria-pressed="${ui.replay}" aria-label="Incident timeline" title="Incident timeline (scrub, replay)">${ic('timeline')}</button>
@@ -432,7 +441,7 @@ export async function mountConsole(app) {
             const line = ui.review ? 'After-action review · read-only' : mine.length ? `${mine.length} need${mine.length > 1 ? '' : 's'} you · cards on the map` : working ? `${working} agent${working > 1 ? 's' : ''} working · nothing needs you` : 'Watching · nothing needs you';
             $('#phead').innerHTML = `${mascot(orbMood, 'talonFaceMain')}
         <div><h1>TALON</h1><div class="line">${mine.length ? '<i class="dot needs"></i>' : working ? '<i class="dot working"></i>' : '<i class="dot done"></i>'}${esc(line)}</div></div>
-        <div class="budget" title="Interrupt budget: at most ${ts.budget.max} per ${ts.budget.windowMin} min (ISA-18.2). Over budget, TALON holds an interrupt to an ask and logs it."><div class="pips">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</div><small>Interrupts ${ts.budget.used}/${ts.budget.max} · ${ts.budget.windowMin} min</small></div>`;
+        <div class="budget" title="Interrupt budget: at most ${ts.budget.max} per ${ts.budget.windowMin} min (ISA-18.2). Over budget, TALON holds an interrupt to an ask and logs it. Life-safety interrupts are exempt and always come through."><div class="pips">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</div><small>Interrupts ${ts.budget.used}/${ts.budget.max} · ${ts.budget.windowMin} min</small></div>`;
             $('#ptabs').innerHTML = ['now', 'log', 'review'].map((t) => `<button role="tab" aria-selected="${ui.tab === t}" data-act="tab" data-tab="${t}">${t === 'now' ? 'Thread' : t === 'log' ? 'Log' : 'Review'}</button>`).join('');
         }
         // The header is cheap and always rendered (the chat card keeps its identity when closed);
@@ -477,9 +486,10 @@ export async function mountConsole(app) {
             // The route toggle lives in the COA header; keep the decisive options only.
             opts = opts.filter((x) => !x.toggle);
         }
-        const gate = it.gate ? `<div class="gate"><b>${esc(it.gate.label)}</b>${it.gate.reach ? `<span>${esc(it.gate.reach)}</span>` : ''}${it.gate.check ? `<span class="check">${ic('check', 'xs')}${esc(it.gate.check)}</span>` : ''}<span class="lapse">If it lapses: ${esc(it.gate.onExpire ?? 'nothing is sent')}</span></div>` : '';
+        const gate = it.gate ? `<div class="gate"><b>${esc(it.gate.label)}</b>${it.gate.reach ? `<span>${esc(it.gate.reach)}</span>` : ''}${it.gate.check ? `<span class="check">${ic('check', 'xs')}${esc(it.gate.check)}</span>` : ''}${(it.gate.owns || it.gate.reqs) ? `<span class="authsplit">${it.gate.owns ? `<span class="auth-pill owned" title="Executed directly under the fire side's own authority">OWNED · ${esc(it.gate.owns)}</span>` : ''}${it.gate.reqs ? `<span class="auth-pill req" title="Unified-command requisition — an external authority (Sheriff / OES) executes this part">REQ → ${esc(it.gate.reqs)}</span>` : ''}</span>` : ''}<span class="lapse">If it lapses: ${esc(it.gate.onExpire ?? 'nothing is sent')}</span></div>` : '';
         const options = draftNow
             ? `<div class="dissent"><div><b>You're declining TALON's recommendation.</b><br><span style="color:var(--text-2)">Both positions go on the record verbatim: TALON's reasons and your words. A later re-raise can only cite new evidence, and goes to the Regional Duty Supervisor.</span></div>
+          <div class="dchips" role="group" aria-label="Doctrinal reason chips (Q / W / E)">${DISSENT_CHIPS.map(([key, text]) => `<button type="button" class="chip dchip" data-act="dissent-chip" data-text="${esc(text)}" title="Insert this reason"><span class="kbd">${key}</span>${esc(text)}</button>`).join('')}</div>
           <textarea id="dissentText" placeholder="Your reason, in your words (optional)" aria-label="Your reason"></textarea>
           <div class="row"><button class="btn ghost sm" data-act="dissent-cancel">Cancel</button><button class="btn primary sm" data-act="dissent-ok">Record: ${esc(draftNow.label)}</button></div></div>`
             : opts.length
@@ -515,7 +525,7 @@ export async function mountConsole(app) {
             return `<div class="entry operator"><time>${fmtT(e.t)}</time><div class="bubble">${esc(e.title)}</div></div>`;
         const auth = e.authority === 'standing' ? `<span class="auth standing" title="${esc(e.standing ?? '')}">${esc(e.standing ?? 'Standing order')}</span>` : '';
         const lvl = e.level === 'interrupt' ? ' interrupt' : '';
-        const decided = e.kind === 'answer' ? `<span class="chip ${e.who === 'operator' ? 'ok' : ''}" style="height:18px">${e.who === 'operator' ? 'Decision' : e.who === 'autopilot' ? 'Harness' : 'Ruling'}</span>` : '';
+        const decided = e.kind === 'answer' ? `<span class="chip ${e.who === 'operator' ? 'ok' : ''}" style="height:18px">${e.who === 'operator' ? 'Decision' : e.who === 'autopilot' ? 'Harness' : 'Ruling'}</span>` : e.kind === 'ack' ? `<span class="chip ok" style="height:18px" title="The receiving authority confirmed receipt — the escalation is not dangling">ack</span>` : '';
         return `<div class="entry${lvl}"><time>${fmtT(e.t)}</time><div><div class="who"><b>${who}</b>${e.kind === 'expired' ? '<span class="chip needs" style="height:18px">lapsed</span>' : ''}${decided}</div><div class="title">${esc(e.title)}</div>${e.body && e.kind !== 'answer' ? `<div class="body">${esc(e.body)}</div>` : e.kind === 'answer' && e.body ? `<div class="body">${esc(e.body)}</div>` : ''}${e.bullets ? `<ul>${e.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}${auth || e.evidence?.length ? `<div class="foot">${auth}${evChips(e.evidence, `e:${e.id}`)}</div>` : ''}</div></div>`;
     }
     function renderNow(ps, ts) {
@@ -577,7 +587,9 @@ export async function mountConsole(app) {
      */
     async function exportPackage() {
         const ps = player.getState();
-        const rv = talon.review(Math.max(ps.t, ui.liveT));
+        const tEnd = Math.max(ps.t, ui.liveT);
+        const rv = talon.review(tEnd);
+        const stEnd = talon.state(tEnd);
         const s = SITUATIONS.find((x) => x.id === ui.sit);
         const digest = async (text) => {
             const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -586,23 +598,31 @@ export async function mountConsole(app) {
         const pkg = {
             schema: 'sentinel.evidence/1',
             generatedAt: new Date().toISOString(),
-            situation: { id: sit.id, title: sit.meta.title, scenario: s.sid + ' · ' + s.name, coords: sit.meta.coords },
+            situation: { id: sit.id, incident: s.sid, title: sit.meta.title, scenario: s.sid + ' · ' + s.name, coords: sit.meta.coords, operator: 'A. Rao · Operator on authority', period: 'Operational period 1', refs: sit.meta.refs ?? [] },
             provenance: 'Exercise data. Terrain/roads/buildings real (USGS/OSM/ESA); fire, weather, units and times authored; every number in the console carries its basis (MEA/MOD/AUT).',
             measures: rv.measures,
             decisions: rv.decisions.map((d) => ({ item: d.item.id, raised: d.raisedAt, closed: d.closedAt, by: d.by, talonRecommended: d.recommended, operatorChoice: d.choice, latency: d.latency })),
             dissents: rv.dissents,
             standingOrderActions: rv.standing,
             interruptsHeldByBudget: rv.demoted,
+            comms: { messages: stEnd.log.filter((e) => e.kind === 'message').length, acks: stEnd.log.filter((e) => e.kind === 'ack').length },
         };
         const json = JSON.stringify(pkg, null, 2);
         const sum = await digest(json);
         const md = [
             `# Sentinel evidence package — ${pkg.situation.scenario}`, '',
             `Generated ${pkg.generatedAt}. ${pkg.provenance}`, '',
+            `Incident ${s.sid} · Operator A. Rao · Operational period 1${sit.meta.refs?.length ? ` · Refs: ${sit.meta.refs.join(' · ')}` : ''}`, '',
             `**Integrity digest (SHA-256, of the .json file):**`, '', '```', sum, '```', '',
             'Re-compute with `shasum -a 256 ' + s.sid + '-evidence.json`. A digest proves the file is unchanged since export. It is not a signature and not legal attestation.', '',
             '## Measures', ...rv.measures.map((m) => `- **${m.label}:** ${m.value}${m.note ? ` · ${m.note}` : ''}`), '',
             '## Decisions', ...rv.decisions.map((d) => `- T+${Math.round(d.raisedAt)} · **${talon.text(d.item.title, ps.t)}** · TALON: ${d.recommended ?? '–'} · ${d.by}: ${d.choice ?? '–'}${d.latency !== null ? ` · decided in ${fmtDur(d.latency)}` : ''}`), '',
+            '## Transfer of command (ICS-201 brief)', '',
+            `Handed to the relief: committed orders, open items, preserved dissents and standing-order receipts as of ${fmtT(tEnd)}.`,
+            ...(pkg.comms.messages ? [`- Radio-to-text messages on the record: ${pkg.comms.messages} · authority acknowledgements: ${pkg.comms.acks}`] : []),
+            ...rv.decisions.filter((d) => d.by === 'operator' && d.choice).map((d) => `- Committed: ${talon.text(d.item.title, ps.t)} → ${d.choice}`),
+            ...rv.decisions.filter((d) => d.by === 'open').map((d) => `- Open at close-out: ${talon.text(d.item.title, ps.t)} (TALON: ${d.recommended ?? '–'})`),
+            `- Preserved dissents: ${rv.dissents.length} · standing-order actions: ${rv.standing} · interrupts held by budget: ${rv.demoted}.`, '',
             '## Dissent records', ...(rv.dissents.length ? rv.dissents.map((d) => `- **${d.question}**\n  - TALON: ${d.talon.position} (${d.talon.reasons.slice(0, 2).join('; ')})\n  - Operator: ${d.operator.position}${d.operator.words ? ` — "${d.operator.words}"` : ''}${d.reraised ? `\n  - Re-raised to ${d.reraised.to}${d.reraised.ruling ? `, ruled: ${d.reraised.ruling}` : ''}` : ''}`) : ['_None — every recommendation was taken or lapsed._']), '',
             `Handled under standing orders: ${rv.standing} · interrupts held by budget: ${rv.demoted}.`,
         ].join('\n');
@@ -625,6 +645,7 @@ export async function mountConsole(app) {
         const by = (b) => (b === 'operator' ? 'You' : b === 'autopilot' ? 'Autopilot' : b === 'authority' ? 'Supervisor' : b === 'expired' ? 'Lapsed' : 'Open');
         $('#pbody').innerHTML = `
       <div class="card" style="gap:var(--s-2)"><div class="meta"><span class="caps">After-action review</span></div><h2>${esc(sit.meta.title)} · ${esc(SITUATIONS.find((s) => s.id === ui.sit)?.name ?? '')}</h2><p>The map and TALON's panel show exactly what you saw at each moment. Scrub the timeline or pick a decision below.</p>
+        ${sit.meta.refs?.length ? `<div class="refs"><span class="caps">Cross-incident references</span>${sit.meta.refs.map((r) => `<span class="chip" title="Sector-log lineage: incidents cite each other's precedent">${esc(r)}</span>`).join('')}</div>` : ''}
         <button type="button" class="lrow" role="switch" aria-checked="${ps.hindsight}" data-act="hindsight" style="grid-template-columns:1fr auto"><span class="nm">Overlay what we know now<small>Corrected projection at every time (hindsight)</small></span><span class="switch"></span></button>
         <button class="btn sm" data-act="replay">${ic('play', 'xs')}Replay from the start</button><button class="btn sm" data-act="export">${ic('down', 'xs')}Export evidence</button></div>
       <div class="measures">${rv.measures.map((m) => `<div class="measure"><b>${esc(m.value)}</b><span>${esc(m.label)}</span>${m.note ? `<small>${esc(m.note)}</small>` : ''}</div>`).join('')}<div class="measure"><b>${rv.standing}</b><span>Standing-order actions</span><small>${rv.demoted} interrupt${rv.demoted === 1 ? '' : 's'} held by budget</small></div></div>
@@ -1024,6 +1045,9 @@ export async function mountConsole(app) {
             title = L.name ?? def.name ?? L.id;
             sub = L.group === 'planDraft' ? 'Draft revision · awaiting approval' : L.state === 'proposed' ? 'Proposed · not authorized' : L.state === 'compromised' ? 'Compromised' : 'In force';
             facts = [['Basis', pv(L.provenance)], ['Owner', esc(OWNER[L.group] ?? 'Situation')], ['Since', `${fmtT(L.since)}${L.updated > L.since ? ` · updated ${fmtT(L.updated)}` : ''}`], ['State', esc(L.state)]];
+            const lp = layerPoint(sit, s.id);
+            if (lp)
+                facts.push(['Position', `<span class="num">${esc(latlon(lp))}</span>`]);
             const spec = def.spec;
             if (spec.type === 'marker' && spec.detail)
                 facts.unshift(['Detail', esc(spec.detail)]);
@@ -1043,6 +1067,9 @@ export async function mountConsole(app) {
             title = `${u.id}${u.name ? ` · ${u.name}` : ''}`;
             sub = `${u.type ?? u.kind}${u.info.role ? ` · ${u.info.role}` : ''}`;
             facts = [['Status', esc(u.status ?? 'active')], ['Task', esc(u.detail ?? '–')], ['Basis', pv(u.provenance)]];
+            const up = engine.getUnitPosition(u.id);
+            if (up)
+                facts.push(['Position', `<span class="num">${esc(latlon(up))}</span>`]);
             if (u.arrives && u.kind !== 'drone')
                 facts.push(['Arrives', `${fmtT(u.arrives)} · in ${fmtDur(u.arrives - ps.t)}`]);
             if (u.info.battery !== undefined)
@@ -1056,7 +1083,9 @@ export async function mountConsole(app) {
             sub = s.info?.sub ?? '';
             facts = Object.entries(s.info ?? {}).filter(([k2]) => k2 !== 'title' && k2 !== 'sub');
         }
-        el.innerHTML = `<header><div class="grow"><h2>${esc(title)}</h2><div class="sub">${esc(sub)}</div></div><button class="btn icon sm ghost" data-act="closeinsp" aria-label="Close">${ic('close', 'sm')}</button></header><dl class="facts">${facts.map(([k2, v]) => `<dt>${esc(k2)}</dt><dd>${v}</dd>`).join('')}</dl>${acts ? `<div class="acts">${acts}</div>` : ''}`;
+        const askQ = s.kind === 'unit' ? `Status of ${s.id}` : s.kind === 'layer' ? `${title}: what changed?` : null;
+        const askBtn = askQ ? `<button class="btn sm ghost" data-act="askabout" data-q="${esc(askQ)}" title="Prefill the composer with this in context">${ic('chat', 'xs')}Ask TALON</button>` : '';
+        el.innerHTML = `<header><div class="grow"><h2>${esc(title)}</h2><div class="sub">${esc(sub)}</div></div><button class="btn icon sm ghost" data-act="closeinsp" aria-label="Close">${ic('close', 'sm')}</button></header><dl class="facts">${facts.map(([k2, v]) => `<dt>${esc(k2)}</dt><dd>${v}</dd>`).join('')}</dl>${acts || askBtn ? `<div class="acts">${acts}${askBtn}</div>` : ''}`;
     }
     // ------------------------------------------------------------------ attention: TALON points at the map
     function evPoint(e) {
@@ -1169,7 +1198,7 @@ export async function mountConsole(app) {
           <span><b>${esc(p.name)}</b><small>${Number.isFinite(start) ? fmtT(start) : 'not started'}${p.gate ? ` · gate ${fmtT(p.gate.expires)}` : ''}</small></span>
           <span class="chip ${state === 'now' ? 'needs' : state === 'done' ? 'ok' : ''}" style="height:20px">${label}</span></button>`;
             }).join('');
-            return `<h3 class="caps">Incident journey</h3><p style="margin:0 0 10px;color:var(--text-2);font-size:var(--fs-caption);max-width:320px">Where the incident stands. The console shows what is happening now; this is the record and what is pending.</p>${rows}`;
+            return `<h3 class="caps">Incident journey</h3><p style="margin:0 0 10px;color:var(--text-2);font-size:var(--fs-caption);max-width:320px">Where the incident stands. The console shows what is happening now; this is the record and what is pending.</p>${rows}${sit.meta.refs?.length ? `<div class="caps ghead">Cross-incident references</div>${sit.meta.refs.map((r) => `<div class="menu-item" style="cursor:default"><span><small>${esc(r)}</small></span></div>`).join('')}` : ''}`;
         }
         if (name.startsWith('slot:')) {
             const cur = name.slice(5);
@@ -1484,6 +1513,14 @@ export async function mountConsole(app) {
                 ui.dissent = null;
                 keys.delete('now');
                 return schedule();
+            case 'dissent-chip': {
+                const ta = document.getElementById('dissentText');
+                if (ta) {
+                    ta.value = ta.value ? `${ta.value} ${d.text}` : d.text ?? '';
+                    ta.focus();
+                }
+                return;
+            }
             case 'dissent-ok':
                 if (ui.dissent)
                     answer(ui.dissent.item, ui.dissent.option, document.getElementById('dissentText')?.value ?? '');
@@ -1511,6 +1548,14 @@ export async function mountConsole(app) {
                 if (it?.evidence)
                     showOnMap(it.evidence);
                 return;
+            }
+            case 'askabout': {
+                ui.panel = true;
+                ui.tab = 'now';
+                const inp = $('#cmd');
+                inp.value = `${d.q ?? ''} `;
+                inp.focus();
+                return schedule();
             }
             case 'evfocus':
                 return showOnMap(evidenceFor(d.ev));
@@ -1811,6 +1856,14 @@ export async function mountConsole(app) {
             return;
         }
         if (tgt.closest('input, textarea') || ev.metaKey || ev.ctrlKey || ev.altKey) {
+            // Glove flow: dissent box open + empty note → Q/W/E drops a doctrinal reason and arms the record button.
+            if (tgt.id === 'dissentText' && ui.dissent && !tgt.value && (ev.key === 'q' || ev.key === 'w' || ev.key === 'e')) {
+                ev.preventDefault();
+                const chip = DISSENT_CHIPS[{ q: 0, w: 1, e: 2 }[ev.key.toLowerCase()]];
+                tgt.value = chip[1];
+                $('.dissent [data-act="dissent-ok"]')?.focus();
+                return;
+            }
             if (tgt.id === 'dissentText' && ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey) && ui.dissent)
                 answer(ui.dissent.item, ui.dissent.option, tgt.value);
             return;
@@ -1860,6 +1913,14 @@ export async function mountConsole(app) {
         else if (k === 'i') {
             const b = app.querySelector('[data-act=ir]');
             b.click();
+        }
+        else if (ui.dissent && (k === 'q' || k === 'w' || k === 'e')) {
+            const chip = DISSENT_CHIPS[{ q: 0, w: 1, e: 2 }[k]];
+            const ta = document.getElementById('dissentText');
+            if (chip && ta) {
+                ta.value = ta.value ? `${ta.value} ${chip[1]}` : chip[1];
+                ta.focus();
+            }
         }
         else if (k === '?')
             shortcuts();

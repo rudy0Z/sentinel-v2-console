@@ -738,3 +738,15 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .coa .pick { width: 7px; height: 7px; border-radius: 2px; background: var(--talon); display: inline-block; }
 .gate .lapse { color: var(--text-3); }
 .tte-marker[data-icon=focus] .tte-mt:empty { display: none; }
+
+/* Audit fix pass (2026-10-27): unified-command split, doctrinal dissent chips, record refs */
+.authsplit { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0; }
+.auth-pill { display: inline-flex; align-items: center; font: var(--fw-semibold) var(--fs-micro)/1.4 var(--font-mono); letter-spacing: .02em; padding: 1px 6px; border-radius: var(--r-xs); white-space: nowrap; }
+.auth-pill.owned { color: var(--map-cyan); background: color-mix(in srgb, var(--map-cyan) 10%, transparent); border: 1px solid color-mix(in srgb, var(--map-cyan) 28%, transparent); }
+.auth-pill.req { color: var(--needs); background: color-mix(in srgb, var(--needs) 12%, transparent); border: 1px solid color-mix(in srgb, var(--needs) 34%, transparent); }
+.dchips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.dchip { height: 24px; padding: 0 8px; gap: 5px; font-size: var(--fs-caption); color: var(--text-2); }
+.dchip .kbd { font-size: 9px; }
+.dchip:hover { color: var(--text-1); border-color: color-mix(in srgb, var(--talon) 45%, transparent); }
+.refs { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; margin: 4px 0; }
+.refs .chip { height: auto; padding: 3px 8px; text-align: left; white-space: normal; font-size: var(--fs-caption); }

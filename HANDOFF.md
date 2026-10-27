@@ -1,4 +1,4 @@
-# Handoff · Sentinel console + TALON copilot (2026-10-21 · v2 pass 2026-10-26)
+# Handoff · Sentinel console + TALON copilot (2026-10-21 · v2 pass 2026-10-26 · audit-fix pass 2026-10-27)
 
 ## Run it
 ```sh
@@ -34,6 +34,8 @@ Target: control-room and desktop displays, ≥1280 px wide. Phone layouts are ou
 3. **Two authority tiers only: `standing` and `operator`.** Standing items must cite their standing order or run card, or they are dropped — including model-posted items. Option effects run only when the operator picks the option. A TALON draft is a proposal and never executes.
 4. **Silence is never approval.** A gated plan or report with no decision lapses, nothing is sent, and TALON escalates (verified for both the evacuation plan and the CAD report).
 5. **Hold and autopilot are harness only.** They live behind the dashed EXERCISE label. The incident flow is never shown as steps.
+6. **Life-safety interrupts are exempt (audit-fix 2026-10-27, ADR-1 partial).** Items with `priority: 'life-safety'` (the lapse, the correction, the road cut) bypass the interrupt budget entirely and are never demoted — a spot fire can never be silenced by two routine gates. Other interrupts keep the 2-per-10-min cap.
+7. **Every escalation is acknowledged (audit-fix 2026-10-27, ADR-3 partial).** Actions and escalations that name a receiving authority (the WEA requisition → Sheriff/OES, lapses and re-raises → Regional Duty Supervisor) carry an `ack` — the receiver's acknowledgement lands on the record ~18 scene-seconds later as a logged entry with an `ack` chip, so no escalation dangles in a string. Gate blocks additionally split their effects into `OWNED · …` (fire/UAS side) and `REQ → …` (unified-command requisition) pills.
 
 ## Design system
 - `console.css` defines every colour, space (4px grid), radius, type step, duration and z-layer once as tokens. `tokens.html` renders the live system for review.
@@ -46,5 +48,5 @@ Target: control-room and desktop displays, ≥1280 px wide. Phone layouts are ou
 - **Perf on real GPU**: fps from SwiftShader is meaningless; re-check with the reduced glass blur on hardware.
 - **Voice/sound** still unverified outside headless Chrome.
 - **Remaining failure injects** (designed, not authored): network degradation, route-blocked partial evacuation as a wui branch. Satellite loss, source conflict and battery handover are in.
-- **ADR-1/ADR-2/ADR-3** (one attention arbiter, debrief model, supervisor naming) remain open. ADR-4 is superseded by the posture-pill ruling above.
+- **ADR-1/ADR-2/ADR-3** (one attention arbiter, debrief model, supervisor naming) — the audit-fix pass shipped the P0 life-safety interrupt tier (ADR-1 partial) and the supervisor acknowledgement loop (ADR-3 partial); the full arbiter, the debrief model and supervisor party-naming remain open. ADR-4 is superseded by the posture-pill ruling above. Findings and rationale: `docs/DEEP-AUDIT-2026-10-27.md`.
 - **Data stays exercise data:** fire spread is a self-similar growth model plus an elliptical spot fire, not Rothermel. Households are one per footprint; device and line counts are estimates.
