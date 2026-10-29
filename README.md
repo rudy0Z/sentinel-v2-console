@@ -1,6 +1,6 @@
 # Tactical Terrain Engine
 
-> **Start with [HANDOFF.md](HANDOFF.md)**: the Sentinel console (`index.html`, `commandConsole.ts`), the TALON copilot (`talon.ts`), the optional live-model adapter (`talonAgent.ts`), the governance rules, open decisions and what is left. The design system renders at `tokens.html`. This README covers the engine and the bench harness.
+> **Start with [HANDOFF.md](docs/HANDOFF.md)**: the Sentinel console (`index.html`, `commandConsole.ts`), the TALON copilot (`talon.ts`), the optional live-model adapter (`talonAgent.ts`), the governance rules, open decisions and what is left. The design system renders at `tokens.html`. This README covers the engine and the bench harness.
 
 A Three.js (r170) terrain and map engine for emergency command displays, plus a player that runs an incident as a timeline. Three tiers:
 
@@ -15,7 +15,7 @@ A Three.js (r170) terrain and map engine for emergency command displays, plus a 
 ```sh
 npm install
 npm run serve        # http://127.0.0.1:8130/  (console) · /tokens.html (design system) · /harness.html (bench)
-npm run verify       # headless checks (32): governance, journey arcs, live-model adapter, a11y, engine
+npm run verify       # headless checks (38): governance, journey arcs, live-model adapter, a11y, engine
 npm run build        # tsc + re-inline the three modules into harness.html
 npm run data         # re-download ./data/ and rebuild the scenario + situations
 npm run phases       # screenshot every phase into qa/ and print draw calls per phase

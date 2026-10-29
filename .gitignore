@@ -5,3 +5,7 @@ qa/
 .agents/
 .codex/
 
+skills-lock.json
+mirasim-conversation-*.md
+DIRECTION-*.md
+task-*.html
