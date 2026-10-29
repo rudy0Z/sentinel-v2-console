@@ -360,6 +360,15 @@ export interface Engine {
   highlightUnit(id: string | null): void;
   /** Current ground position of a unit (track, patrol or fixed), or null. */
   getUnitPosition(id: string): Vec2 | null;
+  /**
+   * CSS→WebGL token bridge (A3): merge a patch into PALETTE and refresh everything that was
+   * initialized from it — the field uniforms' PALETTE defaults, live Line2 materials (their
+   * colors are copied at style time, so they are re-styled in place), and the 2D canvas
+   * layers, which read PALETTE at draw time and pick the patch up on the next frame.
+   * Per-field iso/edge colors pinned by a layer's own spec are data, not palette, and are
+   * intentionally not overridden. Pure function of the theme attribute — never of time.
+   */
+  setPalette(patch: Partial<typeof PALETTE>): void;
   openDronePip(droneId: string, opts?: PipOptions): void;
   closeDronePip(): void;
   setPipSensor(mode: 'eo' | 'ir'): void;
@@ -389,6 +398,10 @@ export const PALETTE = {
   ink: '#0A0E14',
   slate: '#1C2530',
   cyan: '#00E5FF',
+  /** Proposed (drawn, not authorized) — cool periwinkle, off the cyan axis so it can never
+   *  equilibrate with committed cyan (mirrors the CSS `--plan-proposed` token). Used as the
+   *  default for proposed lines that do not pin their own color. */
+  proposed: '#8FB8FF',
   amber: '#FF8A4A',
   red: '#E5533C',
   fire: '#FF6A00',
@@ -396,6 +409,11 @@ export const PALETTE = {
   warn: '#FFB020',
   text: '#D7E0EA',
   dim: '#8796A8',
+  // Provenance ladder, mirrored from the CSS tokens (--p-prov-*). Reserved for renderers
+  // that draw provenance directly; today 2D/3D provenance color comes from the specs.
+  measured: '#8FC6FF',
+  modeled: '#FFB089',
+  authored: '#C9B8FF',
 };
 
 const DEG = Math.PI / 180;
@@ -2981,6 +2999,26 @@ class TacticalTerrainEngine implements Engine {
     return u ? this.unitAnchor(u) : null;
   }
 
+  setPalette(patch: Partial<typeof PALETTE>): void {
+    Object.assign(PALETTE, patch);
+    // Field uniforms: refresh the PALETTE-initialized defaults. Iso/edge colors of a live
+    // field come from its own spec (data-pinned) and are re-applied over these on attach.
+    this.F.uIsoC0.value.copy(hexToVec3(PALETTE.fire));
+    this.F.uIsoC1.value.copy(hexToVec3(PALETTE.fire));
+    this.F.uIsoC2.value.copy(hexToVec3(PALETTE.red));
+    this.F.uEdgeC.value.copy(hexToVec3(PALETTE.fire));
+    // Lines: colors were copied into materials at style time — restyle in place.
+    for (const rec of this.layers.values()) {
+      const s = rec.spec;
+      if (s.type === 'line') {
+        for (const o of rec.objects) if (o instanceof Line2) this.styleLine(o, s);
+      } else if (s.type === 'polygon' && s.stroke) {
+        for (const o of rec.objects) if (o instanceof Line2) this.styleLine(o, { type: 'line', points: [], ...s.stroke, state: s.state });
+      }
+    }
+    this.invalidate();
+  }
+
   setViewInsets(insets: Partial<ViewInsets>, durationMs = 0): void {
     const to = { ...(this.insetTween?.to ?? this.insets), ...insets };
     if (durationMs <= 0) {
@@ -3771,11 +3809,16 @@ class TacticalTerrainEngine implements Engine {
     let style = s.style === 'dashed' ? 1 : s.style === 'chevron' ? 2 : 0;
     let dash = s.dash ?? [12, 8], speed = s.speed ?? 24, hollow = 0;
     if (st === 'proposed') {
+      // Redundant plan-state encoding (B2): proposed is dashed + hollow against committed
+      // solid, so the distinction survives stress, projectors and colour-vision deficiency.
+      if (s.color === undefined) color = colorLow = PALETTE.proposed;
       hollow = 1;
       core = Math.max(core, 4);
       glow *= 0.5;
       glowOp *= 0.35;
       speed = 0;
+      style = 1;
+      dash = [4, 6];
     } else if (st === 'draft') {
       color = colorLow = PALETTE.amber;
       core = Math.max(1.6, core * 0.6);
@@ -4289,7 +4332,10 @@ class TacticalTerrainEngine implements Engine {
     r.tele.innerHTML = `ALT ${fmtInt(agl)} FT AGL<br>GS ${Math.round(gs)} KT<br>HDG ${String(Math.round(g.heading) % 360).padStart(3, '0')}°<br>PITCH ${g.pitch < 0 ? '−' : ''}${Math.abs(Math.round(g.pitch))}°`;
     const { lat, lon } = this.geo.toLatLon(g.tgt[0], g.tgt[1]);
     r.spiline.innerHTML = `SPI ${this.geo.format(lat, lon)}<br><span class="dim">RNG ${fmtInt(g.range)} M · ELEV ${fmtInt(g.tz - 1)} M</span>`;
-    r.right.innerHTML = `BAT 69%<br>LNK −63 DBM<br>ZOOM ${pip.zoom.toFixed(1)}× · ${Math.round(g.hfov)}° FOV`;
+    // Sensor freshness (G2): LINK % presents the feed's existing RSSI on a linear
+    // −90…−30 dBm scale. The pip carries no frame-age source, so AGE is honestly absent.
+    const linkPct = clamp(Math.round(((90 + -63) / 60) * 100), 0, 100);
+    r.right.innerHTML = `BAT 69%<br>LNK −63 DBM · LINK ${linkPct}%<br>ZOOM ${pip.zoom.toFixed(1)}× · ${Math.round(g.hfov)}° FOV`;
     if (r.zoom) r.zoom.textContent = `${pip.zoom.toFixed(1)}×`;
     pip.el.classList.toggle('is-compact', rect.w < 420);
     r.pmark.textContent = `◂ ${g.pitch < 0 ? '−' : ''}${Math.abs(Math.round(g.pitch))}°`;

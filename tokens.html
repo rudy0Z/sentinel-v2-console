@@ -43,12 +43,20 @@
   <header>
     <h1>Sentinel · design system v2</h1>
     <p>Every value on this page is rendered from <code>console.css</code> tokens — the sheet imports it and adds no
-    component styles of its own, so what you see here is exactly what the console renders. Owner rulings 2026-10-26:
-    violet TALON identity, Geist Sans + Geist Mono self-hosted, tabular numerals everywhere numbers live.</p>
+    component styles of its own, so what you see here is exactly what the console renders. Tokens are a strict
+    3-tier system: <b>Tier 1</b> primitives (<code>--p-*</code>, shared verbatim with the WebGL bridge), <b>Tier 2</b>
+    semantic intent (<code>--bg-*</code>, <code>--border-*</code>, <code>--text-*</code>, <code>--plan-*</code>),
+    <b>Tier 3</b> component/state tokens. Components consume Tier 2/3 only. Owner rulings 2026-10-26: violet TALON
+    identity, Geist Sans + Geist Mono self-hosted, tabular numerals everywhere numbers live.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="themeToggle" aria-pressed="false">☾ EOC Darkroom</button>
+      <span class="field-note">Toggle sets <code>data-theme="daylight"</code> on <code>&lt;html&gt;</code> — the same
+      contract the Settings popover uses (Field High-Lux). Terrain stays dark by design; chrome re-skins instantly.</span>
+    </div>
   </header>
 
   <section>
-    <h2>Typography <small>Geist Sans · Geist Mono · latin, self-hosted in ./fonts</small></h2>
+    <h2>Typography <small>Geist Sans · Geist Mono · latin, self-hosted in ./fonts · legibility floor 10.5px</small></h2>
     <div class="demo-card">
       <div class="type-row"><code>--fs-micro 11px</code><span class="caps">Task 02 · dissent gate · standing order cited</span></div>
       <div class="type-row"><code>--fs-caption 11.5px</code><span>Zone 1 · mandatory · 34 homes · 84% cleared</span></div>
@@ -66,8 +74,18 @@
   </section>
 
   <section>
-    <h2>Neutrals <small>cool graphite ramp · 0 = darkest</small></h2>
+    <h2>Tier 1 · neutrals <small>--p-slate-0…12 · cool graphite, 0 = darkest · exact hex shared with the WebGL bridge</small></h2>
     <div class="grid swatches" id="neutrals"></div>
+  </section>
+
+  <section>
+    <h2>Tier 2 · surfaces &amp; borders <small>semantic intent — components never touch primitives</small></h2>
+    <div class="grid swatches" id="surfaces"></div>
+  </section>
+
+  <section>
+    <h2>Tier 2 · text tiers <small>WCAG AA ≥ 4.5:1 measured on #101218 and #0C0E13</small></h2>
+    <div class="grid ladder" id="texttiers"></div>
   </section>
 
   <section>
@@ -87,12 +105,12 @@
   <section>
     <h2>Plan-state ladder <small>mirrors terrainEngine PALETTE — cards and map can never disagree</small></h2>
     <div class="grid ladder">
-      <div class="rung"><i style="background:var(--state-proposed)"></i><div><b>Proposed</b><small>Plan drawn, not yet authorized. Hollow core on the map.</small><code>--state-proposed</code></div></div>
-      <div class="rung"><i style="background:var(--state-expiring)"></i><div><b>Expiring</b><small>Gate open, clock running — a human is being waited on.</small><code>--state-expiring</code></div></div>
-      <div class="rung"><i style="background:var(--state-committed)"></i><div><b>Committed</b><small>Authorized order. Spec as given.</small><code>--state-committed</code></div></div>
-      <div class="rung"><i style="background:var(--state-lapsed)"></i><div><b>Lapsed</b><small>Gate expired — nothing was sent. Silence is never approval.</small><code>--state-lapsed</code></div></div>
-      <div class="rung"><i style="background:var(--state-draft)"></i><div><b>Draft</b><small>TALON revision awaiting a decision, beside the committed plan.</small><code>--state-draft</code></div></div>
-      <div class="rung"><i style="background:var(--state-compromised)"></i><div><b>Compromised</b><small>Plan invalidated by events (route cut, projection passed).</small><code>--state-compromised</code></div></div>
+      <div class="rung"><i style="background:var(--plan-proposed)"></i><div><b>Proposed</b><small>Plan drawn, not yet authorized. Hollow core + dashed stroke on the map.</small><code>--plan-proposed</code> <span class="field-note">(legacy alias --state-proposed)</span></div></div>
+      <div class="rung"><i style="background:var(--state-expiring)"></i><div><b>Expiring</b><small>Gate open, clock running — a human is being waited on.</small><code>--state-expiring</code> <span class="field-note">(aliases --needs)</span></div></div>
+      <div class="rung"><i style="background:var(--plan-committed)"></i><div><b>Committed</b><small>Authorized order. Solid 1.5–2px stroke + solid dot.</small><code>--plan-committed</code> <span class="field-note">(legacy aliases --state-committed, --map-cyan)</span></div></div>
+      <div class="rung"><i style="background:var(--state-lapsed)"></i><div><b>Lapsed</b><small>Gate expired — nothing was sent. Silence is never approval.</small><code>--state-lapsed</code> <span class="field-note">(aliases --idle)</span></div></div>
+      <div class="rung"><i style="background:var(--plan-draft)"></i><div><b>Draft</b><small>TALON revision awaiting a decision, beside the committed plan.</small><code>--plan-draft</code> <span class="field-note">(legacy aliases --state-draft, --map-amber)</span></div></div>
+      <div class="rung"><i style="background:var(--plan-cut)"></i><div><b>Compromised / cut</b><small>Plan invalidated by events (route cut, projection passed). P0 vermilion.</small><code>--plan-cut</code> <span class="field-note">(legacy aliases --state-compromised, --map-red)</span></div></div>
     </div>
   </section>
 
@@ -179,12 +197,14 @@
 <script>
   // Render swatch grids from the live tokens so this page can never show a stale value.
   const groups = {
-    neutrals: ['--n-0','--n-1','--n-2','--n-3','--n-4','--n-5','--n-6','--n-7','--n-8','--n-9','--n-10','--n-11','--n-12'],
-    hues: ['--violet-5','--blue-5','--amber-5','--green-5','--red-5','--talon','--working','--needs','--done','--critical','--idle','--prov-measured','--prov-modeled','--prov-authored'],
-    mapcolors: ['--map-cyan','--map-amber','--map-red','--map-fire','--map-ok','--map-sand','--state-proposed','--state-committed','--state-draft','--state-compromised','--viz-1','--viz-2'],
+    neutrals: ['--p-slate-0','--p-slate-1','--p-slate-2','--p-slate-3','--p-slate-4','--p-slate-5','--p-slate-6','--p-slate-7','--p-slate-8','--p-slate-9','--p-slate-10','--p-slate-11','--p-slate-12'],
+    surfaces: ['--bg-canvas','--bg-surface-1','--bg-surface-2','--bg-surface-3','--bg-glass','--bg-sunken','--bg-raised','--border-subtle','--border-default','--border-strong','--outline-media-inset'],
+    hues: ['--talon','--talon-ink','--working','--needs','--done','--critical','--idle','--prov-measured','--prov-modeled','--prov-authored','--tint-critical-bg','--tint-warning-bg','--tint-talon-bg','--tint-committed-bg'],
+    mapcolors: ['--map-cyan','--map-amber','--map-red','--map-fire','--map-ok','--map-sand','--plan-proposed','--plan-committed','--plan-draft','--plan-cut','--viz-1','--viz-2'],
   };
   for (const [id, vars] of Object.entries(groups)) {
     const el = document.getElementById(id);
+    if (!el) continue;
     for (const v of vars) {
       el.insertAdjacentHTML('beforeend',
         `<div class="sw"><i style="background:var(${v})"></i><span><b>${v.replace(/^--/, '')}</b><em data-var="${v}"></em></span></div>`);
@@ -193,6 +213,39 @@
   for (const em of document.querySelectorAll('[data-var]')) {
     em.textContent = getComputedStyle(document.documentElement).getPropertyValue(em.dataset.var).trim();
   }
+  // Text tiers with the measured WCAG ratios (dark-theme values; recompute live for truthfulness).
+  function lum(hex) {
+    const c = hex.replace('#','');
+    const rgb = [0,2,4].map(i => parseInt(c.slice(i, i+2), 16) / 255)
+      .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+  }
+  function ratio(a, b) { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); }
+  const tiers = [
+    ['--text-1', '#101218', 'Primary · titles, values'],
+    ['--text-2', '#101218', 'Secondary · body copy'],
+    ['--text-3', '#101218', 'Muted · labels, caps'],
+    ['--text-4', '#101218', 'Micro · axis, ticks, timestamps'],
+  ];
+  const tt = document.getElementById('texttiers');
+  const cs = getComputedStyle(document.documentElement);
+  for (const [v, surface, use] of tiers) {
+    const fg = cs.getPropertyValue(v).trim() || '#000000';
+    const r = ratio(fg, surface).toFixed(1);
+    tt.insertAdjacentHTML('beforeend',
+      `<div class="rung"><i style="background:var(${v})"></i><div><b>${v}</b><small>${use} · ${fg.toUpperCase()} · ${r}:1 on ${surface}</small><code>≥ 4.5:1 required</code></div></div>`);
+  }
+  // Theme posture toggle: same contract as the Settings popover control.
+  const toggle = document.getElementById('themeToggle');
+  toggle.addEventListener('click', () => {
+    const day = document.documentElement.dataset.theme === 'daylight';
+    if (day) delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = 'daylight';
+    toggle.setAttribute('aria-pressed', String(!day));
+    toggle.textContent = day ? '☾ EOC Darkroom' : '☀ Field High-Lux';
+    for (const em of document.querySelectorAll('[data-var]')) {
+      em.textContent = getComputedStyle(document.documentElement).getPropertyValue(em.dataset.var).trim();
+    }
+  });
 </script>
 </body>
 </html>

@@ -303,6 +303,118 @@ async function open(q, w = 1600, h = 960, pinned) {
   await page.close();
 }
 
+// ---------------------------------------------------------------- design-system guards: red discipline, text contrast, dock affordance
+{
+  const { page } = await open('situation=wui-breakout&phase=D');
+
+  // Constitutional red discipline (B1): --critical is life safety ONLY. The stylesheet
+  // must not apply --critical (or any red alias / red literal) to the mic, the
+  // interrupt-budget pips or the low-battery state — mic is TALON violet, pips and
+  // <25% battery are --needs amber — and the live DOM must render a drone below the
+  // 25% handover floor in the resolved amber. Parsed in-page from the live stylesheet
+  // (comments stripped, whitespace tolerant); the DOM half runs at T+74+ where FT-01
+  // crosses the floor.
+  const red = await page.evaluate(async () => {
+    const css = await (await fetch('/console.css')).text();
+    const rules = [...css.replace(/\/\*[\s\S]*?\*\//g, ' ').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
+    const RED = /--critical|--p-red|--red-5|--red-1|--map-red|--state-compromised|--plan-cut|255\s*,\s*91\s*,\s*78|229\s*,\s*83\s*,\s*60|#FF5B4E|#E5533C/i;
+    const bad = (frag) => rules.filter((r) => new RegExp(frag).test(r.sel) && RED.test(r.body)).map((r) => r.sel);
+    const battLow = rules.filter((r) => /\.batt\.low/.test(r.sel));
+    talon.answer('plan', 'authorize');
+    player.setTime(76); // FT-01 crossed the 25% handover floor at T+74 (battery 14)
+    // The UI re-renders on rAF and software GL is slow — poll for the low readout.
+    const poll = (ms = 10000) => new Promise((resolve) => {
+      const t0 = Date.now();
+      const step = () => {
+        const el = [...document.querySelectorAll('.batt')].find((b) => /below the 25% handover floor/.test(b.title || ''));
+        if (el) resolve(el);
+        else if (Date.now() - t0 > ms) resolve(null);
+        else setTimeout(step, 100);
+      };
+      step();
+    });
+    const low = await poll();
+    const probe = document.createElement('i');
+    probe.style.color = 'var(--needs)';
+    document.body.appendChild(probe);
+    const needs = getComputedStyle(probe).color;
+    probe.remove();
+    return {
+      mic: bad('\\.mic'), pips: bad('\\.pips'),
+      battLowRules: battLow.length, battLowRed: battLow.filter((r) => RED.test(r.body)).map((r) => r.sel), battLowAmber: battLow.some((r) => /--needs/.test(r.body)),
+      lowFound: !!low, lowColor: low ? getComputedStyle(low).color : null, needs,
+    };
+  });
+  check(
+    'red discipline: no .mic / .pips / .batt.low rule applies --critical or red (amber --needs instead); live <25% battery computes to the resolved --needs',
+    red.mic.length === 0 && red.pips.length === 0 && red.battLowRules >= 1 && red.battLowRed.length === 0 && red.battLowAmber && red.lowFound && red.lowColor === red.needs,
+    JSON.stringify(red)
+  );
+
+  // --text-4 (axis labels, timestamps, micro copy) clears WCAG AA 4.5:1 against the
+  // widget surface it sits on — the live .widget background composited over the
+  // canvas — and against the documented token surface #101218. Ratio computed
+  // in-page with the WCAG relative-luminance formula.
+  const contrast = await page.evaluate(() => {
+    const chan = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    const lum = ([r, g, b]) => 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b);
+    const parse = (s) => {
+      const m = s.trim().match(/rgba?\(([^)]+)\)/);
+      if (m) return m[1].split(/[\s,/]+/).filter(Boolean).slice(0, 4).map(Number);
+      const h = s.trim().replace('#', '');
+      return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+    };
+    const mix = (fg, bg) => { const a = fg[3] ?? 1; return [0, 1, 2].map((i) => Math.round(fg[i] * a + bg[i] * (1 - a))); };
+    const ratio = (a, b) => { const l1 = lum(a), l2 = lum(b); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05); };
+    const probe = (prop) => { const i = document.createElement('i'); i.style.color = prop; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return parse(c); };
+    const text4 = probe('var(--text-4)');
+    const canvas = probe('var(--bg-canvas)');
+    const w = document.querySelector('.widget:not(.feed)');
+    const widgetBg = w ? mix(parse(getComputedStyle(w).backgroundColor), canvas) : parse('#101218');
+    return {
+      text4: getComputedStyle(document.documentElement).getPropertyValue('--text-4').trim(),
+      rWidget: Math.round(ratio(text4, widgetBg) * 100) / 100,
+      rToken: Math.round(ratio(text4, parse('#101218')) * 100) / 100,
+    };
+  });
+  check(
+    '--text-4 contrast: >= 4.5:1 WCAG AA on the live widget surface and on the #101218 token surface',
+    contrast.rWidget >= 4.5 && contrast.rToken >= 4.5,
+    `${contrast.text4} · widget ${contrast.rWidget}:1 · token ${contrast.rToken}:1`
+  );
+  await page.close();
+
+  // Dock overflow affordance (D3): when .slots clips horizontally at 1280x800 the TS
+  // renders a floating .dock-more pill (counts the clipped widgets) that scrolls them
+  // into view on click; with no overflow (1920px) it must not exist.
+  const dock1280 = await open('situation=wui-breakout&phase=D', 1280, 800);
+  const ovf = await dock1280.page.evaluate(async () => {
+    const s = document.querySelector('#slots');
+    const overflow = s.scrollWidth > s.clientWidth + 1;
+    const pill = document.getElementById('dockMore');
+    const visible = !!pill && pill.offsetParent !== null && pill.getBoundingClientRect().height > 0;
+    const label = pill?.textContent ?? '';
+    const hidden = [...s.querySelectorAll('.widget')].filter((w) => w.offsetLeft + w.offsetWidth > s.clientWidth + 1).length;
+    const before = s.scrollLeft;
+    pill?.click();
+    const t0 = Date.now();
+    while (s.scrollLeft <= before && Date.now() - t0 < 3000) await new Promise((r) => setTimeout(r, 50));
+    return { overflow, visible, label, hidden, scrolled: s.scrollLeft > before };
+  });
+  await dock1280.page.close();
+  const dock1920 = await open('situation=wui-breakout&phase=D', 1920, 960);
+  const wide = await dock1920.page.evaluate(() => {
+    const s = document.querySelector('#slots');
+    return { overflow: s.scrollWidth > s.clientWidth + 1, pill: !!document.getElementById('dockMore') };
+  });
+  await dock1920.page.close();
+  check(
+    'dock affordance: at 1280x800 .slots overflow renders a visible .dock-more that scrolls the clipped widgets; at 1920 no overflow and no pill',
+    ovf.overflow && ovf.visible && /^\+\d+ widgets?/.test(ovf.label) && ovf.scrolled && !wide.overflow && !wide.pill,
+    `1280 hidden=${ovf.hidden} label="${ovf.label}" scrolled=${ovf.scrolled} · 1920 overflow=${wide.overflow} pill=${wide.pill}`
+  );
+}
+
 // ---------------------------------------------------------------- engine bench: hud:false, procedural fixture
 {
   const page = await browser.newPage();

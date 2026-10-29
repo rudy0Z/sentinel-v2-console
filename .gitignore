@@ -1,3 +1,7 @@
 node_modules/
 *.log
 .v2c/
+qa/
+.agents/
+.codex/
+

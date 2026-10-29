@@ -696,7 +696,7 @@ talonWUI.items.find((i) => i.id === 'escalate_rr').at = '@answer:escalate:hold+4
 
 const wui = {
   schema: 'tte.situation/1', id: 'wui-breakout',
-  meta: { title: 'Encinal Canyon', subtitle: 'WUI breakout · training exercise', coords: scenario.meta.coords, size: scenario.meta.size, attribution: ATTRIB, disclaimer: DISCLAIMER, epoch: EPOCH, tz: 'PST', feedDrone: 'FT-01', refs: [`Cites S-04 · burn-permit registry discipline (plot AU-2214 trained in the Latigo save)`, `Cites S-03 · DZ-4 mutual-aid dozer staging SLA established at Mulholland`] },
+  meta: { title: 'Encinal Canyon', subtitle: 'WUI breakout · training exercise', coords: scenario.meta.coords, size: scenario.meta.size, attribution: ATTRIB, disclaimer: DISCLAIMER, epoch: EPOCH, tz: 'PST', feedDrone: 'FT-01', tfr: { label: 'AIR ATTACK INBOUND · UAS FLOOR < 150′' }, refs: [`Cites S-04 · burn-permit registry discipline (plot AU-2214 trained in the Latigo save)`, `Cites S-03 · DZ-4 mutual-aid dozer staging SLA established at Mulholland`] },
   clock: { start: -30, end: 140 },
   phases: phasesWUI, layers: layersWUI, units: unitsWUI,
   routes: { defs: routeDefs, primary: 'route-a', committedAt: '@authorize' },

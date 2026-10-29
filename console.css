@@ -15,105 +15,239 @@
 @font-face { font-family: "Geist Mono"; font-style: normal; font-weight: 600; font-display: swap; src: url("./fonts/geist-mono-600.woff2") format("woff2"); }
 
 :root {
-  /* ---- primitives: neutrals (cool graphite, 0 = darkest) */
-  --n-0: #07080B;
-  --n-1: #0C0E12;
-  --n-2: #101218;
-  --n-3: #161922;
-  --n-4: #1D212C;
-  --n-5: #272C39;
-  --n-6: #363C4C;
-  --n-7: #535A6C;
-  --n-8: #7A8193;
-  --n-9: #A3A9B7;
-  --n-10: #C9CDD6;
-  --n-11: #ECEEF2;
-  --n-12: #FFFFFF;
+  /* ==========================================================================
+     TIER 1 — PRIMITIVES. Raw values only, never used directly by components.
+     Exact hex (not OKLCH) by design: the WebGL bridge (terrainEngine PALETTE)
+     shares these exact values. --p-slate-0..12 mirror the legacy --n-0..12 ramp.
+     ========================================================================== */
+  --p-slate-0: #07080B;
+  --p-slate-1: #0C0E12;
+  --p-slate-2: #101218;
+  --p-slate-3: #161922;
+  --p-slate-4: #1D212C;
+  --p-slate-5: #272C39;
+  --p-slate-6: #363C4C;
+  --p-slate-7: #535A6C;
+  --p-slate-8: #7A8193;
+  --p-slate-9: #A3A9B7;
+  --p-slate-10: #C9CDD6;
+  --p-slate-11: #ECEEF2;
+  --p-slate-12: #FFFFFF;
 
-  /* ---- primitives: hues (each with a soft tint for fills) */
-  --violet-5: #9B8AFF;   /* TALON identity */
-  --violet-4: #BBA9FF;
+  /* chromatic primitives */
+  --p-violet-500: #9B8AFF;   /* TALON identity */
+  --p-violet-300: #BBA9FF;
+  --p-periwinkle-300: #8FB8FF; /* plan proposed (cool ice-blue, off the cyan axis) */
+  --p-blue-500: #4F98FF;     /* working */
+  --p-cyan-500: #00E5FF;     /* plan committed — tactical cyan */
+  --p-amber-400: #FFB547;    /* needs you (waiting on a human) */
+  --p-orange-400: #FF8A4A;   /* plan draft — warm tactical amber */
+  --p-orange-500: #FF6A00;   /* fire front */
+  --p-vermilion-600: #E5533C;/* plan cut / compromised — life safety */
+  --p-red-500: #FF5B4E;      /* critical, life safety (UI state) */
+  --p-emerald-400: #3DDC84;  /* safe zone */
+  --p-green-500: #3CD483;    /* done / ok */
+  --p-sand-300: #D9B36C;     /* suppression line */
+  --p-viz-orange: #E8650F;   /* data viz (validated: dark surface --p-slate-2, CVD ΔE 27) */
+  --p-viz-blue: #5B86E6;
+  --p-prov-blue: #8FC6FF;    /* provenance: measured */
+  --p-prov-peach: #FFB089;   /* provenance: modeled */
+  --p-prov-lilac: #C9B8FF;   /* provenance: authored */
+
+  /* alpha ladder — the only translucent steps components may use */
+  --p-alpha-w-02: rgba(255, 255, 255, .02);
+  --p-alpha-w-04: rgba(255, 255, 255, .04);
+  --p-alpha-w-05: rgba(255, 255, 255, .05);
+  --p-alpha-w-06: rgba(255, 255, 255, .06);
+  --p-alpha-w-07: rgba(255, 255, 255, .07);
+  --p-alpha-w-08: rgba(255, 255, 255, .08);
+  --p-alpha-w-10: rgba(255, 255, 255, .10);
+  --p-alpha-w-12: rgba(255, 255, 255, .12);
+  --p-alpha-w-18: rgba(255, 255, 255, .18);
+  --p-alpha-w-20: rgba(255, 255, 255, .20);
+  --p-alpha-w-30: rgba(255, 255, 255, .30);
+  --p-alpha-w-60: rgba(255, 255, 255, .60);
+  --p-alpha-b-30: rgba(0, 0, 0, .30);
+  --p-alpha-b-35: rgba(0, 0, 0, .35);
+  --p-alpha-b-45: rgba(0, 0, 0, .45);
+  --p-alpha-b-50: rgba(0, 0, 0, .50);
+  --p-alpha-b-55: rgba(0, 0, 0, .55);
+  --p-alpha-b-60: rgba(0, 0, 0, .60);
+
+  /* ==========================================================================
+     TIER 2 — SEMANTIC INTENT. Components consume these (or Tier 3) only.
+     ========================================================================== */
+  /* surfaces */
+  --bg-canvas: var(--p-slate-0);
+  --bg-surface-1: var(--p-slate-1);                              /* solid chrome */
+  --bg-surface-2: rgba(17, 20, 26, .92);                         /* cards, widgets */
+  --bg-surface-3: rgba(12, 14, 19, .9);                          /* popovers, menus, toasts */
+  --bg-glass: rgba(12, 14, 19, .85);                             /* rail, topbar glass */
+  --bg-sunken: var(--p-alpha-b-30);
+  --bg-raised: var(--p-alpha-w-04);
+  --bg-hover: var(--p-alpha-w-08);
+  --bg-pressed: var(--p-alpha-w-10);
+
+  /* borders & hairlines */
+  --border-subtle: var(--p-alpha-w-07);
+  --border-default: var(--p-alpha-w-12);
+  --border-strong: var(--p-alpha-w-20);
+  --border-specular-top: var(--p-alpha-w-05);                    /* light catching a top edge */
+  --outline-media-inset: var(--p-alpha-w-10);                    /* hairline around dark media feeds */
+
+  /* text (WCAG AA ≥4.5:1 measured on #101218 and #0C0E13 — see tokens.html) */
+  --text-1: #ECEEF2;   /* 16.1:1 on #101218 · 16.6:1 on #0C0E13 */
+  --text-2: #B6BDCB;   /*  9.9:1 · 10.2:1 */
+  --text-3: #8E96A9;   /*  6.3:1 · 6.5:1 */
+  --text-4: #7D86A0;   /*  5.2:1 · 5.3:1 (lifted one step past spec #788195 so it also clears 4.5:1 on --bg-raised composites) */
+  --text-inverse: var(--p-slate-1);
+  /* icons (WCAG 1.4.11 non-text contrast — meaningful icons ≥3:1, chrome icons ≥7:1) */
+  --icon: var(--p-slate-10);
+  --icon-strong: var(--p-slate-12);
+
+  /* plan-state & authority ladder — mirrors terrainEngine PALETTE so cards and map can never disagree */
+  --plan-proposed: var(--p-periwinkle-300);  /* plan drawn, not yet authorized */
+  --plan-committed: var(--p-cyan-500);       /* authorized order — solid geometry only */
+  --plan-draft: var(--p-orange-400);         /* TALON revision awaiting a decision */
+  --plan-cut: var(--p-vermilion-600);        /* life-safety vermilion — P0 only */
+
+  /* state (one meaning each, never reused for decoration) */
+  --talon: var(--p-violet-500);
+  --talon-ink: var(--p-violet-300);
+  --working: var(--p-blue-500);
+  --needs: var(--p-amber-400);
+  --done: var(--p-green-500);
+  --critical: var(--p-red-500);              /* life safety ONLY — see red-discipline note at B1 */
+  --idle: var(--p-slate-7);
+  --focus-ring: 0 0 0 2px var(--p-slate-0), 0 0 0 4px var(--p-violet-300);
+  --focus-halo: rgba(187, 169, 255, .12);
+
+  /* provenance (doc 12 rule 1) */
+  --prov-measured: var(--p-prov-blue);
+  --prov-modeled: var(--p-prov-peach);
+  --prov-authored: var(--p-prov-lilac);
+
+  /* data viz */
+  --viz-1: var(--p-viz-orange);
+  --viz-2: var(--p-viz-blue);
+
+  /* map state (mirrors terrainEngine PALETTE; 3D terrain stays dark in every theme) */
+  --map-cyan: var(--plan-committed);
+  --map-amber: var(--plan-draft);
+  --map-red: var(--plan-cut);
+  --map-fire: var(--p-orange-500);
+  --map-ok: var(--p-emerald-400);
+  --map-sand: var(--p-sand-300);
+
+  /* legacy state ladder — kept as aliases so existing rules and the TS bridge keep working */
+  --state-proposed: var(--plan-proposed);
+  --state-expiring: var(--needs);
+  --state-committed: var(--plan-committed);
+  --state-lapsed: var(--idle);
+  --state-draft: var(--plan-draft);
+  --state-compromised: var(--plan-cut);
+
+  /* legacy neutral ramp — aliases to Tier-1 (the TS bridge reads these) */
+  --n-0: var(--p-slate-0);
+  --n-1: var(--p-slate-1);
+  --n-2: var(--p-slate-2);
+  --n-3: var(--p-slate-3);
+  --n-4: var(--p-slate-4);
+  --n-5: var(--p-slate-5);
+  --n-6: var(--p-slate-6);
+  --n-7: var(--p-slate-7);
+  --n-8: var(--p-slate-8);
+  --n-9: var(--p-slate-9);
+  --n-10: var(--p-slate-10);
+  --n-11: var(--p-slate-11);
+  --n-12: var(--p-slate-12);
+
+  /* legacy hue steps — aliases to Tier-1 */
+  --violet-5: var(--p-violet-500);
+  --violet-4: var(--p-violet-300);
   --violet-1: rgba(155, 138, 255, .14);
-  --blue-5: #4F98FF;     /* working */
+  --blue-5: var(--p-blue-500);
   --blue-1: rgba(79, 152, 255, .14);
-  --amber-5: #FFB547;    /* needs you (waiting on a human) */
+  --amber-5: var(--p-amber-400);
   --amber-1: rgba(255, 181, 71, .14);
-  --green-5: #3CD483;    /* done / ok */
+  --green-5: var(--p-green-500);
   --green-1: rgba(60, 212, 131, .13);
-  --red-5: #FF5B4E;      /* critical, life safety */
+  --red-5: var(--p-red-500);
   --red-1: rgba(255, 91, 78, .14);
-  /* map state (mirrors terrainEngine PALETTE) */
-  --map-cyan: #00E5FF;   /* committed plan */
-  --map-amber: #FF8A4A;  /* draft revision */
-  --map-red: #E5533C;    /* compromised, order */
-  --map-fire: #FF6A00;   /* fire front */
-  --map-ok: #3DDC84;     /* safe zone */
-  --map-sand: #D9B36C;   /* suppression line */
-  /* plan-state ladder — mirrors terrainEngine PALETTE so cards and map can never disagree */
-  --state-proposed: #67D9F0;    /* plan drawn, not yet authorized */
-  --state-expiring: var(--needs); /* gate open, clock running (a human is being waited on) */
-  --state-committed: #00E5FF;   /* authorized order */
-  --state-lapsed: #7A8193;      /* gate expired — nothing was sent */
-  --state-draft: #FF8A4A;       /* TALON revision awaiting a decision */
-  --state-compromised: #E5533C; /* plan invalidated by events */
-  /* data viz (validated: dark surface --n-2, CVD ΔE 27) */
-  --viz-1: #E8650F;
-  --viz-2: #5B86E6;
 
-  /* ---- semantic: surfaces */
-  --bg: var(--n-0);
-  --surface-glass: rgba(12, 14, 19, .85);
-  --surface-solid: #0C0E13;
+  /* ==========================================================================
+     TIER 3 — COMPONENT & STATE TOKENS.
+     ========================================================================== */
+  /* legacy surface aliases */
+  --bg: var(--bg-canvas);
+  --surface-glass: var(--bg-glass);
+  --surface-solid: var(--bg-surface-1);
+  --surface-card: var(--bg-surface-2);
+  --surface-glass-strong: var(--bg-surface-3);
+  --surface-raised: var(--bg-raised);
+  --surface-hover: var(--bg-hover);
+  --surface-pressed: var(--bg-pressed);
+  --surface-sunken: var(--bg-sunken);
+  --surface-inverse: var(--p-slate-11);
+  --border: var(--border-default);
+  --highlight-top: inset 0 1px 0 var(--border-specular-top);
+
+  /* card / panel tints */
+  --tint-critical-bg: rgba(255, 91, 78, .14);
+  --tint-warning-bg: rgba(255, 181, 71, .14);
+  --tint-talon-bg: rgba(155, 138, 255, .14);
+  --tint-committed-bg: rgba(0, 229, 255, .12);
+  --tint-working-bg: rgba(79, 152, 255, .14);
+  --tint-done-bg: rgba(60, 212, 131, .13);
+  --critical-soft: var(--tint-critical-bg);
+  --needs-soft: var(--tint-warning-bg);
+  --talon-soft: var(--tint-talon-bg);
+  --working-soft: var(--tint-working-bg);
+  --done-soft: var(--tint-done-bg);
+
+  /* buttons & decision rows */
+  --btn-bg: linear-gradient(180deg, var(--p-alpha-w-06) 0%, var(--p-alpha-w-02) 100%);
+  --btn-shadow: inset 0 1px 0 var(--p-alpha-w-08), 0 1px 2px var(--p-alpha-b-45);
+  --btn-shadow-active: inset 0 1px 0 var(--p-alpha-w-02), inset 0 1px 3px var(--p-alpha-b-50); /* press collapses the top specular */
+  --btn-primary-bg: linear-gradient(180deg, #FFFFFF 0%, #DCE0E8 100%);
+  --btn-primary-bg-hover: #FFFFFF;
+  --btn-primary-bg-active: #DCE0E8;
+  --btn-primary-border: var(--p-alpha-w-60);
+  --btn-primary-shadow: inset 0 1px 0 var(--p-slate-12), 0 2px 0 var(--p-slate-8), 0 5px 12px var(--p-alpha-b-50);
+  --btn-primary-shadow-active: inset 0 1px 0 var(--p-slate-12), 0 0 0 var(--p-slate-8), 0 1px 3px var(--p-alpha-b-45);
+  --opt-bg: linear-gradient(180deg, var(--p-alpha-w-04) 0%, var(--p-alpha-w-02) 100%);
+  --opt-bg-rec: linear-gradient(180deg, var(--p-alpha-w-08) 0%, var(--p-alpha-w-04) 100%);
+  --opt-shadow: inset 0 1px 0 var(--p-alpha-w-06), 0 2px 4px var(--p-alpha-b-35);
+  --opt-shadow-active: inset 0 1px 0 var(--p-alpha-w-02), inset 0 1px 3px var(--p-alpha-b-55);
+  --opt-k-shadow: 0 1px 0 var(--p-alpha-b-50);
+
+  /* recessed inputs & wells */
+  --inset-well: inset 0 1px 2px var(--p-alpha-b-60);           /* seg, clock, op */
+  --inset-input: inset 0 1px 2px var(--p-alpha-b-50);
+  --inset-field: inset 0 1px 3px var(--p-alpha-b-55);
+
+  /* glass rim: a 0.5px diagonal light catch, masked to the edge */
+  --rim-gradient: linear-gradient(135deg, var(--p-alpha-w-30), var(--p-alpha-w-05) 38%, var(--p-alpha-w-05) 62%, var(--p-alpha-w-18));
+  /* wordmark: engraved metal */
+  --wordmark-gradient: linear-gradient(180deg, #F5F7FB 0%, #B9C0CD 55%, #8E97A8 100%);
+
+  /* masks (alpha only — theme independent) */
+  --mask-opaque: #000000;
+  --mask-dash: repeating-linear-gradient(90deg, var(--mask-opaque) 0 5px, transparent 5px 7px);
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --surface-card: rgba(17, 20, 26, .92);
-  --surface-glass-strong: rgba(12, 14, 19, .9);
-  --surface-raised: rgba(255, 255, 255, .045);
-  --surface-hover: rgba(255, 255, 255, .07);
-  --surface-pressed: rgba(255, 255, 255, .1);
-  --surface-sunken: rgba(0, 0, 0, .28);
-  --surface-inverse: var(--n-11);
-  --border-subtle: rgba(255, 255, 255, .07);
-  --border: rgba(255, 255, 255, .11);
-  --border-strong: rgba(255, 255, 255, .2);
-  --highlight-top: inset 0 1px 0 rgba(255, 255, 255, .05);
 
-  /* ---- semantic: text */
-  --text-1: var(--n-11);
-  --text-2: var(--n-9);
-  --text-3: var(--n-8);
-  --text-4: var(--n-7);
-  --text-inverse: var(--n-1);
-  /* ---- semantic: icons (WCAG 1.4.11 non-text contrast — meaningful icons ≥3:1, chrome icons ≥7:1) */
-  --icon: var(--n-10);
-  --icon-strong: var(--n-12);
+  /* scroll fades (see .fade-y / .fade-x) */
+  --fade-len: 32px;
+  --fade-start: 0%;
+  --fade-end: 100%;
 
-  /* ---- semantic: state (one meaning each, never reused for decoration) */
-  --talon: var(--violet-5);
-  --talon-soft: var(--violet-1);
-  --talon-ink: var(--violet-4);
-  --working: var(--blue-5);
-  --working-soft: var(--blue-1);
-  --needs: var(--amber-5);
-  --needs-soft: var(--amber-1);
-  --done: var(--green-5);
-  --done-soft: var(--green-1);
-  --critical: var(--red-5);
-  --critical-soft: var(--red-1);
-  --idle: var(--n-7);
-  --focus-ring: 0 0 0 2px var(--n-0), 0 0 0 4px var(--violet-4);
-
-  /* ---- provenance (doc 12 rule 1) */
-  --prov-measured: #8FC6FF;
-  --prov-modeled: #FFB089;
-  --prov-authored: #C9B8FF;
-
-  /* ---- type */
+  /* type */
   --font-sans: "Geist", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --fs-micro: 11px;
-  --fs-badge: 10px;   /* mono data badges (prov, batt, counts) — non-prose */
-  --fs-chart: 9.5px;   /* chart axes, tick labels — data ink */
-  --fs-harness: 8.5px; /* EXERCISE label — harness chrome, never product copy */
+  --fs-badge: 10.5px;  /* mono data badges (prov, batt, counts) — legibility floor */
+  --fs-chart: 10.5px;  /* chart axes, tick labels — lifted from 9.5px */
+  --fs-harness: 10.5px;/* EXERCISE label — harness chrome, never product copy */
   --fs-caption: 11.5px;
   --fs-body: 12.5px;
   --fs-title: 13.5px;
@@ -129,7 +263,7 @@
   --tracking-caps: .08em;
   --tracking-tight: -0.01em;
 
-  /* ---- space (4px grid) */
+  /* space (4px grid) */
   --s-1: 4px;
   --s-2: 8px;
   --s-3: 12px;
@@ -139,7 +273,7 @@
   --s-8: 32px;
   --s-10: 40px;
 
-  /* ---- radius */
+  /* radius (concentric: r_inner = max(2px, r_outer - padding)) */
   --r-xs: 4px;
   --r-sm: 6px;
   --r-md: 8px;
@@ -147,20 +281,21 @@
   --r-xl: 12px;
   --r-pill: 999px;
 
-  /* ---- elevation */
-  --shadow-1: 0 8px 24px rgba(0, 0, 0, .35);
-  --shadow-2: 0 18px 50px rgba(0, 0, 0, .5);
+  /* elevation */
+  --shadow-1: 0 8px 24px var(--p-alpha-b-35);
+  --shadow-2: 0 18px 50px var(--p-alpha-b-50);
   --blur: blur(10px) saturate(140%);
 
-  /* ---- motion */
+  /* motion */
   --dur-fast: 120ms;
   --dur-base: 200ms;
   --dur-slow: 320ms;
   --ease-out: cubic-bezier(.2, .8, .2, 1);
   --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1); /* damped avionics release — no toy bounce */
 
-  /* ---- layout */
-  --gap: 10px;
+  /* layout */
+  --gap: 12px; /* snapped to the 4px grid (--s-3) */
   --topbar-h: 52px;
   --rail-w2: 44px;
   --panel-w: 372px;
@@ -168,7 +303,7 @@
   --slots-h: 204px;
   --tools-w: 40px;
 
-  /* ---- layers */
+  /* layers */
   --z-map-ui: 10;
   --z-dock: 20;
   --z-talon: 30;
@@ -181,11 +316,29 @@
   color-scheme: dark;
 }
 
+/* Scroll-fade plumbing: registered props animate the mask stops against the
+   element's own scroll timeline (pattern: craft.gustavofior.com/scroll-fades). */
+@property --fade-start { syntax: "<length-percentage>"; inherits: false; initial-value: 0%; }
+@property --fade-end { syntax: "<length-percentage>"; inherits: false; initial-value: 100%; }
+
 @media (max-height: 780px) { :root { --slots-h: 172px; } }
 @media (min-width: 1680px) { :root { --panel-w: 400px; } }
+/* Reduced motion keeps state legible: color/opacity fades survive at ~80-120ms,
+   continuous loops stop, entrances collapse to opacity-only, presses don't travel. */
 @media (prefers-reduced-motion: reduce) {
-  :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; }
-  *, *::before, *::after { animation-duration: 0ms !important; animation-iteration-count: 1 !important; }
+  :root { --dur-fast: 80ms; --dur-base: 120ms; --dur-slow: 120ms; }
+  /* continuous loops off */
+  .dot.working, .live::before, .rail .rbtn.mic[aria-pressed="true"], .mascot .orb-tick, .mascot .orb-dot { animation: none; }
+  /* entrances become opacity-only */
+  @keyframes pop-in { from { opacity: 0; } }
+  @keyframes chat-in { from { opacity: 0; } }
+  @keyframes widget-in { from { opacity: 0; } }
+  @keyframes fade { from { opacity: 0; } }
+  /* presses and shakes don't move */
+  .btn:active:not(:disabled), .opt:active:not(:disabled), .rbtn:active, .chip:active { transform: none; }
+  .rail .statuspill .adot:hover .dot { transform: none; }
+  .field.invalid { animation: none; }
+  .cards { transition: none; }
 }
 @media (prefers-reduced-transparency: reduce) {
   .glass, .rail .rbtn, .rail .statuspill, .pop, .tip { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--surface-solid); }
@@ -199,7 +352,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text-1
 body { overflow: hidden; }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: none; box-shadow: var(--focus-ring), 0 0 0 7px color-mix(in srgb, var(--violet-4) 12%, transparent); }
+:focus-visible { outline: none; box-shadow: var(--focus-ring), 0 0 0 7px var(--focus-halo); }
 .mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .caps { font-size: var(--fs-micro); font-weight: var(--fw-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-3); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -209,21 +362,21 @@ svg.ic.sm { width: 14px; height: 14px; }
 svg.ic.xs { width: 12px; height: 12px; }
 
 /* ---- glass surface */
-.glass { position: relative; background: var(--surface-glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border: 1px solid var(--border-subtle); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .09), inset 0 0 0 .5px rgba(255, 255, 255, .05), 0 2px 6px rgba(0, 0, 0, .35), 0 18px 44px -18px rgba(0, 0, 0, .5); }
+.glass { position: relative; background: var(--surface-glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border: 1px solid var(--border-subtle); box-shadow: inset 0 1px 0 var(--p-alpha-w-10), inset 0 0 0 .5px var(--p-alpha-w-05), 0 2px 6px var(--p-alpha-b-35), 0 18px 44px -18px var(--p-alpha-b-50); }
 /* film grain on the glass: kills gradient banding and reads as sensor texture */
 .glass::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; opacity: .045; mix-blend-mode: overlay; background-image: var(--grain); background-size: 180px; }
 
 /* ---- buttons */
-.btn { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2); height: 32px; padding: 0 var(--s-3); border-radius: var(--r-sm); border: 1px solid var(--border); background: linear-gradient(180deg, rgba(255, 255, 255, .06) 0%, rgba(255, 255, 255, .025) 100%); color: var(--text-1); font-size: var(--fs-body); font-weight: var(--fw-medium); white-space: nowrap; user-select: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .45); transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast), transform 170ms cubic-bezier(.2, 1.4, .35, 1); }
+.btn { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2); height: 32px; padding: 0 var(--s-3); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--btn-bg); color: var(--text-1); font-size: var(--fs-body); font-weight: var(--fw-medium); white-space: nowrap; user-select: none; box-shadow: var(--btn-shadow); transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast), transform 120ms var(--ease-out-expo); }
 .btn:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--border-strong); }
-.btn:active:not(:disabled) { background: var(--surface-pressed); transform: translateY(1px); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .5); transition-duration: 40ms; }
+.btn:active:not(:disabled) { background: var(--surface-pressed); transform: translateY(1px); box-shadow: var(--btn-shadow-active); transition-duration: 40ms; } /* 40ms travel in, 120ms --ease-out-expo release */
 .rbtn:active { transform: translateY(1px); }
 .opt:active:not(:disabled) { transform: translateY(1px); }
 .chip:active { transform: scale(0.97); }
 .btn:disabled { opacity: .4; cursor: default; }
-.btn.primary { background: linear-gradient(180deg, #FFFFFF 0%, #DCE0E8 100%); color: var(--n-0); border-color: rgba(255, 255, 255, .6); font-weight: var(--fw-semibold); box-shadow: inset 0 1px 0 #FFFFFF, 0 2px 0 var(--n-8), 0 5px 12px rgba(0, 0, 0, .5); }
-.btn.primary:hover:not(:disabled) { background: #FFFFFF; }
-.btn.primary:active:not(:disabled) { background: #DCE0E8; transform: translateY(2px); box-shadow: inset 0 1px 0 #FFFFFF, 0 0 0 var(--n-8), 0 1px 3px rgba(0, 0, 0, .45); }
+.btn.primary { background: var(--btn-primary-bg); color: var(--n-0); border-color: var(--btn-primary-border); font-weight: var(--fw-semibold); box-shadow: var(--btn-primary-shadow); }
+.btn.primary:hover:not(:disabled) { background: var(--btn-primary-bg-hover); }
+.btn.primary:active:not(:disabled) { background: var(--btn-primary-bg-active); transform: translateY(2px); box-shadow: var(--btn-primary-shadow-active); }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--text-2); box-shadow: none; }
 .btn.ghost:hover:not(:disabled) { color: var(--text-1); background: var(--surface-hover); }
 .btn.sm { height: 26px; padding: 0 var(--s-2); font-size: var(--fs-caption); border-radius: var(--r-xs); }
@@ -233,19 +386,19 @@ svg.ic.xs { width: 12px; height: 12px; }
 .kbd { font: var(--fw-medium) var(--fs-micro)/1 var(--font-mono); color: var(--text-3); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; min-width: 18px; text-align: center; display: inline-block; }
 
 /* ---- segmented control */
-.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6); }
+.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: var(--inset-well); }
 .seg button { appearance: none; border: 0; background: transparent; color: var(--text-2); height: 24px; padding: 0 var(--s-2); border-radius: var(--r-xs); font-size: var(--fs-caption); font-weight: var(--fw-medium); }
 .seg button:hover { color: var(--text-1); }
 .seg button[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); box-shadow: var(--highlight-top); }
 
 /* ---- chips, dots, badges */
-.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--n-8); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--idle); }
 .dot.working { background: var(--working); box-shadow: 0 0 0 3px var(--working-soft); animation: breathe 1.6s var(--ease-in-out) infinite; }
 .dot.needs { background: var(--needs); box-shadow: 0 0 0 3px var(--needs-soft); }
 .dot.done { background: var(--done); }
 .dot.critical { background: var(--critical); box-shadow: 0 0 0 3px var(--critical-soft); }
 @keyframes breathe { 50% { box-shadow: 0 0 0 5px transparent; opacity: .7; } }
-.chip { display: inline-flex; align-items: center; gap: var(--s-1); height: 22px; padding: 0 var(--s-2); border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface-raised); color: var(--text-2); font-size: var(--fs-caption); font-weight: var(--fw-medium); white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; gap: var(--s-1); height: 22px; padding: 0 var(--s-2); border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface-raised); color: var(--text-2); font-size: var(--fs-caption); font-weight: var(--fw-medium); white-space: nowrap; transition: transform 120ms var(--ease-out-expo); }
 button.chip:hover { color: var(--text-1); border-color: var(--border-strong); background: var(--surface-hover); }
 .chip.talon { color: var(--talon-ink); border-color: color-mix(in srgb, var(--talon) 40%, transparent); background: var(--talon-soft); }
 .chip.needs { color: var(--needs); border-color: color-mix(in srgb, var(--needs) 40%, transparent); background: var(--needs-soft); }
@@ -269,7 +422,7 @@ button.chip:hover { color: var(--text-1); border-color: var(--border-strong); ba
 
 .topbar { position: absolute; z-index: var(--z-topbar); top: var(--gap); left: var(--gap); right: var(--gap); height: var(--topbar-h); border-radius: var(--r-lg); display: flex; align-items: center; gap: var(--s-3); padding: 0 var(--s-2) 0 var(--s-4); min-width: 0; }
 .brand { display: flex; align-items: center; gap: var(--s-2); font-weight: var(--fw-bold); font-size: var(--fs-title); letter-spacing: .14em; white-space: nowrap; }
-.brand span { background: linear-gradient(180deg, #F5F7FB 0%, #B9C0CD 55%, #8E97A8 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand span { background: var(--wordmark-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .brand svg { width: 22px; height: 22px; }
 .vsep { width: 1px; height: 22px; background: var(--border); flex: none; }
 .sitbtn { appearance: none; display: flex; align-items: center; gap: var(--s-2); height: 36px; padding: 0 var(--s-3) 0 var(--s-2); border-radius: var(--r-sm); border: 1px solid transparent; background: transparent; min-width: 0; text-align: left; }
@@ -285,7 +438,7 @@ button.chip:hover { color: var(--text-1); border-color: var(--border-strong); ba
 .kpi b { font: var(--fw-semibold) var(--fs-title)/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
 .kpi small { font-size: var(--fs-micro); color: var(--text-3); display: flex; align-items: center; gap: 5px; }
 .grow { flex: 1; min-width: 0; }
-.clock { display: flex; align-items: center; gap: var(--s-2); height: 36px; padding: 0 var(--s-3); border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6); white-space: nowrap; }
+.clock { display: flex; align-items: center; gap: var(--s-2); height: 36px; padding: 0 var(--s-3); border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: var(--inset-well); white-space: nowrap; }
 .clock b { font: var(--fw-semibold) var(--fs-body)/1 var(--font-mono); }
 .clock span { font: var(--fw-medium) var(--fs-caption)/1 var(--font-mono); color: var(--text-2); }
 .live { display: inline-flex; align-items: center; gap: var(--s-1); font: var(--fw-bold) var(--fs-micro)/1 var(--font-sans); letter-spacing: var(--tracking-caps); color: var(--critical); }
@@ -310,10 +463,11 @@ button.chip:hover { color: var(--text-1); border-color: var(--border-strong); ba
 .readout i { font-style: normal; color: var(--text-4); }
 
 /* ---- popovers, menus */
-.pop { position: absolute; z-index: var(--z-popover); border-radius: var(--r-lg); padding: var(--s-3); min-width: 240px; max-height: calc(100vh - 120px); overflow: auto; background: var(--surface-glass-strong); animation: pop-in var(--dur-base) var(--ease-out); scrollbar-width: thin; }
+.pop { position: absolute; z-index: var(--z-popover); border-radius: var(--r-lg); padding: var(--s-3); min-width: 240px; max-height: calc(100vh - 120px); overflow: auto; background: var(--surface-glass-strong); animation: pop-in var(--dur-base) var(--ease-out); scrollbar-width: thin; transform-origin: top right; /* rail popovers; topbar popovers add .from-top */ }
+.pop.from-top { transform-origin: top center; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
 .pop h3 { margin: 0 0 var(--s-2); }
-.menu-item { appearance: none; width: 100%; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-2); border-radius: var(--r-sm); border: 0; background: transparent; text-align: left; }
+.menu-item { appearance: none; width: 100%; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-2); border-radius: var(--r-xs); border: 0; background: transparent; text-align: left; } /* concentric: 10px pop - 12px padding → 4px */
 .menu-item:hover { background: var(--surface-hover); }
 .menu-item b { font-weight: var(--fw-medium); display: block; }
 .menu-item small { color: var(--text-3); font-size: var(--fs-caption); display: block; }
@@ -331,7 +485,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 [aria-checked="true"] > .switch::after { transform: translateX(12px); background: var(--n-11); }
 /* live-model settings (Phase 4) */
 .airow { display: grid; grid-template-columns: 84px 1fr; gap: var(--s-2); align-items: center; margin: 0 0 var(--s-2); }
-.in { height: 30px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface-sunken); color: var(--text-1); font-size: var(--fs-caption); padding: 0 var(--s-2); min-width: 0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .5); }
+.in { height: 30px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface-sunken); color: var(--text-1); font-size: var(--fs-caption); padding: 0 var(--s-2); min-width: 0; box-shadow: var(--inset-input); }
 .in:focus { outline: none; border-color: var(--border-strong); }
 .ghead { margin: var(--s-3) var(--s-1) var(--s-1); }
 .legend-row { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-caption); color: var(--text-2); padding: 3px var(--s-1); }
@@ -360,17 +514,17 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .rail .rbtn:hover { color: var(--icon-strong); background: var(--surface-hover); }
 .rail .rbtn .mascot { width: 30px; height: 30px; }
 .rail .rbtn[aria-pressed="true"] { color: var(--talon-ink); border-color: color-mix(in srgb, var(--talon) 45%, transparent); background: var(--talon-soft); }
-.rail .rbtn.mic[aria-pressed="true"] { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 45%, transparent); background: var(--critical-soft); animation: breathe 1.4s var(--ease-in-out) infinite; }
+.rail .rbtn.mic[aria-pressed="true"] { color: var(--talon-ink); border-color: color-mix(in srgb, var(--talon) 45%, transparent); background: var(--talon-soft); animation: breathe 1.4s var(--ease-in-out) infinite; } /* red discipline: transmitting is TALON activity, not life safety */
 .rail .rbtn .badge { position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--r-pill); background: var(--needs); color: var(--text-inverse); font: var(--fw-bold) var(--fs-badge)/16px var(--font-sans); text-align: center; }
 .rail .rbtn .pips { position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; }
 .rail .rbtn .pips i { width: 6px; height: 2.5px; border-radius: 1px; background: var(--n-6); }
-.rail .rbtn .pips i.on { background: var(--critical); }
+.rail .rbtn .pips i.on { background: var(--needs); } /* red discipline: interrupt budget pips are amber */
 
 /* chat: a floating card over the map — never a docked panel, the map does not reflow */
 .chat { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h)); right: calc(var(--gap) * 2 + var(--rail-w2)); width: var(--panel-w); max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 96px); border-radius: var(--r-xl); display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-2); animation: chat-in var(--dur-base) var(--ease-out); }
 .chat[hidden] { display: none; }
 /* light catches the top edge of the glass: a 0.5px diagonal rim, masked so only the edge paints */
-.chat::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: .5px; pointer-events: none; background: linear-gradient(135deg, rgba(255, 255, 255, .30), rgba(255, 255, 255, .05) 38%, rgba(255, 255, 255, .05) 62%, rgba(255, 255, 255, .18)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+.chat::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: .5px; pointer-events: none; background: var(--rim-gradient); -webkit-mask: linear-gradient(var(--mask-opaque) 0 0) content-box, linear-gradient(var(--mask-opaque) 0 0); -webkit-mask-composite: xor; mask: linear-gradient(var(--mask-opaque) 0 0) content-box, linear-gradient(var(--mask-opaque) 0 0); mask-composite: exclude; }
 @keyframes chat-in { from { opacity: 0; transform: translateX(10px); } }
 
 /* posture pill: the operator follows the incident, not the process */
@@ -384,14 +538,16 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 
 /* decision cards: appear only while an item is open — tasks surface naturally,
    anchored to the left of the edge rail */
-.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: calc(var(--gap) * 2 + var(--rail-w2)); width: 372px; display: grid; gap: var(--s-2); max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 120px); overflow-y: auto; scrollbar-width: none; pointer-events: none; }
+.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: calc(var(--gap) * 2 + var(--rail-w2)); width: 372px; display: grid; gap: var(--s-2); max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 120px); overflow-y: auto; scrollbar-width: none; pointer-events: none; transition: transform var(--dur-base) var(--ease-out-expo); }
 .cards > * { pointer-events: auto; }
 .cards:empty { display: none; }
-.cards .card { box-shadow: var(--shadow-2), inset 0 0 0 .5px rgba(255, 255, 255, .08); }
-.app.chat-open .cards { right: calc(var(--gap) * 3 + var(--rail-w2) + var(--panel-w)); }
+.cards .card { box-shadow: var(--shadow-2), inset 0 0 0 .5px var(--p-alpha-w-08); }
+/* TALON drawer displacement is a transform, not a layout property: the TS layer
+   toggles .chat-open on the app root (legacy alias) or .cards-shift on the stack. */
+.app.chat-open .cards, .cards.cards-shift { transform: translateX(calc(-1 * (var(--panel-w) + var(--gap)))); }
 .app.chat-open .cards { max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 96px); }
-.tip { position: fixed; z-index: var(--z-toast); pointer-events: none; padding: 6px var(--s-3); border-radius: var(--r-pill); background: var(--surface-glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow-1); font-size: var(--fs-caption); white-space: nowrap; display: flex; align-items: center; gap: var(--s-2); opacity: 0; transform: translateX(4px); transition: opacity var(--dur-fast), transform var(--dur-fast); }
-.tip.on { opacity: 1; transform: none; }
+.tip { position: fixed; z-index: var(--z-toast); pointer-events: none; padding: 6px var(--s-3); border-radius: var(--r-pill); background: var(--surface-glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow-1); font-size: var(--fs-caption); white-space: nowrap; display: flex; align-items: center; gap: var(--s-2); opacity: 0; transform: translateX(4px); transition: opacity 80ms var(--ease-out), transform 80ms var(--ease-out); }
+.tip.on { opacity: 1; transform: none; transition-duration: 120ms; } /* enter slower (120ms) than exit (80ms) */
 .tip small { color: var(--text-3); }
 
 .phead { position: relative; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-4) var(--s-4) var(--s-3); }
@@ -400,7 +556,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .budget { margin-left: auto; display: grid; gap: var(--s-1); justify-items: end; }
 .budget .pips { display: flex; gap: 3px; }
 .budget .pips i { width: 14px; height: 4px; border-radius: 2px; background: var(--n-5); }
-.budget .pips i.on { background: var(--critical); }
+.budget .pips i.on { background: var(--needs); } /* red discipline: interrupt budget pips are amber */
 .budget small { font-size: var(--fs-micro); color: var(--text-3); white-space: nowrap; }
 .ptabs { position: relative; display: flex; gap: var(--s-1); padding: 0 var(--s-4) var(--s-2); border-bottom: 1px solid var(--border-subtle); }
 .ptabs button { appearance: none; border: 0; background: transparent; color: var(--text-3); font-weight: var(--fw-medium); padding: 6px var(--s-2); border-radius: var(--r-xs); position: relative; }
@@ -414,13 +570,13 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
    the state: calm stippled ring · working sphere · listening wave · focused
    dotted triangle (a human authority gate is open) · sheepish constellation ·
    alert serrated ring. Mood and gaze are CSS states. */
-.mascot { width: 40px; height: 40px; flex: none; overflow: visible; --orb-c: var(--n-10); }
+.mascot { width: 40px; height: 40px; flex: none; overflow: visible; --orb-c: var(--icon); }
 .mascot .orb-tick, .mascot .orb-link, .mascot .orb-dot { transition: opacity var(--dur-base) var(--ease-out); transform-origin: 32px 32px; }
 .mascot .orb-dots, .mascot .orb-ticks { transition: transform var(--dur-slow) var(--ease-out); transform-origin: 32px 32px; }
 .mascot .orb-tick { stroke: var(--orb-c); stroke-width: 1.5; stroke-linecap: round; opacity: 0; }
 .mascot .orb-dot { fill: var(--orb-c); opacity: 0; }
 .mascot .orb-link { stroke: var(--orb-c); stroke-width: .75; opacity: 0; }
-.mascot[data-mood="calm"] { --orb-c: var(--n-9); }
+.mascot[data-mood="calm"] { --orb-c: var(--text-3); }
 .mascot[data-mood="calm"] .orb-tick { opacity: .78; animation: orbSpinSlow 28s linear infinite; }
 .mascot[data-mood="working"] { --orb-c: var(--working); }
 .mascot[data-mood="listening"] { --orb-c: var(--talon-ink); }
@@ -465,20 +621,20 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .evid { display: flex; flex-wrap: wrap; gap: var(--s-1); }
 .evid .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--talon-ink); }
 .opts { display: grid; gap: var(--s-1); }
-.opt { appearance: none; display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: var(--s-2); width: 100%; min-height: 40px; padding: 6px var(--s-2) 6px 6px; border-radius: var(--r-md); border: 1px solid var(--border); background: linear-gradient(180deg, rgba(255, 255, 255, .045) 0%, rgba(255, 255, 255, .015) 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 2px 4px rgba(0, 0, 0, .35); text-align: left; user-select: none; transition: background var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast), transform 170ms cubic-bezier(.2, 1.4, .35, 1); }
+.opt { appearance: none; display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: var(--s-2); width: 100%; min-height: 40px; padding: 6px var(--s-2) 6px 6px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--opt-bg); box-shadow: var(--opt-shadow); text-align: left; user-select: none; transition: background var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast), transform 120ms var(--ease-out-expo); }
 .opt:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--border-strong); }
-.opt:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .55); transition-duration: 40ms; }
+.opt:active:not(:disabled) { transform: translateY(1px); box-shadow: var(--opt-shadow-active); transition-duration: 40ms; } /* 40ms travel in, 120ms --ease-out-expo release */
 .opt:disabled { opacity: .45; cursor: default; }
-.opt .k { width: 24px; height: 24px; border-radius: var(--r-xs); display: grid; place-items: center; background: var(--surface-pressed); border: 1px solid var(--border-strong); border-bottom-width: 2px; box-shadow: 0 1px 0 rgba(0, 0, 0, .5); font: var(--fw-semibold) var(--fs-caption)/1 var(--font-mono); color: var(--text-2); }
+.opt .k { width: 24px; height: 24px; border-radius: var(--r-xs); display: grid; place-items: center; background: var(--surface-pressed); border: 1px solid var(--border-strong); border-bottom-width: 2px; box-shadow: var(--opt-k-shadow); font: var(--fw-semibold) var(--fs-caption)/1 var(--font-mono); color: var(--text-2); }
 .opt b { font-weight: var(--fw-medium); }
 .opt small { color: var(--text-3); font-size: var(--fs-micro); }
-.opt.rec { border-color: var(--border-strong); background: linear-gradient(180deg, rgba(255, 255, 255, .08) 0%, rgba(255, 255, 255, .03) 100%); }
+.opt.rec { border-color: var(--border-strong); background: var(--opt-bg-rec); }
 .opt.rec .k { background: var(--surface-inverse); color: var(--text-inverse); }
 .opt .tag { font-size: var(--fs-micro); color: var(--text-3); }
 .gate { border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--critical) 35%, transparent); background: var(--critical-soft); padding: var(--s-2) var(--s-3); display: grid; gap: var(--s-1); font-size: var(--fs-caption); color: var(--text-2); }
 .gate b { color: var(--text-1); font: var(--fw-semibold) var(--fs-caption)/1.35 var(--font-mono); letter-spacing: .02em; }
 .gate .check { color: var(--done); display: flex; gap: var(--s-1); align-items: center; }
-.coa { display: grid; grid-template-columns: 96px 1fr 1fr; border-radius: var(--r-md); border: 1px solid var(--border); overflow: hidden; font-size: var(--fs-caption); }
+.coa { display: grid; grid-template-columns: 96px 1fr 1fr; border-radius: var(--r-xs); border: 1px solid var(--border); overflow: hidden; font-size: var(--fs-caption); } /* concentric: 10px card - 12px padding → 4px */
 .coa > * { padding: 6px var(--s-2); border-top: 1px solid var(--border-subtle); }
 .coa .hd { border-top: 0; }
 .coa button.hd { appearance: none; border: 0; background: transparent; text-align: left; display: grid; gap: 1px; padding: var(--s-2); border-left: 1px solid var(--border-subtle); }
@@ -493,7 +649,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .conf { display: inline-flex; align-items: center; gap: var(--s-1); }
 .conf i { width: 4px; height: 9px; border-radius: 1px; background: var(--n-5); }
 .conf i.on { background: var(--text-2); }
-.dissent { display: grid; gap: var(--s-2); border-radius: var(--r-md); border: 1px solid var(--border); padding: var(--s-3); background: var(--surface-sunken); }
+.dissent { display: grid; gap: var(--s-2); border-radius: var(--r-xs); border: 1px solid var(--border); padding: var(--s-3); background: var(--surface-sunken); } /* concentric: 10px card - 12px padding → 4px */
 .dissent textarea { width: 100%; resize: vertical; min-height: 56px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface-sunken); padding: var(--s-2); font-size: var(--fs-body); color: var(--text-1); }
 .dissent .row { display: flex; gap: var(--s-2); justify-content: flex-end; }
 .record { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
@@ -534,12 +690,12 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .composer { border-top: 1px solid var(--border-subtle); padding: var(--s-2) var(--s-3) var(--s-3); display: grid; gap: var(--s-2); }
 .composer .to { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-micro); color: var(--text-3); }
 .composer .to b { color: var(--talon-ink); font-weight: var(--fw-medium); }
-.field { display: flex; align-items: center; gap: var(--s-1); padding: 0 var(--s-1) 0 var(--s-3); height: 42px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface-sunken); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .55); transition: border-color var(--dur-fast); }
+.field { display: flex; align-items: center; gap: var(--s-1); padding: 0 var(--s-1) 0 var(--s-3); height: 42px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface-sunken); box-shadow: var(--inset-field); transition: border-color var(--dur-fast); }
 .field:focus-within { border-color: var(--border-strong); }
 .field input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: var(--fs-body); }
 .field input::placeholder { color: var(--text-4); }
 .suggest { display: flex; gap: var(--s-1); overflow-x: auto; scrollbar-width: none; }
-.mic[aria-pressed="true"] { color: var(--critical); }
+.mic[aria-pressed="true"] { color: var(--talon-ink); } /* red discipline: PTT is violet, not life-safety red */
 
 /* review */
 .measures { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
@@ -553,7 +709,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .drow time { font: var(--fw-medium) var(--fs-micro)/18px var(--font-mono); color: var(--text-4); }
 
 /* operator identity */
-.op { display: inline-flex; align-items: center; gap: var(--s-2); height: 36px; padding: 0 var(--s-3); border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6); white-space: nowrap; }
+.op { display: inline-flex; align-items: center; gap: var(--s-2); height: 36px; padding: 0 var(--s-3); border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: var(--inset-well); white-space: nowrap; }
 .op .dot { width: 7px; height: 7px; }
 .op b { font-size: var(--fs-caption); font-weight: var(--fw-semibold); }
 .op span { font-size: var(--fs-micro); color: var(--text-3); }
@@ -564,8 +720,13 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .dock { position: absolute; z-index: var(--z-dock); left: var(--gap); right: var(--gap); bottom: var(--gap); }
 .slots { display: flex; align-items: flex-end; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; }
 .slots::-webkit-scrollbar { display: none; }
+/* "+N more widgets" affordance: rendered by the TS layer only when .slots
+   overflows horizontally (e.g. 2 of 5 widgets clip at 1280px). Click scrolls
+   the hidden widgets into view. */
+.dock-more { position: absolute; z-index: calc(var(--z-dock) + 1); right: var(--s-1); bottom: calc(100% - var(--s-4)); display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid color-mix(in srgb, var(--needs) 45%, transparent); background: var(--surface-glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); color: var(--needs); font: var(--fw-semibold) var(--fs-micro)/1 var(--font-mono); letter-spacing: .04em; white-space: nowrap; box-shadow: var(--shadow-1); cursor: pointer; }
+.dock-more:hover { border-color: var(--needs); }
 /* calm mode: no incident anywhere — the widgets dock as a left column, the map owns the rest */
-.app.calm .slots { position: fixed; z-index: var(--z-dock); left: var(--gap); top: calc(var(--gap) * 2 + var(--topbar-h)); flex-direction: column; align-items: flex-start; width: 340px; max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 60px); overflow-y: auto; overflow-x: hidden; }
+.app.calm .slots { position: fixed; z-index: var(--z-dock); left: var(--gap); top: calc(var(--gap) * 2 + var(--topbar-h)); flex-direction: column; align-items: flex-start; width: 340px; max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 60px); overflow-y: auto; overflow-x: hidden; -webkit-mask-image: none; mask-image: none; animation: none; }
 .widget { flex: 0 0 auto; border-radius: var(--r-lg); display: flex; flex-direction: column; min-width: 0; overflow: hidden; animation: widget-in var(--dur-base) var(--ease-out); height: var(--slots-h); }
 .widget[data-w='fleet'], .widget[data-w='evac'], .widget[data-w='events'] { width: 316px; }
 .widget[data-w='weather'] { width: 336px; }
@@ -590,7 +751,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .track .line { position: absolute; left: 0; right: 0; top: 19px; height: 2px; border-radius: 1px; background: var(--n-5); }
 .track .fill { position: absolute; left: 0; top: 19px; height: 2px; border-radius: 1px; background: var(--text-2); }
 .track .future { position: absolute; top: 19px; height: 2px; right: 0; background: repeating-linear-gradient(90deg, var(--n-6) 0 4px, transparent 4px 8px); }
-.track .head { position: absolute; top: 12px; width: 2px; height: 16px; margin-left: -1px; border-radius: 1px; background: var(--text-1); box-shadow: 0 0 0 3px rgba(255, 255, 255, .08); }
+.track .head { position: absolute; top: 12px; width: 2px; height: 16px; margin-left: -1px; border-radius: 1px; background: var(--text-1); box-shadow: 0 0 0 3px var(--p-alpha-w-08); }
 .track .head::after { content: ""; position: absolute; left: -4px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-1); }
 .track .mk { position: absolute; top: 13px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; display: grid; place-items: center; }
 .track .mk::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); box-shadow: 0 0 0 2px var(--n-2); }
@@ -617,7 +778,8 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .widget.feed { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .widget.feed > header { background: var(--surface-glass-strong); }
 .widget.feed .wbody { padding: 0; position: relative; }
-.feedhost { position: absolute; inset: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); overflow: hidden; }
+.feedhost { position: absolute; inset: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); overflow: hidden; box-shadow: inset 0 0 0 1px var(--outline-media-inset); } /* inner hairline keeps night-vision/IR feeds bounded on dark cards */
+.drone-pip { box-shadow: inset 0 0 0 1px var(--outline-media-inset); }
 .feedhost .empty, .wbody .empty { display: grid; place-items: center; height: 100%; color: var(--text-3); font-size: var(--fs-caption); text-align: center; padding: var(--s-3); }
 .widget.feed .wbody .empty { background: var(--surface-glass-strong); }
 
@@ -648,14 +810,18 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 /* battery: readable text, level-coloured (green >55 · amber 25–55 · red <25) */
 .batt { font: var(--fw-semibold) var(--fs-micro)/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--done); }
 .batt.warn { color: var(--needs); }
-.batt.low { color: var(--critical); }
+.batt.low { color: var(--needs); } /* red discipline: <25% is amber; red is reserved for auto-land / link-lost failure states */
 .zrow { display: grid; grid-template-columns: 1fr auto; gap: var(--s-1) var(--s-2); padding: 6px 0; border-bottom: 1px solid var(--border-subtle); font-size: var(--fs-caption); }
 .zrow:last-child { border-bottom: 0; }
 .zrow b { font-weight: var(--fw-medium); color: var(--text-1); display: flex; align-items: center; gap: var(--s-1); }
 .zrow .sw { width: 8px; height: 8px; border-radius: 2px; }
 .zrow small { color: var(--text-3); }
 .bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: var(--n-5); overflow: hidden; }
-.bar i { display: block; height: 100%; border-radius: 2px; background: var(--done); -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 7px); mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 7px); transition: width var(--dur-slow) var(--ease-out); }
+.bar i { display: block; height: 100%; border-radius: 2px; background: var(--done); -webkit-mask-image: var(--mask-dash); mask-image: var(--mask-dash); transform: scaleX(var(--fill, 1)); transform-origin: left center; transition: transform 160ms var(--ease-out-expo), width var(--dur-slow) var(--ease-out); }
+/* BAR FILL CONTRACT: the TS layer still sets width:X% inline (works unchanged).
+   New code should set --fill:0.62 (0..1) instead and drop the width style —
+   transform animates on the compositor at 160ms --ease-out-expo. Both work;
+   when --fill is unset it defaults to 1 (no visual effect on width-set bars). */
 .srow { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-caption); padding: 4px 0; color: var(--text-2); }
 .srow .dot { width: 7px; height: 7px; }
 .srow .dot.warn { background: var(--needs); }
@@ -702,7 +868,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .toast { pointer-events: auto; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3); border-radius: var(--r-pill); background: var(--surface-glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow-2); font-size: var(--fs-body); max-width: min(560px, 90vw); animation: pop-in var(--dur-base) var(--ease-out); }
 .toast.critical { border-color: color-mix(in srgb, var(--critical) 50%, transparent); }
 .toast.needs { border-color: color-mix(in srgb, var(--needs) 45%, transparent); }
-.scrim { position: absolute; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; background: rgba(0, 0, 0, .5); animation: fade var(--dur-base); padding: var(--s-4); }
+.scrim { position: absolute; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; background: var(--p-alpha-b-50); animation: fade var(--dur-base); padding: var(--s-4); }
 @keyframes fade { from { opacity: 0; } }
 .modal { width: min(440px, 100%); border-radius: var(--r-xl); padding: var(--s-8) var(--s-6) var(--s-6); text-align: center; display: grid; gap: var(--s-3); justify-items: center; background: var(--surface-glass-strong); animation: pop-in var(--dur-slow) var(--ease-out); }
 .modal .mascot { width: 72px; height: 72px; }
@@ -723,10 +889,77 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .boot .mascot { width: 56px; height: 56px; }
 
 /* ==========================================================================
+   Edge-aware scroll fades — utilities + the surfaces they are applied to.
+   Pattern: craft.gustavofior.com/scroll-fades — the mask stops are registered
+   custom properties driven by the element's own scroll timeline, so edges fade
+   only while there is more content beyond them. Falls back to a static fade on
+   both ends where scroll-driven animations are unsupported.
+   ========================================================================== */
+.fade-y, .wbody, .pbody, #cards {
+  --fade-start: 0%;
+  --fade-end: 100%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, var(--mask-opaque) var(--fade-start), var(--mask-opaque) var(--fade-end), transparent);
+  mask-image: linear-gradient(to bottom, transparent, var(--mask-opaque) var(--fade-start), var(--mask-opaque) var(--fade-end), transparent);
+}
+.fade-x, .slots {
+  --fade-start: 0%;
+  --fade-end: 100%;
+  -webkit-mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--fade-start), var(--mask-opaque) var(--fade-end), transparent);
+  mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--fade-start), var(--mask-opaque) var(--fade-end), transparent);
+}
+@supports (animation-timeline: scroll()) {
+  .fade-y, .wbody, .pbody, #cards {
+    animation: fade-y-run linear both;
+    animation-timeline: scroll(self);
+  }
+  .fade-x, .slots {
+    animation: fade-x-run linear both;
+    animation-timeline: scroll(self);
+  }
+  /* #cards is a content-height stack: skip fades until it actually scrolls so a
+     short stack never shows a phantom bottom fade. */
+  #cards { animation-name: fade-y-run-content; }
+}
+@keyframes fade-y-run {
+  0% { --fade-start: 0%; --fade-end: calc(100% - var(--fade-len)); }   /* at top: clean top edge, faded bottom */
+  12% { --fade-start: var(--fade-len); }                                /* scrolled: fade the top too */
+  88% { --fade-end: calc(100% - var(--fade-len)); }
+  100% { --fade-start: var(--fade-len); --fade-end: 100%; }             /* at end: clean bottom edge */
+}
+@keyframes fade-y-run-content {
+  0% { --fade-start: 0%; --fade-end: 100%; }
+  12% { --fade-start: var(--fade-len); --fade-end: calc(100% - var(--fade-len)); }
+  88% { --fade-start: var(--fade-len); --fade-end: calc(100% - var(--fade-len)); }
+  100% { --fade-start: var(--fade-len); --fade-end: 100%; }
+}
+@keyframes fade-x-run {
+  0% { --fade-start: 0%; --fade-end: calc(100% - var(--fade-len)); }
+  12% { --fade-start: var(--fade-len); }
+  88% { --fade-end: calc(100% - var(--fade-len)); }
+  100% { --fade-start: var(--fade-len); --fade-end: 100%; }
+}
+@supports not (animation-timeline: scroll()) {
+  /* static fallback: fade both ends of the visible box (#cards opts out — it is
+     content-height and would dim a short stack's last card) */
+  .fade-y, .wbody, .pbody {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, var(--mask-opaque) var(--fade-len), var(--mask-opaque) calc(100% - var(--fade-len)), transparent);
+    mask-image: linear-gradient(to bottom, transparent, var(--mask-opaque) var(--fade-len), var(--mask-opaque) calc(100% - var(--fade-len)), transparent);
+  }
+  #cards { -webkit-mask-image: none; mask-image: none; }
+  .fade-x, .slots {
+    -webkit-mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--fade-len), var(--mask-opaque) calc(100% - var(--fade-len)), transparent);
+    mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--fade-len), var(--mask-opaque) calc(100% - var(--fade-len)), transparent);
+  }
+}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
-@media (max-width: 1180px) {
+/* 1280px floor: compact the topbar before the posture pill can ever collide
+   with the situation meta (extended from 1180px for the 1280x800 target). */
+@media (max-width: 1310px) {
   .kpis .kpi.opt, .sitbtn small { display: none; }
+  .topbar { padding: 0 var(--s-2); gap: var(--s-2); }
 }
 @media (max-width: 980px) {
   :root { --panel-w: min(400px, calc(100vw - 40px)); }
@@ -750,3 +983,122 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .dchip:hover { color: var(--text-1); border-color: color-mix(in srgb, var(--talon) 45%, transparent); }
 .refs { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; margin: 4px 0; }
 .refs .chip { height: auto; padding: 3px 8px; text-align: left; white-space: normal; font-size: var(--fs-caption); }
+
+/* ==========================================================================
+   FIELD HIGH-LUX — [data-theme="daylight"]
+   A battalion chief steps out of a dark EOC onto a truck hood in 10,000-lux
+   sun: warm tactical alabaster surfaces, deep obsidian ink, bold structural
+   borders, zero reliance on outer glow. The TS layer toggles
+   data-theme="daylight" on <html> (Settings popover: EOC Darkroom / Field
+   High-Lux). Every semantic token the components use is overridden here.
+   DOCUMENTED LIMITATION: the 3D terrain engine keeps its dark palette —
+   --plan-* deliberately stay the dark-theme values so the WebGL bridge keeps
+   feeding the dark map; only the CSS surface aliases (--map-*, --state-*,
+   --viz-*, --prov-*) switch to darker map-ink variants.
+   ========================================================================== */
+:root[data-theme="daylight"] {
+  color-scheme: light;
+
+  /* surfaces */
+  --bg-canvas: #E6E3DA;
+  --bg-surface-1: #F2F0EA;
+  --bg-surface-2: #F7F5EF;
+  --bg-surface-3: #FAF8F2;
+  --bg-glass: rgba(242, 240, 234, .92);
+  --bg-sunken: rgba(17, 20, 28, .06);
+  --bg-raised: rgba(17, 20, 28, .045);
+  --bg-hover: rgba(17, 20, 28, .06);
+  --bg-pressed: rgba(17, 20, 28, .10);
+
+  /* borders & hairlines — bold, structural */
+  --border-subtle: rgba(17, 20, 28, .12);
+  --border-default: rgba(17, 20, 28, .22);
+  --border-strong: rgba(17, 20, 28, .38);
+  --border-specular-top: rgba(255, 255, 255, .85);
+  --outline-media-inset: rgba(17, 20, 28, .18);
+
+  /* text (all tiers ≥4.9:1 on #F2F0EA, ≥4.3:1 on #E6E3DA) */
+  --text-1: #11141C;
+  --text-2: #3F4451;
+  --text-3: #4A4F5C;
+  --text-4: #555A68;
+  --text-inverse: #F2F0EA;
+  --icon: #3F4451;
+  --icon-strong: #11141C;
+
+  /* state */
+  --talon: #5B3FD0;
+  --talon-ink: #4E35B8;
+  --talon-soft: rgba(91, 63, 208, .10);
+  --working: #1D5FA8;
+  --working-soft: rgba(29, 95, 168, .10);
+  --needs: #8A5300;
+  --needs-soft: rgba(138, 83, 0, .10);
+  --done: #1B6B41;
+  --done-soft: rgba(27, 107, 65, .10);
+  --critical: #B3271A;
+  --critical-soft: rgba(179, 39, 26, .09);
+  --idle: #6B7280;
+  --focus-ring: 0 0 0 2px var(--bg-surface-1), 0 0 0 4px var(--text-1); /* dark ink ring */
+  --focus-halo: rgba(17, 20, 28, .12);
+
+  /* tints */
+  --tint-critical-bg: rgba(179, 39, 26, .09);
+  --tint-warning-bg: rgba(138, 83, 0, .10);
+  --tint-talon-bg: rgba(91, 63, 208, .10);
+  --tint-committed-bg: rgba(0, 121, 168, .10);
+  --tint-working-bg: rgba(29, 95, 168, .10);
+  --tint-done-bg: rgba(27, 107, 65, .10);
+
+  /* map ink (CSS aliases only — see limitation note above) */
+  --map-cyan: #0079A8;
+  --map-amber: #B4501E;
+  --map-red: #B3271A;
+  --map-fire: #C2410C;
+  --map-ok: #157F3D;
+  --map-sand: #7A5E1F;
+  --state-proposed: #3B55C4;
+  --state-expiring: var(--needs);
+  --state-committed: var(--map-cyan);
+  --state-lapsed: #5C6370;
+  --state-draft: var(--map-amber);
+  --state-compromised: var(--map-red);
+  --viz-1: #B84A00;
+  --viz-2: #3B5FCC;
+  --prov-measured: #1D5FA8;
+  --prov-modeled: #B4501E;
+  --prov-authored: #5B3FD0;
+
+  /* component tokens — solid light panels, darker neutral shadows */
+  --btn-bg: linear-gradient(180deg, rgba(17, 20, 28, .04) 0%, rgba(17, 20, 28, .015) 100%);
+  --btn-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 1px 2px rgba(23, 26, 34, .18);
+  --btn-shadow-active: inset 0 1px 0 rgba(255, 255, 255, .25), inset 0 1px 3px rgba(23, 26, 34, .22);
+  --opt-bg: linear-gradient(180deg, rgba(17, 20, 28, .035) 0%, rgba(17, 20, 28, .012) 100%);
+  --opt-bg-rec: linear-gradient(180deg, rgba(17, 20, 28, .07) 0%, rgba(17, 20, 28, .025) 100%);
+  --opt-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 2px 4px rgba(23, 26, 34, .14);
+  --opt-shadow-active: inset 0 1px 0 rgba(255, 255, 255, .2), inset 0 1px 3px rgba(23, 26, 34, .2);
+  --inset-well: inset 0 1px 2px rgba(17, 20, 28, .14);
+  --inset-input: inset 0 1px 2px rgba(17, 20, 28, .12);
+  --inset-field: inset 0 1px 3px rgba(17, 20, 28, .14);
+  --surface-inverse: #11141C;
+  --wordmark-gradient: linear-gradient(180deg, #11141C 0%, #2A2F3A 60%, #3F4451 100%);
+  --shadow-1: 0 8px 24px rgba(23, 26, 34, .16);
+  --shadow-2: 0 18px 50px rgba(23, 26, 34, .24);
+}
+
+/* daylight component adjustments that tokens alone can't express */
+:root[data-theme="daylight"] .glass { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 0 .5px rgba(17, 20, 28, .05), 0 2px 6px rgba(23, 26, 34, .10), 0 18px 44px -18px rgba(23, 26, 34, .22); }
+:root[data-theme="daylight"] .glass, :root[data-theme="daylight"] .card, :root[data-theme="daylight"] .widget, :root[data-theme="daylight"] .pop { border-width: 2px; } /* structural borders survive high lux (spec's 1.5px quantizes to 1px at DPR 1 in Chromium — 2px delivers the bold intent) */
+:root[data-theme="daylight"] .glass::after { opacity: .03; }
+:root[data-theme="daylight"] .exercise::before { background: var(--bg-surface-1); }
+:root[data-theme="daylight"] .track .line { background: rgba(17, 20, 28, .24); }
+:root[data-theme="daylight"] .track .future { background: repeating-linear-gradient(90deg, rgba(17, 20, 28, .3) 0 4px, transparent 4px 8px); }
+:root[data-theme="daylight"] .track .mk::before { box-shadow: 0 0 0 2px var(--bg-surface-3); }
+:root[data-theme="daylight"] .chart .hdot { stroke: var(--bg-surface-2); }
+:root[data-theme="daylight"] .rail .rbtn .pips i, :root[data-theme="daylight"] .budget .pips i { background: rgba(17, 20, 28, .18); }
+:root[data-theme="daylight"] .bar { background: rgba(17, 20, 28, .14); }
+:root[data-theme="daylight"] .conf i, :root[data-theme="daylight"] .dots i, :root[data-theme="daylight"] .steps i { background: rgba(17, 20, 28, .16); }
+:root[data-theme="daylight"] .switch { background: rgba(17, 20, 28, .22); }
+:root[data-theme="daylight"] .switch::after { background: #F7F5EF; }
+:root[data-theme="daylight"] [aria-checked="true"] > .switch { background: var(--talon); }
+:root[data-theme="daylight"] [aria-checked="true"] > .switch::after { background: #FFFFFF; }

@@ -267,6 +267,43 @@ export class Talon {
         }
         return best;
     }
+    /**
+     * The issued banner for one answered item (F1), a pure function of (script, decisions, t).
+     * An item qualifies when it carries `ack` itself or its chosen option produced a statutory
+     * effect (authorize / approve). The acknowledgement time is data, not invention: it comes
+     * from the item's own `ack`, or from the script item that executes the decision (e.g. the
+     * evacuation-order note hanging off `@authorize`), or — when the script carries no
+     * scripted receipt — from the gate's own `reqs` line, with `ackAt` null (no receipt is
+     * claimed that the data does not log).
+     */
+    issuedState(itemId, t = this.player.getTime()) {
+        const P = this.player;
+        const it = this.item(itemId);
+        if (!it || it.reraise || (it.kind !== 'ask' && it.kind !== 'proposal'))
+            return null;
+        const ans = P.answerOf(itemId, t);
+        if (!ans)
+            return null;
+        if (it.ack)
+            return { itemId, by: it.ack.by, at: ans.at, ackAt: ans.at + (it.ack.after ?? 0.3), label: this.text(it.title, t) };
+        const opt = it.options?.find((o) => o.id === ans.option);
+        const effect = opt?.effect?.kind;
+        if (effect !== 'authorize' && effect !== 'approve')
+            return null;
+        for (const x of this.script.items) {
+            if (!x.ack || x.id === itemId)
+                continue;
+            const ref = Array.isArray(x.at) ? x.at.filter((y) => typeof y === 'string').join(' ') : typeof x.at === 'string' ? x.at : '';
+            if (!ref.includes(effect === 'authorize' ? '@authorize' : '@approve') && !ref.includes(`@answer:${itemId}`))
+                continue;
+            const at = P.resolveRef(x.at, t);
+            if (!Number.isFinite(at) || at < ans.at - 1e-6)
+                continue;
+            return { itemId, by: x.ack.by, at: ans.at, ackAt: at + (x.ack.after ?? 0.3), label: this.text(x.title, t) };
+        }
+        const reqs = it.gate?.reqs?.split('→').pop()?.trim();
+        return reqs ? { itemId, by: reqs, at: ans.at, ackAt: null, label: this.text(it.title, t) } : null;
+    }
     /** Moments worth marking on a timeline (decision-aware). */
     markers(t = this.player.getTime(), horizon = this.situation.clock.end) {
         const P = this.player;
