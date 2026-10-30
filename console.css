@@ -640,6 +640,9 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .gate { border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--critical) 35%, transparent); background: var(--critical-soft); padding: var(--s-2) var(--s-3); display: grid; gap: var(--s-1); font-size: var(--fs-caption); color: var(--text-2); }
 .gate b { color: var(--text-1); font: var(--fw-semibold) var(--fs-caption)/1.35 var(--font-mono); letter-spacing: .02em; }
 .gate .check { color: var(--done); display: flex; gap: var(--s-1); align-items: center; }
+.gate .fragility { color: var(--needs); display: flex; gap: var(--s-1); align-items: center; } /* red discipline: a named blind spot is amber, not life-safety */
+.since { color: var(--text-2); font-size: var(--fs-caption); line-height: var(--lh-body); border-left: 2px solid color-mix(in srgb, var(--talon-ink) 45%, transparent); padding: 2px 0 2px var(--s-2); }
+.gatechip.drift { color: var(--needs); background: var(--needs-soft); } /* amber: the model is behind the ground, not life-safety yet */
 .coa { display: grid; grid-template-columns: 96px 1fr 1fr; border-radius: var(--r-xs); border: 1px solid var(--border); overflow: hidden; font-size: var(--fs-caption); } /* concentric: 10px card - 12px padding → 4px */
 .card.coa-shut .coa { display: none; } /* layout guard: COA collapses so options never clip (audit 2026-10-30) */
 .coa-tog { appearance: none; display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); width: 100%; background: transparent; border: 0; border-top: 1px solid var(--border-subtle); color: var(--text-2); font: var(--fw-medium) var(--fs-caption)/1.4 var(--font-sans); padding: 5px 2px; cursor: pointer; text-align: left; }

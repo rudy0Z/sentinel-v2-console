@@ -68,6 +68,8 @@ export interface TalonGate {
   expires: TimeRef;
   reach?: string;
   check?: string;
+  /** What could invalidate this plan — the operator deserves the plan's own blind spots. */
+  fragility?: string;
   onExpire?: string;
   /** Parts executed directly under the fire side's own authority (badge on the gate). */
   owns?: string;

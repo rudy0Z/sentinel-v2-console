@@ -318,6 +318,8 @@ export async function mountConsole(app: HTMLElement) {
     dissent: null as { item: string; option: string } | null,
     coaToggled: new Set<string>(),
     takSync: new Set<string>(),
+    /** P5 working-memory anchor: scene time of the operator's last recorded decision. */
+    lastDecisionT: -Infinity as number,
     /** P3 mic presence: the ears, not the voice. On the net by default (ambient); muted
      *  stops TALON hearing the room and net. Transmitting (V / hail) is `listening`. */
     micMuted: store.get('micMuted', false),
@@ -373,7 +375,7 @@ export async function mountConsole(app: HTMLElement) {
     (window as unknown as Record<string, unknown>).talon = talon;
     scale = new TimeScale(sit);
     growth = buildGrowth(sit, world);
-    Object.assign(ui, { review: false, sel: null, dissent: null, hold: null, feedDrone: null, feedSensor: null, tab: 'now', hoverEv: null, cardFocus: null, recordMode: false, endNudged: false, modMea: false });
+    Object.assign(ui, { review: false, sel: null, dissent: null, hold: null, feedDrone: null, feedSensor: null, tab: 'now', hoverEv: null, cardFocus: null, recordMode: false, endNudged: false, modMea: false, lastDecisionT: -Infinity });
     ui.seen = new Set();
     stopPlay();
     const pi = phaseParam ? Math.max(0, sit.phases.findIndex((p) => p.id === phaseParam)) : 0;
@@ -519,6 +521,9 @@ export async function mountConsole(app: HTMLElement) {
     const mode = ui.recordMode ? 'record' : ui.review ? 'review' : isPast() ? 'past' : 'live';
     const mine = ts.open.filter((o) => !o.item.reraise).length;
     const gateOpen = !!ps.gate?.open;
+    // P5 plan drift: armed the moment the measured ground truth outran the model.
+    const corr = ts.log.find((e) => e.kind === 'correction');
+    const drift = !!corr && ps.t >= corr.t - 0.01;
     // G1: airspace deconfliction. Nominal by default; a situation may carry meta.tfr
     // (e.g. an air attack inbound with a lower UAS floor) and the pill says so in amber.
     // Nothing is rendered that the data does not state.
@@ -526,14 +531,14 @@ export async function mountConsole(app: HTMLElement) {
     const tfrPill = tfr?.label
       ? `<span class="chip needs" title="${esc(tfr.note ?? 'Airspace deconfliction: TALON holds UAS below the manned traffic floor inside the TFR')}">${esc(tfr.label)}</span>`
       : `<span class="chip" title="Airspace deconfliction: UAS hold below 400 ft AGL inside the TFR; manned air attack has priority">TFR · DECONFLICTED &lt; 400′ AGL</span>`;
-    const k = [ui.sit, inc?.value, inc?.level, ps.phase.id, gateOpen, Math.floor(ps.gate?.expires ?? 0), wall, mode, ui.pop, mine, ui.panel, ui.replay, ui.listening, ui.ai?.model ?? '', tfr?.label ?? '', ui.recordMode ? 'rec' : '', ui.bookmark ? `bm${fmtT(ui.bookmark.t)}` : ''];
+    const k = [ui.sit, inc?.value, inc?.level, ps.phase.id, gateOpen, Math.floor(ps.gate?.expires ?? 0), wall, mode, ui.pop, mine, ui.panel, ui.replay, ui.listening, ui.ai?.model ?? '', tfr?.label ?? '', ui.recordMode ? 'rec' : '', ui.bookmark ? `bm${fmtT(ui.bookmark.t)}` : '', drift];
     if (!changed('top', k)) return;
     const s = SITUATIONS.find((x) => x.id === ui.sit)!;
     $('#topbar').innerHTML = `
       <div class="brand">${BRAND}<span>SENTINEL</span></div><div class="vsep"></div>
       <button class="sitbtn" data-act="pop" data-pop="sit" aria-haspopup="menu" aria-expanded="${ui.pop === 'sit'}" title="Incidents"><span><b>${esc(sit.meta.title)} · ${esc(s.name)}</b><small>${esc(s.sid)} · ${esc(sit.meta.coords ?? '')} · Training exercise</small></span>${ic('down', 'sm')}</button>
       <button class="posture ${inc?.level ?? 'ok'}" data-act="pop" data-pop="arc" aria-haspopup="dialog" aria-expanded="${ui.pop === 'arc'}" title="Incident journey — what happened, what is pending. The operator follows the incident, not the process.">
-        <i class="dot"></i><b>${esc(ps.phase.name)}</b>${gateOpen ? `<span class="gatechip">GATE <span class="countdown" data-until="${ps.gate!.expires}"></span></span>` : ''}
+        <i class="dot"></i><b>${esc(ps.phase.name)}</b>${gateOpen ? `<span class="gatechip">GATE <span class="countdown" data-until="${ps.gate!.expires}"></span></span>` : ''}${drift ? '<span class="gatechip drift" title="Measured spread outran the model — the FT-02 IR pass found the cut early. The draft amendment addresses it.">PLAN DRIFT</span>' : ''}
       </button>
       ${tfrPill}
       ${ui.recordMode
@@ -654,7 +659,7 @@ export async function mountConsole(app: HTMLElement) {
       <h2>${esc(s.label)}</h2></article>`;
   }
 
-  function focusCard(o: OpenItem, ps: PlayerState): string {
+  function focusCard(o: OpenItem, ps: PlayerState, dSince: TalonEntry[] = []): string {
     const it = o.item;
     const t = ps.t;
     const decide = canDecide();
@@ -676,7 +681,7 @@ export async function mountConsole(app: HTMLElement) {
       // The route toggle lives in the COA header; keep the decisive options only.
       opts = opts.filter((x) => !x.toggle);
     }
-    const gate = it.gate ? `<div class="gate"><b>${esc(it.gate.label)}</b>${it.gate.reach ? `<span class="stakes" style="${STAKES_STYLE}">${esc(it.gate.reach)}</span>` : ''}${it.gate.check ? `<span class="check">${ic('check', 'xs')}${esc(it.gate.check)}</span>` : ''}${(it.gate.owns || it.gate.reqs) ? `<span class="authsplit">${it.gate.owns ? `<span class="auth-pill owned" title="Executed directly under the fire side's own authority">OWNED · ${esc(it.gate.owns)}</span>` : ''}${it.gate.reqs ? `<span class="auth-pill req" title="Unified-command requisition — an external authority (Sheriff / OES) executes this part">REQ → ${esc(it.gate.reqs)}</span>` : ''}</span>` : ''}<span class="lapse">If it lapses: ${esc(it.gate.onExpire ?? 'nothing is sent')}</span></div>` : '';
+    const gate = it.gate ? `<div class="gate"><b>${esc(it.gate.label)}</b>${it.gate.reach ? `<span class="stakes" style="${STAKES_STYLE}">${esc(it.gate.reach)}</span>` : ''}${it.gate.check ? `<span class="check">${ic('check', 'xs')}${esc(it.gate.check)}</span>` : ''}${it.gate.fragility ? `<span class="fragility" title="The plan's own blind spot — what would invalidate it">⚠ Fragile if: ${esc(it.gate.fragility)}</span>` : ''}${(it.gate.owns || it.gate.reqs) ? `<span class="authsplit">${it.gate.owns ? `<span class="auth-pill owned" title="Executed directly under the fire side's own authority">OWNED · ${esc(it.gate.owns)}</span>` : ''}${it.gate.reqs ? `<span class="auth-pill req" title="Unified-command requisition — an external authority (Sheriff / OES) executes this part">REQ → ${esc(it.gate.reqs)}</span>` : ''}</span>` : ''}<span class="lapse">If it lapses: ${esc(it.gate.onExpire ?? 'nothing is sent')}</span></div>` : '';
     const correction = it.kind === 'correction' ? correctionDelta(it) : null;
     const modMeaBtn = it.kind === 'correction' && canDecide() && correction ? `<button class="chip modmea" data-act="modmea" aria-pressed="${ui.modMea}" title="Light both projections on the map: the superseded model (MOD) against the measured cut (MEA)">${ic('timeline', 'xs')}Compare on map · MOD vs MEA</button>` : '';
     const options = draftNow
@@ -690,6 +695,7 @@ export async function mountConsole(app: HTMLElement) {
     return `<article class="card ${crit ? 'critical' : 'needs'}${coaShut ? ' coa-shut' : ''}"${crit ? ' role="alert" aria-live="assertive"' : ' aria-live="polite"'}>
       <div class="meta"><i class="dot ${crit ? 'critical' : 'needs'}"></i><span class="caps">${esc(agent)} · ${it.kind === 'proposal' ? 'Proposal' : 'Needs you'}</span><span class="grow"></span>${o.expiresAt !== null || Number.isFinite(o.closesAt) ? `<span class="countdown${crit ? ' stakes' : ''}"${crit ? ` style="${STAKES_STYLE}"` : ''} data-until="${Number.isFinite(o.closesAt) ? o.closesAt : o.expiresAt}" title="Closes at ${fmtT(o.closesAt)} (scene time)"></span>` : ''}</div>
       <h2>${esc(talon.text(it.title, t))}</h2>
+      ${dSince.length && Number(o.item.at) > ui.lastDecisionT + 0.01 ? `<div class="since" title="What changed on the incident since you last decided — working-memory anchor">Δ since your last decision (${fmtT(ui.lastDecisionT)}): ${dSince.map((e) => esc(e.title)).join(' · ')}</div>` : ''}
       ${it.body ? `<p>${esc(talon.text(it.body, t))}</p>` : ''}
       ${correction ? `<div class="stakes" style="${STAKES_STYLE}">${esc(correction)}</div>${modMeaBtn}<div class="basis"><span class="prov modeled"${provTitle('modeled')}>mod</span><span>Superseded projection kept on the map (ghosted) — replaced by the FT-02 IR pass <span class="prov measured"${provTitle('measured')}>mea</span></span></div>` : ''}
       ${compare}
@@ -754,14 +760,18 @@ export async function mountConsole(app: HTMLElement) {
     const routed = ts.open.filter((o) => o.item.reraise);
     const focus = focusItem(mine);
     const issued = issuedCard(ps);
+    // P5 working-memory anchor: what the incident did since the operator last decided.
+    const dSince = Number.isFinite(ui.lastDecisionT)
+      ? ts.log.filter((e) => e.t > ui.lastDecisionT && (e.kind === 'action' || e.kind === 'correction' || e.kind === 'expired')).slice(-2)
+      : [];
     const coaKey = [...ui.coaToggled].sort().join('|');
-    const k = [mine.map((o) => [o.item.id, o.expiresAt, o.closesAt]), routed.map((o) => o.item.id), ui.dissent, canDecide(), ps.primary, Math.floor(ps.t * 2), focus?.item.id ?? null, issued, coaKey];
+    const k = [mine.map((o) => [o.item.id, o.expiresAt, o.closesAt]), routed.map((o) => o.item.id), ui.dissent, canDecide(), ps.primary, Math.floor(ps.t * 2), focus?.item.id ?? null, issued, coaKey, dSince.map((e) => e.id).join('|')];
     const el = $('#cards');
     if (!changed('cards', k)) return;
     if (!mine.length && !routed.length) return void (el.innerHTML = '');
     let html = issued;
     if (mine.length && focus) {
-      html += focusCard(focus, ps);
+      html += focusCard(focus, ps, dSince);
       // F2: "Also waiting" rows are real buttons — click or Alt+N promotes the item into
       // the focus card. A P0 life-safety interrupt preempts: rows lock and say so.
       const queued = mine.filter((o) => o !== focus).slice(0, 2);
@@ -1526,6 +1536,7 @@ export async function mountConsole(app: HTMLElement) {
     if (!r.ok) return toast(r.reason ?? 'Could not record that.');
     if (ui.cardFocus === itemId) ui.cardFocus = null; // the promoted item resolved
     ui.lastSeen = player.getTime();
+    ui.lastDecisionT = player.getTime(); // P5: the Δ-since anchor for the next card
     if (ui.hold?.id === itemId) ui.hold = null;
     // P2 ground link: a committed gate that names field executors pushes its geometry to
     // their ATAK tablets — the center-to-ground handoff is a receipt, not a radio hope.
