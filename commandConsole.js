@@ -298,6 +298,7 @@ export async function mountConsole(app) {
         sel: null,
         hoverEv: null,
         dissent: null,
+        coaToggled: new Set(),
         hold: null,
         feedDrone: null,
         feedSensor: null,
@@ -604,9 +605,15 @@ export async function mountConsole(app) {
         let opts = it.options ?? [];
         const draftNow = ui.dissent?.item === it.id ? it.options?.find((x) => x.id === ui.dissent.option) : null;
         let compare = '';
+        let coaShut = false;
         if (it.compare) {
+            // Layout guard (visual audit 2026-10-30): on short viewports the COA table is what
+            // pushes the decisive options below the card's clip edge. Default it collapsed there,
+            // keep it collapsed whenever a dissent box is open on this card, and let the operator toggle.
+            const coaDefaultShut = innerHeight < 1000;
+            coaShut = draftNow ? true : (ui.coaToggled.has(it.id) ? !coaDefaultShut : coaDefaultShut);
             const prim = ps.primary;
-            compare = `<div class="coa" role="group" aria-label="Courses of action"><div class="hd"></div>${it.compare.cols.map((c) => `<button class="hd" data-act="coa" data-route="${c.route ?? ''}" aria-pressed="${prim === c.route}" ${decide ? '' : 'disabled'}><b>${c.recommended ? '<i class="pick" title="TALON recommends"></i>' : ''}${esc(c.label)}</b><small>${esc(c.sub ?? '')}</small></button>`).join('')}
+            compare = `<button class="coa-tog" data-act="coatog" data-item="${it.id}" aria-expanded="${coaShut ? 'false' : 'true'}"><span>${coaShut ? 'Compare courses of action' : 'Hide COA comparison'}</span>${ic(coaShut ? 'down' : 'up', 'xs')}</button><div class="coa" role="group" aria-label="Courses of action"><div class="hd"></div>${it.compare.cols.map((c) => `<button class="hd" data-act="coa" data-route="${c.route ?? ''}" aria-pressed="${prim === c.route}" ${decide ? '' : 'disabled'}><b>${c.recommended ? '<i class="pick" title="TALON recommends"></i>' : ''}${esc(c.label)}</b><small>${esc(c.sub ?? '')}</small></button>`).join('')}
         ${it.compare.rows.map((r) => `<div class="rl">${esc(r.label)}</div>${r.values.map((v, i) => `<div class="v${r.best === i ? ' best' : ''}">${esc(v)}</div>`).join('')}`).join('')}</div>`;
             // The route toggle lives in the COA header; keep the decisive options only.
             opts = opts.filter((x) => !x.toggle);
@@ -621,7 +628,7 @@ export async function mountConsole(app) {
             : opts.length
                 ? `<div class="opts" role="group" aria-label="Your options">${opts.map((x, i) => `<button class="opt${x.recommended ? ' rec' : ''}" data-act="answer" data-item="${it.id}" data-opt="${x.id}" ${decide ? '' : 'disabled'}><span class="k">${i + 1}</span><b>${esc(x.label)}</b><span class="tag">${x.recommended ? 'Recommended' : ''}</span></button>`).join('')}</div>${decide ? '' : `<span class="caps" style="text-transform:none;letter-spacing:0">${ui.review ? 'Review is read-only.' : 'You are viewing the past. Go back to live to decide.'}</span>`}`
                 : `<span class="caps" style="text-transform:none;letter-spacing:0">Reported for awareness — no action requested. It is on the record.</span>`;
-        return `<article class="card ${crit ? 'critical' : 'needs'}"${crit ? ' role="alert" aria-live="assertive"' : ' aria-live="polite"'}>
+        return `<article class="card ${crit ? 'critical' : 'needs'}${coaShut ? ' coa-shut' : ''}"${crit ? ' role="alert" aria-live="assertive"' : ' aria-live="polite"'}>
       <div class="meta"><i class="dot ${crit ? 'critical' : 'needs'}"></i><span class="caps">${esc(agent)} · ${it.kind === 'proposal' ? 'Proposal' : 'Needs you'}</span><span class="grow"></span>${o.expiresAt !== null || Number.isFinite(o.closesAt) ? `<span class="countdown${crit ? ' stakes' : ''}"${crit ? ` style="${STAKES_STYLE}"` : ''} data-until="${Number.isFinite(o.closesAt) ? o.closesAt : o.expiresAt}" title="Closes at ${fmtT(o.closesAt)} (scene time)"></span>` : ''}</div>
       <h2>${esc(talon.text(it.title, t))}</h2>
       ${it.body ? `<p>${esc(talon.text(it.body, t))}</p>` : ''}
@@ -687,7 +694,8 @@ export async function mountConsole(app) {
         const routed = ts.open.filter((o) => o.item.reraise);
         const focus = focusItem(mine);
         const issued = issuedCard(ps);
-        const k = [mine.map((o) => [o.item.id, o.expiresAt, o.closesAt]), routed.map((o) => o.item.id), ui.dissent, canDecide(), ps.primary, Math.floor(ps.t * 2), focus?.item.id ?? null, issued];
+        const coaKey = [...ui.coaToggled].sort().join('|');
+        const k = [mine.map((o) => [o.item.id, o.expiresAt, o.closesAt]), routed.map((o) => o.item.id), ui.dissent, canDecide(), ps.primary, Math.floor(ps.t * 2), focus?.item.id ?? null, issued, coaKey];
         const el = $('#cards');
         if (!changed('cards', k))
             return;
@@ -1751,6 +1759,14 @@ export async function mountConsole(app) {
             case 'coa':
                 if (d.route && canDecide())
                     player.setActiveRoute(d.route);
+                return;
+            case 'coatog':
+                if (ui.coaToggled.has(d.item))
+                    ui.coaToggled.delete(d.item);
+                else
+                    ui.coaToggled.add(d.item);
+                keys.delete('cards');
+                schedule();
                 return;
             case 'route': {
                 const r = player.setActiveRoute(d.route);

@@ -427,8 +427,8 @@ button.chip:hover { color: var(--text-1); border-color: var(--border-strong); ba
 .vsep { width: 1px; height: 22px; background: var(--border); flex: none; }
 .sitbtn { appearance: none; display: flex; align-items: center; gap: var(--s-2); height: 36px; padding: 0 var(--s-3) 0 var(--s-2); border-radius: var(--r-sm); border: 1px solid transparent; background: transparent; min-width: 0; text-align: left; }
 .sitbtn:hover { background: var(--surface-hover); border-color: var(--border-subtle); }
-.sitbtn b { font-weight: var(--fw-semibold); display: block; line-height: var(--lh-tight); white-space: nowrap; }
-.sitbtn small { display: block; color: var(--text-3); font-size: var(--fs-caption); white-space: nowrap; }
+.sitbtn b { font-weight: var(--fw-semibold); display: block; line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sitbtn small { display: block; color: var(--text-3); font-size: var(--fs-caption); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .status-pill { display: inline-flex; align-items: center; gap: var(--s-2); height: 28px; padding: 0 var(--s-3); border-radius: var(--r-pill); font-weight: var(--fw-semibold); font-size: var(--fs-caption); letter-spacing: .02em; white-space: nowrap; border: 1px solid var(--border); color: var(--text-2); }
 .status-pill.ok { color: var(--done); border-color: color-mix(in srgb, var(--done) 35%, transparent); background: var(--done-soft); }
 .status-pill.warn { color: var(--needs); border-color: color-mix(in srgb, var(--needs) 35%, transparent); background: var(--needs-soft); }
@@ -538,14 +538,14 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 
 /* decision cards: appear only while an item is open — tasks surface naturally,
    anchored to the left of the edge rail */
-.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: calc(var(--gap) * 2 + var(--rail-w2)); width: 372px; display: grid; gap: var(--s-2); max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 120px); overflow-y: auto; scrollbar-width: none; pointer-events: none; transition: transform var(--dur-base) var(--ease-out-expo); }
+.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: calc(var(--gap) * 2 + var(--rail-w2)); width: 372px; display: grid; gap: var(--s-2); max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 56px); overflow-y: auto; scrollbar-width: none; pointer-events: none; transition: transform var(--dur-base) var(--ease-out-expo); } /* 56px = gap + dock clearance; the old 120px reserve wasted 64px of card height (audit 2026-10-30) */
 .cards > * { pointer-events: auto; }
 .cards:empty { display: none; }
 .cards .card { box-shadow: var(--shadow-2), inset 0 0 0 .5px var(--p-alpha-w-08); }
 /* TALON drawer displacement is a transform, not a layout property: the TS layer
    toggles .chat-open on the app root (legacy alias) or .cards-shift on the stack. */
 .app.chat-open .cards, .cards.cards-shift { transform: translateX(calc(-1 * (var(--panel-w) + var(--gap)))); }
-.app.chat-open .cards { max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 96px); }
+.app.chat-open .cards { max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 56px); }
 .tip { position: fixed; z-index: var(--z-toast); pointer-events: none; padding: 6px var(--s-3); border-radius: var(--r-pill); background: var(--surface-glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow-1); font-size: var(--fs-caption); white-space: nowrap; display: flex; align-items: center; gap: var(--s-2); opacity: 0; transform: translateX(4px); transition: opacity 80ms var(--ease-out), transform 80ms var(--ease-out); }
 .tip.on { opacity: 1; transform: none; transition-duration: 120ms; } /* enter slower (120ms) than exit (80ms) */
 .tip small { color: var(--text-3); }
@@ -635,6 +635,10 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .gate b { color: var(--text-1); font: var(--fw-semibold) var(--fs-caption)/1.35 var(--font-mono); letter-spacing: .02em; }
 .gate .check { color: var(--done); display: flex; gap: var(--s-1); align-items: center; }
 .coa { display: grid; grid-template-columns: 96px 1fr 1fr; border-radius: var(--r-xs); border: 1px solid var(--border); overflow: hidden; font-size: var(--fs-caption); } /* concentric: 10px card - 12px padding → 4px */
+.card.coa-shut .coa { display: none; } /* layout guard: COA collapses so options never clip (audit 2026-10-30) */
+.coa-tog { appearance: none; display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); width: 100%; background: transparent; border: 0; border-top: 1px solid var(--border-subtle); color: var(--text-2); font: var(--fw-medium) var(--fs-caption)/1.4 var(--font-sans); padding: 5px 2px; cursor: pointer; text-align: left; }
+.coa-tog:hover { color: var(--text-1); }
+.coa-tog svg { color: var(--text-3); }
 .coa > * { padding: 6px var(--s-2); border-top: 1px solid var(--border-subtle); }
 .coa .hd { border-top: 0; }
 .coa button.hd { appearance: none; border: 0; background: transparent; text-align: left; display: grid; gap: 1px; padding: var(--s-2); border-left: 1px solid var(--border-subtle); }
