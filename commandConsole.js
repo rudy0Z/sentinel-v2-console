@@ -299,6 +299,7 @@ export async function mountConsole(app) {
         hoverEv: null,
         dissent: null,
         coaToggled: new Set(),
+        takSync: new Set(),
         /** P1 record loop: the bookmarked record review (brief: "reviewing footage from an
          *  earlier alert") that a P0 breakout preempts. liveT holds the live incident's head
          *  while the operator is inside the record; null until the first preemption. */
@@ -1382,9 +1383,20 @@ export async function mountConsole(app) {
         pop.style.left = `${clamp(right && name !== 'sit' ? r.left - pr.width - 10 : r.left, 8, innerWidth - pr.width - 8)}px`;
         schedule();
     }
+    /** P2 command bridge (ICS-205): hovering a leader row brushes their paired drone and
+     *  net target on the map — the person ↔ machine pairing, glanceable. */
+    let brushKey = '';
+    function bridgeRows() {
+        return (sit.meta.bridge ?? []);
+    }
     function closePop() {
         document.getElementById('pop')?.remove();
         if (ui.pop) {
+            if (brushKey) {
+                engine.highlightUnit(null);
+                engine.setLayerEmphasis(null, 220);
+                brushKey = '';
+            }
             ui.pop = null;
             schedule();
         }
@@ -1468,7 +1480,14 @@ export async function mountConsole(app) {
                 ['Override you', 'Never', 'A re-raise goes to the Regional Duty Supervisor'],
             ].map(([a, b, c]) => `<tr style="border-top:1px solid var(--border-subtle)"><td style="padding:7px 8px 7px 0;color:var(--text-1)">${a}${c ? `<div style="color:var(--text-3);font-size:var(--fs-micro)">${c}</div>` : ''}</td><td style="padding:7px 0;white-space:nowrap;color:${b === 'Never' ? 'var(--critical)' : b === 'You decide' ? 'var(--needs)' : 'var(--text-2)'}">${b}</td></tr>`).join('')}</table>
         <div class="caps ghead">Provenance legend</div>
-        <p style="margin:0 4px 8px;color:var(--text-2);font-size:var(--fs-caption);max-width:340px"><span class="prov measured"${provTitle('measured')}>mea</span> Measured — direct EO/IR or RAWS sensor telemetry (ground truth) · <span class="prov modeled"${provTitle('modeled')}>mod</span> Modeled — deterministic spread-model projection (subject to wind/fuel drift) · <span class="prov authored"${provTitle('authored')}>aut</span> Authored — exercise scenario baseline or operator-entered</p>`;
+        <p style="margin:0 4px 8px;color:var(--text-2);font-size:var(--fs-caption);max-width:340px"><span class="prov measured"${provTitle('measured')}>mea</span> Measured — direct EO/IR or RAWS sensor telemetry (ground truth) · <span class="prov modeled"${provTitle('modeled')}>mod</span> Modeled — deterministic spread-model projection (subject to wind/fuel drift) · <span class="prov authored"${provTitle('authored')}>aut</span> Authored — exercise scenario baseline or operator-entered</p>
+        ${bridgeRows().length ? `<div class="caps ghead">Command bridge · ICS-205 <span style="color:var(--text-3)">— the humans on this incident</span></div>
+        <div class="bridge">${bridgeRows().map((b) => `<div class="brow" data-drone="${esc(b.drone ?? '')}" data-layers="${esc(b.layers ?? '')}">
+          <div class="bhead"><b>${esc(b.name)}</b><span class="chip" style="height:18px;flex:none">${esc(b.tag)}</span></div>
+          <div class="brole">${esc(b.role)} · ${esc(b.where ?? '')}</div>
+          <div class="bnet"><span class="chip" style="height:18px" title="ICS-205 net assignment">${esc(b.net)}${b.freq && b.freq !== '—' ? ` · ${esc(b.freq)}` : ''}</span>${b.drone ? `<span class="chip" style="height:18px" title="Autonomous drone paired to this leader's division — no joystick, a standing order">⟡ ${esc(b.drone)} · ${esc(b.droneJob ?? '')}</span>` : ''}${ui.takSync.has(b.id) ? '<span class="chip" style="height:18px;color:var(--done)">✓ TAK synced</span>' : ''}</div>
+          <div class="bacts"><button class="btn ghost sm" data-act="hail" data-id="${esc(b.id)}" title="Open the patch — TALON ducks while you transmit">${ic('mic', 'xs')}Hail · ${esc(b.net)}</button><button class="btn ghost sm" data-act="takpush" data-id="${esc(b.id)}" title="Push this plan's waypoints and hazard pins to the leader's ATAK tablet">${ic('pin', 'xs')}${ui.takSync.has(b.id) ? 'Synced' : 'Push to TAK'}</button></div>
+        </div>`).join('')}</div><p style="margin:0 4px;color:var(--text-3);font-size:var(--fs-micro)">Hover a leader to see their pairing on the map. Drones are autonomous — the pairing is a standing order, not a pilot.</p>` : ''}`;
         if (name === 'settings') {
             const ai = ui.ai;
             const prov = ui.aiProvider ?? ai?.provider ?? 'openai';
@@ -1571,6 +1590,11 @@ export async function mountConsole(app) {
         ui.lastSeen = player.getTime();
         if (ui.hold?.id === itemId)
             ui.hold = null;
+        // P2 ground link: a committed gate that names field executors pushes its geometry to
+        // their ATAK tablets — the center-to-ground handoff is a receipt, not a radio hope.
+        const gate = talon.item(itemId)?.gate;
+        if (gate?.owns || gate?.reqs)
+            toast('✓ Ground link · ATAK — waypoints and hazard pins pushed to the field teams on this plan.');
         toast(`${opt.toggle ? 'Proposal edited' : 'Recorded'}: ${opt.label}`);
     }
     // A refusal you can feel: typed approvals and unknown calls bounce the composer.
@@ -1664,9 +1688,16 @@ export async function mountConsole(app) {
         const W = window;
         const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
         if (!Ctor)
-            return toast('Voice needs the Web Speech API — Chrome or Edge. This browser does not expose it, so type instead (/).');
-        if (ui.listening)
-            return rec?.stop();
+            return toast('Voice needs the Web Speech API — Chrome or Edge. This browser does not expose it, so type instead (/,');
+        if (ui.listening) {
+            if (rec)
+                return rec.stop();
+            // A radio hail (P2) ducks TALON without ever opening the room mic — release it cleanly.
+            ui.listening = false;
+            keys.delete('rail');
+            schedule();
+            return;
+        }
         try {
             rec = new Ctor();
         }
@@ -1717,6 +1748,20 @@ export async function mountConsole(app) {
         $('#overlay').innerHTML = `<div class="scrim" data-act="overlay-close"><div class="modal glass" role="dialog" aria-label="Keyboard shortcuts"><h2>Shortcuts</h2><div class="keys">${rows.map(([k, d]) => `<span class="kbd">${k}</span><span>${d}</span>`).join('')}</div><div class="row"><button class="btn primary" data-act="overlay-close">Done</button></div></div></div>`;
     }
     // ------------------------------------------------------------------ input wiring
+    // P2 bridge brushing: a leader row lights up their paired drone + net target on the map.
+    app.addEventListener('mouseover', (e) => {
+        if (ui.pop !== 'authority')
+            return;
+        const row = e.target.closest('.brow');
+        const drone = row?.dataset.drone || '';
+        const layers = row?.dataset.layers ? row.dataset.layers.split(',').filter(Boolean) : [];
+        const key = `${drone}|${row?.dataset.layers ?? ''}`;
+        if (key === brushKey)
+            return;
+        brushKey = key;
+        engine.highlightUnit(drone || null);
+        engine.setLayerEmphasis(drone || layers.length ? [...layers, 'labels'] : null, 220);
+    });
     app.addEventListener('click', (e) => {
         const t = e.target;
         if (ui.pop && !t.closest('#pop') && !t.closest('[data-pop]'))
@@ -1831,6 +1876,31 @@ export async function mountConsole(app) {
                 keys.delete('cards');
                 schedule();
                 return;
+            case 'hail': {
+                const b = bridgeRows().find((x) => x.id === d.id);
+                if (!b)
+                    return;
+                closePop();
+                // A hail is a radio patch, not the room mic: duck TALON (G3 holds asks while the
+                // operator transmits) without touching Web Speech.
+                if (!ui.listening) {
+                    ui.listening = true;
+                    keys.delete('rail');
+                    schedule();
+                }
+                toast(`Patching you to ${b.name} on ${b.net} — TALON ducks while you transmit.`);
+                window.setTimeout(() => toast(`${b.tag.split('·')[0].trim()} · “${b.radio}”`), 3800);
+                return;
+            }
+            case 'takpush': {
+                const b = bridgeRows().find((x) => x.id === d.id);
+                if (!b)
+                    return;
+                ui.takSync.add(d.id);
+                toast(`✓ Route and hazard pins synced to ${b.name}'s ATAK tablet${b.unit ? ` (${b.unit})` : ''}.`);
+                openPop('authority', document.querySelector('[data-pop="authority"]'));
+                return;
+            }
             case 'route': {
                 const r = player.setActiveRoute(d.route);
                 toast(r === 'primary' ? 'Proposal edited: new primary egress.' : r === 'draft' ? 'Draft staged next to the committed plan.' : 'Already the primary egress.');

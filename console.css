@@ -874,6 +874,15 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .toast.needs { border-color: color-mix(in srgb, var(--needs) 45%, transparent); }
 .bmchip { color: var(--talon-ink); border-color: color-mix(in srgb, var(--talon-ink) 40%, transparent); background: color-mix(in srgb, var(--talon-ink) 10%, transparent); cursor: pointer; }
 .bmchip:hover { border-color: var(--talon-ink); }
+/* P2 command bridge (ICS-205) */
+.bridge { display: grid; gap: var(--s-2); margin: 0 4px 10px; }
+.brow { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); display: grid; gap: 5px; background: var(--surface-sunken); }
+.brow:hover { border-color: color-mix(in srgb, var(--talon-ink) 40%, transparent); }
+.bhead { display: flex; align-items: center; gap: var(--s-2); justify-content: space-between; }
+.bhead b { font-weight: var(--fw-semibold); }
+.brole { color: var(--text-2); font-size: var(--fs-caption); }
+.bnet { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.bacts { display: flex; gap: var(--s-2); }
 .scrim { position: absolute; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; background: var(--p-alpha-b-50); animation: fade var(--dur-base); padding: var(--s-4); }
 @keyframes fade { from { opacity: 0; } }
 .modal { width: min(440px, 100%); border-radius: var(--r-xl); padding: var(--s-8) var(--s-6) var(--s-6); text-align: center; display: grid; gap: var(--s-3); justify-items: center; background: var(--surface-glass-strong); animation: pop-in var(--dur-slow) var(--ease-out); }
