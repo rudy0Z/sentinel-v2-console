@@ -3927,7 +3927,23 @@ class TacticalTerrainEngine {
         const r = pip.refs;
         const s = pip.drone.spec;
         const agl = pip.drone.agl / FT;
-        const gs = s.orbitRadius && s.orbitPeriodS ? ((2 * Math.PI * s.orbitRadius) / s.orbitPeriodS) * 1.94384 : 0;
+        // GS is measured from the model, not assumed (audit 2026-10-30: transiting drones
+        // showed GS 0 KT): anchor motion (tracks follow the clock, patrols the scene time)
+        // combined with the orbital tangential speed, sampled one second ahead.
+        const c1 = this.unitAnchor(pip.drone);
+        const r1 = s.orbitRadius ?? 0;
+        let anchorSpeed = 0;
+        if (s.patrol && pip.drone.patrolLen > 0) {
+            const c2 = this.unitAnchor(pip.drone, this.animTime + 1);
+            anchorSpeed = Math.hypot(c2[0] - c1[0], c2[1] - c1[1]);
+        }
+        else if (s.track?.length) {
+            const t1 = trackAt(s.track, this.clock);
+            const t2 = trackAt(s.track, this.clock + 1);
+            anchorSpeed = Math.hypot(t2[0] - t1[0], t2[1] - t1[1]);
+        }
+        const orbitSpeed = r1 > 0 ? (2 * Math.PI * r1) / (s.orbitPeriodS ?? 90) : 0;
+        const gs = (Math.hypot(anchorSpeed, orbitSpeed) / FT) * 3600 / 6076; // world units/s -> ft/h -> knots
         const secs = Math.max(0, this.animTime - pip.opened);
         r.rec.textContent = `${Math.floor(secs / 3600)}:${String(Math.floor(secs / 60) % 60).padStart(2, '0')}:${String(Math.floor(secs) % 60).padStart(2, '0')}`;
         r.clock.textContent = this.timeLabel ?? this.opts.timeLabel[this.U.uDayNight.value > 0.5 ? 'day' : 'night'];

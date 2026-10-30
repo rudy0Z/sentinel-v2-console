@@ -544,14 +544,14 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 
 /* decision cards: appear only while an item is open — tasks surface naturally,
    anchored to the left of the edge rail */
-.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: calc(var(--gap) * 2 + var(--rail-w2)); width: 372px; display: grid; gap: var(--s-2); max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 56px); overflow-y: auto; scrollbar-width: none; pointer-events: none; transition: transform var(--dur-base) var(--ease-out-expo); } /* 56px = gap + dock clearance; the old 120px reserve wasted 64px of card height (audit 2026-10-30) */
+.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: calc(var(--gap) * 2 + var(--rail-w2)); width: 372px; display: grid; gap: var(--s-2); max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 44px); overflow-y: auto; scrollbar-width: none; pointer-events: none; transition: transform var(--dur-base) var(--ease-out-expo); } /* 44px = gap + dock clearance (was 120px — 64px of dead card height; audit 2026-10-30) */
 .cards > * { pointer-events: auto; }
 .cards:empty { display: none; }
 .cards .card { box-shadow: var(--shadow-2), inset 0 0 0 .5px var(--p-alpha-w-08); }
 /* TALON drawer displacement is a transform, not a layout property: the TS layer
    toggles .chat-open on the app root (legacy alias) or .cards-shift on the stack. */
 .app.chat-open .cards, .cards.cards-shift { transform: translateX(calc(-1 * (var(--panel-w) + var(--gap)))); }
-.app.chat-open .cards { max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 56px); }
+.app.chat-open .cards { max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 44px); }
 .tip { position: fixed; z-index: var(--z-toast); pointer-events: none; padding: 6px var(--s-3); border-radius: var(--r-pill); background: var(--surface-glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow-1); font-size: var(--fs-caption); white-space: nowrap; display: flex; align-items: center; gap: var(--s-2); opacity: 0; transform: translateX(4px); transition: opacity 80ms var(--ease-out), transform 80ms var(--ease-out); }
 .tip.on { opacity: 1; transform: none; transition-duration: 120ms; } /* enter slower (120ms) than exit (80ms) */
 .tip small { color: var(--text-3); }
@@ -643,6 +643,14 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .gate .fragility { color: var(--needs); display: flex; gap: var(--s-1); align-items: center; } /* red discipline: a named blind spot is amber, not life-safety */
 .since { color: var(--text-2); font-size: var(--fs-caption); line-height: var(--lh-body); border-left: 2px solid color-mix(in srgb, var(--talon-ink) 45%, transparent); padding: 2px 0 2px var(--s-2); }
 .gatechip.drift { color: var(--needs); background: var(--needs-soft); } /* amber: the model is behind the ground, not life-safety yet */
+/* Short-viewports (laptop 800–900px): recover vertical density so a gated card with COA
+   collapsed still fits its options + gate + fragility above the dock (audit 2026-10-30). */
+@media (max-height: 900px) {
+  .card { padding: var(--s-3) var(--s-4) var(--s-3); gap: var(--s-2); }
+  .opt { min-height: 34px; padding: 4px var(--s-2) 4px 4px; }
+  .coa-tog { padding: 3px 2px; }
+  .gate { gap: var(--s-1); }
+}
 .coa { display: grid; grid-template-columns: 96px 1fr 1fr; border-radius: var(--r-xs); border: 1px solid var(--border); overflow: hidden; font-size: var(--fs-caption); } /* concentric: 10px card - 12px padding → 4px */
 .card.coa-shut .coa { display: none; } /* layout guard: COA collapses so options never clip (audit 2026-10-30) */
 .coa-tog { appearance: none; display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); width: 100%; background: transparent; border: 0; border-top: 1px solid var(--border-subtle); color: var(--text-2); font: var(--fw-medium) var(--fs-caption)/1.4 var(--font-sans); padding: 5px 2px; cursor: pointer; text-align: left; }

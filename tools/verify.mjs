@@ -438,6 +438,89 @@ async function open(q, w = 1600, h = 960, pinned) {
   await hp.close();
 }
 
+// ---------------------------------------------------------------- final layer (2026-10-30): record loop, bridge, presence, map-is-the-reply
+{
+  const { page, errors } = await open('situation=wui-breakout');
+  // R1 — record loop: a fresh visitor (no params) boots into the S-04 record and is preempted.
+  const rp = await browser.newPage();
+  const rerr = [];
+  rp.on('pageerror', (e) => rerr.push(e.message));
+  await rp.setViewport({ width: 1440, height: 900 });
+  await rp.goto('http://127.0.0.1:8133/', { waitUntil: 'load' });
+  await rp.waitForFunction('window.player && document.querySelector(".boot.gone")', { timeout: 120000 });
+  await sleep(900);
+  const rec = await rp.evaluate(() => ({ mode: document.querySelector('.clock .live')?.textContent, ret: !!document.querySelector('[data-act="return-live"]') }));
+  await rp.evaluate(() => window.sentinelBoot.preempt());
+  await sleep(1000);
+  const live = await rp.evaluate(() => ({ mode: document.querySelector('.clock .live')?.textContent, pill: !!document.querySelector('.bmchip'), title: document.querySelector('.sitbtn b')?.textContent ?? '' }));
+  await rp.evaluate(() => document.querySelector('.bmchip')?.click());
+  await sleep(1000);
+  const back = await rp.evaluate(() => ({ mode: document.querySelector('.clock .live')?.textContent }));
+  check('record loop: boots into the S-04 replay, preempts to live S-05 with bookmark, resumes', rec.mode === 'REPLAY' && rec.ret && live.mode === 'LIVE' && live.pill && /WUI/.test(live.title) && back.mode === 'REPLAY', JSON.stringify({ rec, live, back }));
+  await rp.close();
+
+  // R2 — command bridge: four leaders, TAK push receipt, hail ducks without the room mic.
+  await page.evaluate(() => document.querySelector('[data-pop="authority"]')?.click());
+  await sleep(500);
+  const bridge = await page.evaluate(() => {
+    const n = document.querySelectorAll('.brow').length;
+    document.querySelector('[data-act="takpush"]')?.click();
+    return { n, synced: [...document.querySelectorAll('.bnet .chip')].some((c) => /TAK synced/.test(c.textContent)) };
+  });
+  await sleep(400);
+  await page.evaluate(() => document.querySelector('[data-act="hail"]')?.click());
+  await sleep(400);
+  const ducked = await page.evaluate(() => !document.querySelector('#ptt')?.hidden);
+  check('command bridge: 4 ICS-205 leaders, TAK sync chip, hail ducks TALON', bridge.n === 4 && bridge.synced && ducked, JSON.stringify({ bridge, ducked }));
+
+  // R3 — mic presence tri-state.
+  await page.keyboard.press('Escape');
+  await sleep(300);
+  const m0 = await page.evaluate(() => !!document.querySelector('.rbtn.mic.muted'));
+  await page.keyboard.press('m');
+  await sleep(300);
+  const m1 = await page.evaluate(() => ({ muted: !!document.querySelector('.rbtn.mic.muted'), pressed: document.querySelector('.rbtn.mic')?.getAttribute('aria-pressed') }));
+  check('mic presence: on the net by default, [M] mutes the ears only', !m0 && m1.muted && m1.pressed === 'false', JSON.stringify({ m0, m1 }));
+
+  // R4 — epistemic layer: fragility on the plan gate, drift badge after the correction, MOD/MEA toggle.
+  await page.evaluate(() => { player.setTime(-28); talon.answer('prepos', 'yes'); player.setTime(7.2); });
+  await sleep(700);
+  const frag = await page.evaluate(() => !!document.querySelector('.gate .fragility'));
+  await page.evaluate(() => player.setTime(90));
+  await sleep(800);
+  const drift = await page.evaluate(() => document.querySelector('.gatechip.drift')?.textContent ?? 'none');
+  await page.evaluate(() => document.querySelector('.rail [data-act="panel"]')?.click());
+  await sleep(500);
+  await page.evaluate(() => document.querySelector('.entry .chip.modmea')?.click());
+  await sleep(400);
+  const modmea = await page.evaluate(() => document.querySelector('.entry .chip.modmea')?.getAttribute('aria-pressed'));
+  check('epistemic layer: fragility line, PLAN DRIFT badge, MOD-vs-MEA compare toggle', frag && drift === 'PLAN DRIFT' && modmea === 'true', JSON.stringify({ frag, drift, modmea }));
+
+  // R5 — layout guards: COA collapse keeps options reachable at a laptop viewport; daylight drives the terrain.
+  const lap = await browser.newPage();
+  await lap.setViewport({ width: 1280, height: 800 });
+  await lap.goto('http://127.0.0.1:8133/?situation=wui-breakout&intro=0', { waitUntil: 'load' });
+  await lap.waitForFunction('window.player && document.querySelector(".boot.gone")', { timeout: 120000 });
+  await sleep(800);
+  await lap.evaluate(() => player.setTime(7.2));
+  await sleep(600);
+  const lapP = await lap.evaluate(() => {
+    const opts = [...document.querySelectorAll('.opt')];
+    const last = opts[opts.length - 1]?.getBoundingClientRect();
+    const cards = document.querySelector('.cards')?.getBoundingClientRect();
+    return { shut: !!document.querySelector('.card.coa-shut'), fits: opts.length > 0 && last && cards && last.bottom <= cards.bottom + 2 };
+  });
+  await lap.evaluate(() => document.querySelector('[data-pop="settings"]')?.click());
+  await sleep(400);
+  await lap.evaluate(() => [...document.querySelectorAll('button')].find((b) => /high-lux/i.test(b.textContent))?.click());
+  await sleep(1200);
+  const lux = await lap.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme'), light: engine.getLighting() }));
+  check('layout + theme: COA collapses at 1280x800 with options visible; Field High-Lux drives the terrain light', lapP.shut && lapP.fits && lux.theme === 'daylight' && lux.light === 'day', JSON.stringify({ lapP, lux }));
+  await lap.close();
+  check('final layer: no console errors', errors.length === 0 && rerr.length === 0, [...errors, ...rerr].slice(0, 3).join(' | '));
+  await page.close();
+}
+
 await browser.close();
 server.close();
 const failed = results.filter((r) => !r.ok);

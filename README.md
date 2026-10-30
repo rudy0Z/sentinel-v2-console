@@ -15,7 +15,7 @@ A Three.js (r170) terrain and map engine for emergency command displays, plus a 
 ```sh
 npm install
 npm run serve        # http://127.0.0.1:8130/  (console) · /tokens.html (design system) · /harness.html (bench)
-npm run verify       # headless checks (38): governance, journey arcs, live-model adapter, a11y, engine
+npm run verify       # headless checks (44): governance, journey arcs, live-model adapter, a11y, engine, record loop, command bridge, presence, epistemic layer
 npm run build        # tsc + re-inline the three modules into harness.html
 npm run data         # re-download ./data/ and rebuild the scenario + situations
 npm run phases       # screenshot every phase into qa/ and print draw calls per phase

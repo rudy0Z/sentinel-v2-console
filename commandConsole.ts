@@ -293,6 +293,9 @@ export async function mountConsole(app: HTMLElement) {
     else document.documentElement.removeAttribute('data-theme');
     store.set('theme', mode);
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', mode === 'daylight' ? '#E6E3DA' : '#07080B');
+    // P7: the 3D engine follows the theme — Field High-Lux is a daylight cockpit, not
+    // light chrome floating on a black canvas (visual audit 2026-10-30, split-brain HIGH).
+    engine.setLighting(mode === 'daylight' ? 'day' : 'night', 900);
     applyTokens();
     schedule();
   }
@@ -1988,8 +1991,14 @@ export async function mountConsole(app: HTMLElement) {
         toast('Scripted replies.');
         return schedule();
       case 'mic': {
-        // P3 tri-state presence: the mic is on the net by default (ambient), click/[M] mutes
-        // the ears, V/hail transmits (ducks). Mute never touches the radio or TALON's voice.
+        // P3 tri-state presence: click releases a transmit first (a hail or V can duck),
+        // else cycles the ears. Mute never touches the radio or TALON's voice output.
+        if (ui.listening) {
+          ui.listening = false;
+          keys.delete('rail');
+          schedule();
+          return;
+        }
         ui.micMuted = !ui.micMuted;
         store.set('micMuted', ui.micMuted);
         keys.delete('rail');
@@ -2234,6 +2243,8 @@ export async function mountConsole(app: HTMLElement) {
     } else if (k === 'r') setReview(!ui.review);
     else if (k === 'v') toggleVoice();
     else if (k === 'm') {
+      // Muting ends a transmit too — muted and transmitting is incoherent.
+      if (ui.listening) ui.listening = false;
       ui.micMuted = !ui.micMuted;
       store.set('micMuted', ui.micMuted);
       keys.delete('rail');

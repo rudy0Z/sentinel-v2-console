@@ -1,14 +1,22 @@
-# Handoff · Sentinel console + TALON copilot (2026-10-21 · v2 pass 2026-10-26 · audit-fix pass 2026-10-27)
+# Handoff · Sentinel console + TALON copilot (2026-10-21 · v2 pass 2026-10-26 · audit-fix 2026-10-27 · final layer 2026-10-30)
 
 ## Run it
 ```sh
 npm install
 npm run serve      # http://127.0.0.1:8130/  (console) · /harness.html (engine bench) · /tokens.html (design system)
-npm run verify     # 32 headless checks (console, copilot rules, engine, journey arcs, live-model adapter, a11y)
+npm run verify     # 44 headless checks (console, copilot rules, engine, journey arcs, live-model adapter, a11y, record loop, command bridge, presence, epistemic layer)
 node tools/cshot.mjs <name> "<query>" "<js>" [waitMs] [w] [h]   # screenshot into qa/
 ```
 URL flags: `?situation=standby|small-incident|contain|falsepos|wui-breakout`, `?phase=D`, `?lighting=day`, `?autopilot=1`, `?autoplay=1`, `?intro=0`, `?talon=open` (drawer starts open).
-Keys: `1–3` answer · `/` type · `V` voice · `T` TALON drawer · `R` review · `C` 2D/3D · `L` lighting · `I` thermal · `Space` / `.` exercise clock · `?` all.
+Keys: `1–3` answer · `/` type · `V` voice (transmit) · `M` mic mute · `T` TALON drawer · `R` review · `C` 2D/3D · `L` lighting · `I` thermal · `Space` / `.` exercise clock · `?` all.
+
+## Final layer (2026-10-30) — the interaction architecture pass
+- **Record loop (the brief's cold start):** a first-time visitor to the canonical console boots INSIDE the record — reviewing the closed `S-04` permitted-burn incident — and is preempted ~9 s later by the live `S-05` breakout. The record is bookmarked (`⏸ S-04 · Permitted burn · T+0:06` pill), resumable, and the arc ends by pointing back at the record instead of going silent. `?boot=live|record` forces a path; the choreography requires both `situation` and `intro` params to be absent, so suites and deep links never see it. Returning to live rebuilds the incident (decisions are a function of the rebuilt TALON) — the choreography preempts before any gate opens, so the normal path loses nothing.
+- **Command bridge (ICS-205):** the authority popover carries the incident's human leaders from `meta.bridge` (Reyes DIV-ALPHA, Vance SH-12, Cole AA-07, Lin County OES) with net assignments and autonomous drone pairings. `Hail` ducks TALON and opens the patch without the room mic; `Push to TAK` syncs plan geometry to the leader's ATAK tablet with a persistent receipt; hovering a leader brushes their drone + net target on the map. Committing any gate that names field executors emits the ground-link receipt.
+- **Mic presence:** tri-state — ON THE NET (ambient, default) / MUTED (`M`, the ears only; never the radio or TALON's voice) / TRANSMITTING (`V` or hail, ducks). Red discipline holds: transmitting is TALON activity, amber.
+- **Map-is-the-reply:** hovering a COA column or option lights the geometry it authorizes and dims the rest; the T+89 correction entry carries `Compare on map · MOD vs MEA` (the superseded `cut-prev` model projection against the measured cut); drawer/log entries with evidence are map verbs (click = fly).
+- **Epistemic adds:** gates can name their own blind spot (`⚠ Fragile if: …`); new cards carry a `Δ since your last decision` working-memory anchor; the posture pill arms `PLAN DRIFT` when measured ground truth outruns the model.
+- **Layout fixes (visual audit):** COA compare collapses by default below 1000 px viewport height (and while dissent is open) so decision buttons never clip; card-column reserve tightened 120→56 px; topbar title ellipsizes instead of colliding with the posture pill. Field High-Lux now drives `engine.setLighting('day')` — the terrain re-skins with the chrome (no more split-brain).
 Target: control-room and desktop displays, ≥1280 px wide. Phone layouts are out of scope (decided 2026-10-21).
 
 ## What is built

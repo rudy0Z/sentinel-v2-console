@@ -51,7 +51,8 @@
     <div class="row" style="margin-top:12px">
       <button class="btn" id="themeToggle" aria-pressed="false">☾ EOC Darkroom</button>
       <span class="field-note">Toggle sets <code>data-theme="daylight"</code> on <code>&lt;html&gt;</code> — the same
-      contract the Settings popover uses (Field High-Lux). Terrain stays dark by design; chrome re-skins instantly.</span>
+      contract the Settings popover uses (Field High-Lux). The 3D terrain follows the theme through
+      <code>engine.setLighting()</code> — the whole cockpit re-skins, not just the chrome.</span>
     </div>
   </header>
 
