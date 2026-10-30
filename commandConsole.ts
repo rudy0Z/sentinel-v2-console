@@ -327,6 +327,8 @@ export async function mountConsole(app: HTMLElement) {
     bookmark: null as { sit: string; t: number; label: string; liveT: number } | null,
     recordMode: false,
     endNudged: false,
+    /** P4: MOD-vs-MEA comparison lit on the map while the correction card is open. */
+    modMea: false,
     hold: null as TalonItem | null,
     feedDrone: null as string | null,
     feedSensor: null as 'eo' | 'ir' | null,
@@ -371,7 +373,7 @@ export async function mountConsole(app: HTMLElement) {
     (window as unknown as Record<string, unknown>).talon = talon;
     scale = new TimeScale(sit);
     growth = buildGrowth(sit, world);
-    Object.assign(ui, { review: false, sel: null, dissent: null, hold: null, feedDrone: null, feedSensor: null, tab: 'now', hoverEv: null, cardFocus: null, recordMode: false, endNudged: false });
+    Object.assign(ui, { review: false, sel: null, dissent: null, hold: null, feedDrone: null, feedSensor: null, tab: 'now', hoverEv: null, cardFocus: null, recordMode: false, endNudged: false, modMea: false });
     ui.seen = new Set();
     stopPlay();
     const pi = phaseParam ? Math.max(0, sit.phases.findIndex((p) => p.id === phaseParam)) : 0;
@@ -676,6 +678,7 @@ export async function mountConsole(app: HTMLElement) {
     }
     const gate = it.gate ? `<div class="gate"><b>${esc(it.gate.label)}</b>${it.gate.reach ? `<span class="stakes" style="${STAKES_STYLE}">${esc(it.gate.reach)}</span>` : ''}${it.gate.check ? `<span class="check">${ic('check', 'xs')}${esc(it.gate.check)}</span>` : ''}${(it.gate.owns || it.gate.reqs) ? `<span class="authsplit">${it.gate.owns ? `<span class="auth-pill owned" title="Executed directly under the fire side's own authority">OWNED · ${esc(it.gate.owns)}</span>` : ''}${it.gate.reqs ? `<span class="auth-pill req" title="Unified-command requisition — an external authority (Sheriff / OES) executes this part">REQ → ${esc(it.gate.reqs)}</span>` : ''}</span>` : ''}<span class="lapse">If it lapses: ${esc(it.gate.onExpire ?? 'nothing is sent')}</span></div>` : '';
     const correction = it.kind === 'correction' ? correctionDelta(it) : null;
+    const modMeaBtn = it.kind === 'correction' && canDecide() && correction ? `<button class="chip modmea" data-act="modmea" aria-pressed="${ui.modMea}" title="Light both projections on the map: the superseded model (MOD) against the measured cut (MEA)">${ic('timeline', 'xs')}Compare on map · MOD vs MEA</button>` : '';
     const options = draftNow
       ? `<div class="dissent"><div><b>You're declining TALON's recommendation.</b><br><span style="color:var(--text-2)">Both positions go on the record verbatim: TALON's reasons and your words. A later re-raise can only cite new evidence, and goes to the Regional Duty Supervisor.</span></div>
           <div class="dchips" role="group" aria-label="Doctrinal reason chips (Q / W / E)">${DISSENT_CHIPS.map(([key, text]) => `<button type="button" class="chip dchip" data-act="dissent-chip" data-text="${esc(text)}" title="Insert this reason"><span class="kbd">${key}</span>${esc(text)}</button>`).join('')}</div>
@@ -688,7 +691,7 @@ export async function mountConsole(app: HTMLElement) {
       <div class="meta"><i class="dot ${crit ? 'critical' : 'needs'}"></i><span class="caps">${esc(agent)} · ${it.kind === 'proposal' ? 'Proposal' : 'Needs you'}</span><span class="grow"></span>${o.expiresAt !== null || Number.isFinite(o.closesAt) ? `<span class="countdown${crit ? ' stakes' : ''}"${crit ? ` style="${STAKES_STYLE}"` : ''} data-until="${Number.isFinite(o.closesAt) ? o.closesAt : o.expiresAt}" title="Closes at ${fmtT(o.closesAt)} (scene time)"></span>` : ''}</div>
       <h2>${esc(talon.text(it.title, t))}</h2>
       ${it.body ? `<p>${esc(talon.text(it.body, t))}</p>` : ''}
-      ${correction ? `<div class="stakes" style="${STAKES_STYLE}">${esc(correction)}</div><div class="basis"><span class="prov modeled"${provTitle('modeled')}>mod</span><span>Superseded projection kept on the map (ghosted) — replaced by the FT-02 IR pass <span class="prov measured"${provTitle('measured')}>mea</span></span></div>` : ''}
+      ${correction ? `<div class="stakes" style="${STAKES_STYLE}">${esc(correction)}</div>${modMeaBtn}<div class="basis"><span class="prov modeled"${provTitle('modeled')}>mod</span><span>Superseded projection kept on the map (ghosted) — replaced by the FT-02 IR pass <span class="prov measured"${provTitle('measured')}>mea</span></span></div>` : ''}
       ${compare}
       ${gate}
       ${options}
@@ -721,14 +724,14 @@ export async function mountConsole(app: HTMLElement) {
     const corr = e.kind === 'correction' ? talon.item(e.itemId ?? '') : null;
     const delta = corr ? correctionDelta(corr) : null;
     const rev = delta ? `<div class="stakes" style="${STAKES_STYLE};margin:2px 0">${esc(delta)}</div><div class="body"><span class="prov modeled"${provTitle('modeled')}>mod</span> Superseded projection kept on the map (ghosted) — replaced by the FT-02 IR pass <span class="prov measured"${provTitle('measured')}>mea</span></div>` : '';
-    return `<div class="entry${lvl}"><time>${fmtT(e.t)}</time><div><div class="who"><b>${who}</b>${e.kind === 'expired' ? '<span class="chip needs" style="height:18px">lapsed</span>' : ''}${decided}</div><div class="title">${esc(e.title)}</div>${rev}${e.body && e.kind !== 'answer' ? `<div class="body">${esc(e.body)}</div>` : e.kind === 'answer' && e.body ? `<div class="body">${esc(e.body)}</div>` : ''}${e.bullets ? `<ul>${e.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}${auth || e.evidence?.length ? `<div class="foot">${auth}${evChips(e.evidence, `e:${e.id}`)}</div>` : ''}</div></div>`;
+    return `<div class="entry${lvl}"><time>${fmtT(e.t)}</time><div><div class="who"><b>${who}</b>${e.kind === 'expired' ? '<span class="chip needs" style="height:18px">lapsed</span>' : ''}${decided}</div>${e.kind === 'correction' ? `<div class="title">${esc(e.title)}</div><button class="chip modmea" data-act="modmea" aria-pressed="${ui.modMea}" title="Light both projections on the map: the superseded model (MOD) against the measured cut (MEA)">${ic('timeline', 'xs')}Compare on map · MOD vs MEA</button>` : e.evidence?.length ? `<button class="title linkish" data-act="evfocus" data-ev="e:${e.id}" title="Show on the map — the map is the reply">${esc(e.title)}</button>` : `<div class="title">${esc(e.title)}</div>`}${rev}${e.body && e.kind !== 'answer' ? `<div class="body">${esc(e.body)}</div>` : e.kind === 'answer' && e.body ? `<div class="body">${esc(e.body)}</div>` : ''}${e.bullets ? `<ul>${e.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}${auth || e.evidence?.length ? `<div class="foot">${auth}${evChips(e.evidence, `e:${e.id}`)}</div>` : ''}</div></div>`;
   }
 
   function renderNow(ps: PlayerState, ts: TalonState) {
     const mine = ts.open.filter((o) => !o.item.reraise);
     const routed = ts.open.filter((o) => o.item.reraise);
     const feed = ts.feed.filter((e) => !(e.kind === 'ask' || e.kind === 'proposal') || !ts.open.some((o) => o.item.id === e.itemId));
-    const k = ['now', mine.map((o) => o.item.id), routed.map((o) => o.item.id), feed.map((e) => e.id), ps.primary, canDecide(), ts.agents.map((a) => a.status + a.line), ts.handled, Math.floor(ps.t * 2)];
+    const k = ['now', mine.map((o) => o.item.id), routed.map((o) => o.item.id), feed.map((e) => e.id), ps.primary, canDecide(), ts.agents.map((a) => a.status + a.line), ts.handled, Math.floor(ps.t * 2), ui.modMea];
     if (!changed('now', k)) return;
     const body = $('#pbody');
     let html = '';
@@ -776,7 +779,7 @@ export async function mountConsole(app: HTMLElement) {
   // the incident status lives in the posture pill, the KPIs live on the widgets they belong to.
 
   function renderLog(ts: TalonState) {
-    const k = ['log', ts.log.map((e) => e.id), ui.logAgent, ts.dissents.length];
+    const k = ['log', ts.log.map((e) => e.id), ui.logAgent, ts.dissents.length, ui.modMea];
     if (!changed('now', k)) return;
     const list = ts.log.filter((e) => ui.logAgent === 'all' || e.agent === ui.logAgent);
     $('#pbody').innerHTML = `<div class="seg" role="group" aria-label="Filter by agent"><button data-act="logagent" data-agent="all" aria-pressed="${ui.logAgent === 'all'}">All</button>${talon.script.agents.map((a) => `<button data-act="logagent" data-agent="${a.id}" aria-pressed="${ui.logAgent === a.id}">${esc(a.name)}</button>`).join('')}</div>
@@ -1693,6 +1696,25 @@ export async function mountConsole(app: HTMLElement) {
     engine.highlightUnit(drone || null);
     engine.setLayerEmphasis(drone || layers.length ? [...layers, 'labels'] : null, 220);
   });
+  // P4 the map is the reply: hovering a COA column or an option lights the geometry it
+  // authorizes and dims the rest — the card and the terrain read as one instrument.
+  app.addEventListener('mouseover', (e) => {
+    if (ui.pop) return;
+    const t = (e.target as HTMLElement).closest<HTMLElement>('.coa button.hd[data-route], .opt');
+    if (!t) return;
+    let ids: string[] = [];
+    if (t.dataset.route) ids = [t.dataset.route];
+    else if (t.dataset.item) ids = talon.item(t.dataset.item)?.evidence?.flatMap((ev) => ev.layers ?? []) ?? [];
+    const key = `card|${ids.join(',')}`;
+    if (key === brushKey) return;
+    brushKey = key;
+    engine.setLayerEmphasis(ids.length ? [...ids, 'labels'] : null, 220);
+  });
+  $('#cards').addEventListener('mouseleave', () => {
+    if (!brushKey.startsWith('card|')) return;
+    brushKey = '';
+    engine.setLayerEmphasis(null, 220);
+  });
   app.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     if (ui.pop && !t.closest('#pop') && !t.closest('[data-pop]')) closePop();
@@ -1799,6 +1821,13 @@ export async function mountConsole(app: HTMLElement) {
         keys.delete('cards');
         schedule();
         return;
+      case 'modmea': {
+        ui.modMea = !ui.modMea;
+        engine.setLayerEmphasis(ui.modMea ? ['cut', 'cut-prev', 'labels'] : null, 300);
+        keys.delete('cards');
+        schedule();
+        return;
+      }
       case 'hail': {
         const b = bridgeRows().find((x) => x.id === d.id);
         if (!b) return;
