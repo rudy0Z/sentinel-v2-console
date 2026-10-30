@@ -515,6 +515,12 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .rail .rbtn .mascot { width: 30px; height: 30px; }
 .rail .rbtn[aria-pressed="true"] { color: var(--talon-ink); border-color: color-mix(in srgb, var(--talon) 45%, transparent); background: var(--talon-soft); }
 .rail .rbtn.mic[aria-pressed="true"] { color: var(--talon-ink); border-color: color-mix(in srgb, var(--talon) 45%, transparent); background: var(--talon-soft); animation: breathe 1.4s var(--ease-in-out) infinite; } /* red discipline: transmitting is TALON activity, not life safety */
+.rail .rbtn.mic { --net: 1; }
+.rail .rbtn.mic::after { content: ""; position: absolute; right: 5px; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--talon-ink); opacity: var(--net); box-shadow: 0 0 0 2px var(--bg-surface-1); }
+.rail .rbtn.mic[aria-pressed="true"]::after { background: var(--needs); }
+.rail .rbtn.mic.muted { --net: 0; }
+.rail .rbtn.mic.muted svg { opacity: .38; }
+.rail .rbtn.mic.muted::before { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 1.5px; background: var(--needs); transform: translate(-50%, -50%) rotate(-45deg); border-radius: 1px; }
 .rail .rbtn .badge { position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--r-pill); background: var(--needs); color: var(--text-inverse); font: var(--fw-bold) var(--fs-badge)/16px var(--font-sans); text-align: center; }
 .rail .rbtn .pips { position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; }
 .rail .rbtn .pips i { width: 6px; height: 2.5px; border-radius: 1px; background: var(--n-6); }

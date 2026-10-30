@@ -300,6 +300,9 @@ export async function mountConsole(app) {
         dissent: null,
         coaToggled: new Set(),
         takSync: new Set(),
+        /** P3 mic presence: the ears, not the voice. On the net by default (ambient); muted
+         *  stops TALON hearing the room and net. Transmitting (V / hail) is `listening`. */
+        micMuted: store.get('micMuted', false),
         /** P1 record loop: the bookmarked record review (brief: "reviewing footage from an
          *  earlier alert") that a P0 breakout preempts. liveT holds the live incident's head
          *  while the operator is inside the record; null until the first preemption. */
@@ -544,7 +547,7 @@ export async function mountConsole(app) {
         const mine = ts.open.filter((o) => !o.item.reraise).length;
         const active = ts.agents.filter((a) => a.status !== 'idle');
         const orbMood = ui.listening ? 'listening' : ts.mood === 'calm' && active.some((a) => a.status === 'working') ? 'working' : ts.mood;
-        const k = [ts.agents.map((a) => a.status), mine, ui.panel, ui.pop, ui.listening, ts.budget.used];
+        const k = [ts.agents.map((a) => a.status), mine, ui.panel, ui.pop, ui.listening, ts.budget.used, ui.micMuted];
         if (!changed('rail', k))
             return;
         $('#rail').innerHTML = `
@@ -552,7 +555,7 @@ export async function mountConsole(app) {
         ${active.map((a) => `<span class="adot" data-tip="${esc(a.name)} · ${a.status === 'needs' ? 'needs you' : a.status}|${esc(a.line)}"><i class="dot ${a.status}"></i></span>`).join('')}
       </button>` : ''}
       <button class="rbtn face" data-act="panel" aria-pressed="${ui.panel}" aria-label="TALON chat (T)" data-tip="TALON|thread · log · review (T)">${mascot(orbMood)}${mine ? `<span class="badge">${mine}</span>` : ''}</button>
-      <button class="rbtn mic" data-act="mic" aria-pressed="${ui.listening}" aria-label="Voice command (V)" data-tip="Voice command|press V">${ic('mic')}</button>
+      <button class="rbtn mic${ui.micMuted && !ui.listening ? ' muted' : ''}" data-act="mic" aria-pressed="${ui.listening}" aria-label="${ui.micMuted ? 'Mic muted — click to put TALON on the net' : ui.listening ? 'Transmitting — TALON ducked' : 'TALON on the net — click to mute, V to transmit'}" data-tip="${ui.listening ? 'Transmitting|TALON ducked' : ui.micMuted ? 'Mic muted|[M] or click to un-mute' : 'On the net|click to mute · V to transmit'}">${ic('mic')}</button>
       <button class="rbtn" data-act="pop" data-pop="authority" aria-pressed="${ui.pop === 'authority'}" aria-label="What TALON may do" data-tip="Authority|what TALON may do alone">${ic('shield')}</button>
       <button class="rbtn" data-act="pop" data-pop="settings" aria-pressed="${ui.pop === 'settings'}" aria-label="Settings" data-tip="Settings · live model">${ic('gear')}</button>`;
     }
@@ -1744,7 +1747,7 @@ export async function mountConsole(app) {
         $('#overlay .btn.primary').focus();
     }
     function shortcuts() {
-        const rows = [['1 – 3', 'Answer the card TALON is asking'], ['Alt+1 / Alt+2', 'Promote a queued card to the focus'], ['/', 'Type to TALON'], ['V', 'Voice command'], ['T', 'TALON chat — thread, log, review'], ['R', 'After-action review'], ['C', '2D / 3D map'], ['L', 'Day / night'], ['I', 'Thermal map'], ['Ctrl+Shift+D', 'Dev menu — situations, phases, harness'], ['Esc', 'Close chat, popovers, highlight'], ['Space', 'Exercise clock (harness)'], ['.', 'Next beat (harness)']];
+        const rows = [['1 – 3', 'Answer the card TALON is asking'], ['Alt+1 / Alt+2', 'Promote a queued card to the focus'], ['/', 'Type to TALON'], ['V', 'Voice command'], ['M', 'Mic — on the net / muted'], ['T', 'TALON chat — thread, log, review'], ['R', 'After-action review'], ['C', '2D / 3D map'], ['L', 'Day / night'], ['I', 'Thermal map'], ['Ctrl+Shift+D', 'Dev menu — situations, phases, harness'], ['Esc', 'Close chat, popovers, highlight'], ['Space', 'Exercise clock (harness)'], ['.', 'Next beat (harness)']];
         $('#overlay').innerHTML = `<div class="scrim" data-act="overlay-close"><div class="modal glass" role="dialog" aria-label="Keyboard shortcuts"><h2>Shortcuts</h2><div class="keys">${rows.map(([k, d]) => `<span class="kbd">${k}</span><span>${d}</span>`).join('')}</div><div class="row"><button class="btn primary" data-act="overlay-close">Done</button></div></div></div>`;
     }
     // ------------------------------------------------------------------ input wiring
@@ -2029,8 +2032,15 @@ export async function mountConsole(app) {
                 closePop();
                 toast('Scripted replies.');
                 return schedule();
-            case 'mic':
-                return toggleVoice();
+            case 'mic': {
+                // P3 tri-state presence: the mic is on the net by default (ambient), click/[M] mutes
+                // the ears, V/hail transmits (ducks). Mute never touches the radio or TALON's voice.
+                ui.micMuted = !ui.micMuted;
+                store.set('micMuted', ui.micMuted);
+                keys.delete('rail');
+                schedule();
+                return;
+            }
             case 'group': {
                 const g = d.g;
                 hiddenGroups.has(g) ? hiddenGroups.delete(g) : hiddenGroups.add(g);
@@ -2296,6 +2306,12 @@ export async function mountConsole(app) {
             setReview(!ui.review);
         else if (k === 'v')
             toggleVoice();
+        else if (k === 'm') {
+            ui.micMuted = !ui.micMuted;
+            store.set('micMuted', ui.micMuted);
+            keys.delete('rail');
+            schedule();
+        }
         else if (k === 'c')
             engine.setCamera(engine.getCameraMode() === 'perspective' ? 'topdown' : 'perspective', 1200);
         else if (k === 'l')
