@@ -299,6 +299,12 @@ export async function mountConsole(app) {
         hoverEv: null,
         dissent: null,
         coaToggled: new Set(),
+        /** P1 record loop: the bookmarked record review (brief: "reviewing footage from an
+         *  earlier alert") that a P0 breakout preempts. liveT holds the live incident's head
+         *  while the operator is inside the record; null until the first preemption. */
+        bookmark: null,
+        recordMode: false,
+        endNudged: false,
         hold: null,
         feedDrone: null,
         feedSensor: null,
@@ -342,7 +348,7 @@ export async function mountConsole(app) {
         window.talon = talon;
         scale = new TimeScale(sit);
         growth = buildGrowth(sit, world);
-        Object.assign(ui, { review: false, sel: null, dissent: null, hold: null, feedDrone: null, feedSensor: null, tab: 'now', hoverEv: null, cardFocus: null });
+        Object.assign(ui, { review: false, sel: null, dissent: null, hold: null, feedDrone: null, feedSensor: null, tab: 'now', hoverEv: null, cardFocus: null, recordMode: false, endNudged: false });
         ui.seen = new Set();
         stopPlay();
         const pi = phaseParam ? Math.max(0, sit.phases.findIndex((p) => p.id === phaseParam)) : 0;
@@ -360,6 +366,44 @@ export async function mountConsole(app) {
         buildTimeline();
         applyHiddenGroups();
         schedule();
+    }
+    /** P1 record loop: non-destructive preemption. The operator is reviewing the S-04
+     *  record when the breakout lands; the record is bookmarked, not discarded. Returning
+     *  to live rebuilds the live incident (decisions are a function of the rebuilt talon) —
+     *  the choreography preempts before any decision exists, so the normal path loses nothing. */
+    async function runPreemption() {
+        if (!ui.recordMode || ui.bookmark)
+            return;
+        chime('interrupt');
+        ui.bookmark = { sit: ui.sit, t: player.getTime(), label: `${SITUATIONS.find((x) => x.id === ui.sit)?.sid ?? 'S-04'} · ${SITUATIONS.find((x) => x.id === ui.sit)?.name ?? 'record'}`, liveT: -Infinity };
+        ui.recordMode = false;
+        toast('P0 preemption · S-05 Encinal Canyon breakout detected — recon launched under SO-2. Your S-04 record is bookmarked.', 'critical');
+        await mount('wui-breakout');
+    }
+    async function resumeRecord() {
+        const bm = ui.bookmark;
+        if (!bm || ui.recordMode)
+            return;
+        bm.liveT = ui.liveT;
+        await mount(bm.sit);
+        ui.recordMode = true;
+        ui.review = true;
+        player.setTime(bm.t);
+        ui.liveT = bm.t;
+        ui.lastSeen = bm.t;
+    }
+    async function returnLive() {
+        const bm = ui.bookmark;
+        if (!bm || !ui.recordMode)
+            return;
+        const t0 = (await mount('wui-breakout'), sit.phases[0]?.t ?? sit.clock.start);
+        if (Number.isFinite(bm.liveT) && bm.liveT > t0) {
+            player.setTime(bm.liveT);
+            ui.liveT = bm.liveT;
+            ui.lastSeen = bm.liveT;
+            for (const o of talon.state(bm.liveT).open)
+                ui.seen.add(o.item.id);
+        }
     }
     // ------------------------------------------------------------------ render scheduling
     let queued = false;
@@ -391,6 +435,12 @@ export async function mountConsole(app) {
         if (ps.t > ui.liveT && !ui.review)
             ui.liveT = ps.t;
         announce(ts, ps);
+        // P1: the arc ends inside the record, not in silence — one nudge when the last
+        // phase has run out and nothing waits on the operator.
+        if (!ui.endNudged && !ui.recordMode && ui.sit === 'wui-breakout' && !ts.open.length && ps.t > (sit.phases[sit.phases.length - 1]?.t ?? 0) + 15 && ps.t >= ui.liveT - 0.05) {
+            ui.endNudged = true;
+            toast('Initial attack complete — the record is ready. Review (R) for the after-action brief.');
+        }
         renderTopbar(ps, ts);
         renderRail(ts);
         renderCards(ps, ts);
@@ -453,7 +503,7 @@ export async function mountConsole(app) {
     function renderTopbar(ps, ts) {
         const inc = ps.telemetry.incident;
         const wall = sit.meta.epoch ? player.wallClock(ps.t) : '';
-        const mode = ui.review ? 'review' : isPast() ? 'past' : 'live';
+        const mode = ui.recordMode ? 'record' : ui.review ? 'review' : isPast() ? 'past' : 'live';
         const mine = ts.open.filter((o) => !o.item.reraise).length;
         const gateOpen = !!ps.gate?.open;
         // G1: airspace deconfliction. Nominal by default; a situation may carry meta.tfr
@@ -463,7 +513,7 @@ export async function mountConsole(app) {
         const tfrPill = tfr?.label
             ? `<span class="chip needs" title="${esc(tfr.note ?? 'Airspace deconfliction: TALON holds UAS below the manned traffic floor inside the TFR')}">${esc(tfr.label)}</span>`
             : `<span class="chip" title="Airspace deconfliction: UAS hold below 400 ft AGL inside the TFR; manned air attack has priority">TFR · DECONFLICTED &lt; 400′ AGL</span>`;
-        const k = [ui.sit, inc?.value, inc?.level, ps.phase.id, gateOpen, Math.floor(ps.gate?.expires ?? 0), wall, mode, ui.pop, mine, ui.panel, ui.replay, ui.listening, ui.ai?.model ?? '', tfr?.label ?? ''];
+        const k = [ui.sit, inc?.value, inc?.level, ps.phase.id, gateOpen, Math.floor(ps.gate?.expires ?? 0), wall, mode, ui.pop, mine, ui.panel, ui.replay, ui.listening, ui.ai?.model ?? '', tfr?.label ?? '', ui.recordMode ? 'rec' : '', ui.bookmark ? `bm${fmtT(ui.bookmark.t)}` : ''];
         if (!changed('top', k))
             return;
         const s = SITUATIONS.find((x) => x.id === ui.sit);
@@ -474,13 +524,18 @@ export async function mountConsole(app) {
         <i class="dot"></i><b>${esc(ps.phase.name)}</b>${gateOpen ? `<span class="gatechip">GATE <span class="countdown" data-until="${ps.gate.expires}"></span></span>` : ''}
       </button>
       ${tfrPill}
+      ${ui.recordMode
+            ? `<button class="btn sm primary" data-act="return-live" title="P0 breakout live — the S-05 Encinal Canyon incident needs you">Back to S-05 live${ic('live', 'xs')}</button>`
+            : ui.bookmark
+                ? `<button class="chip bmchip" data-act="resume-record" title="Resume the bookmarked S-04 record review — the live incident stays put">${ic('timeline', 'xs')}${esc(ui.bookmark.label)} · ${fmtT(ui.bookmark.t)}</button>`
+                : ''}
       <div class="grow"></div>
       ${ui.ai?.key ? `<span class="chip working" title="Live model · grounded in the situation, held by the truth guard, never executing">AI · ${esc(ui.ai.model)}</span>` : ''}
-      <div class="clock" title="Scene time · wall clock"><span class="live ${mode}" ${mode !== 'live' ? `title="Read-only record · the live head is ${fmtT(ui.liveT)} — decisions happen only at live"` : ''}>${mode === 'live' ? 'LIVE' : mode === 'review' ? 'REVIEW' : 'VIEWING'}</span><b>${fmtT(ps.t)}</b><span>${esc(wall)}</span></div>
+      <div class="clock" title="Scene time · wall clock"><span class="live ${mode === 'record' ? 'review' : mode}" ${mode !== 'live' ? `title="Read-only record · the live head is ${fmtT(ui.liveT)} — decisions happen only at live"` : ''}>${mode === 'live' ? 'LIVE' : mode === 'record' ? 'REPLAY' : mode === 'review' ? 'REVIEW' : 'VIEWING'}</span><b>${fmtT(ps.t)}</b><span>${esc(wall)}</span></div>
       <div class="op" title="Operator on authority"><i class="dot done"></i><b>A. Rao</b><span>Operator on authority</span></div>
       ${mode === 'past' ? `<button class="btn sm" data-act="golive">${ic('live', 'xs')}Back to live</button>` : ''}
       <button class="btn icon ghost" data-act="scrub" aria-pressed="${ui.replay}" aria-label="Incident timeline" title="Incident timeline (scrub, replay)">${ic('timeline')}</button>
-      <button class="btn ${ui.review ? 'primary' : 'ghost'}" data-act="review" aria-pressed="${ui.review}" title="After-action review (R)">${ic('review')}<span>${ui.review ? 'Exit review' : 'Review'}</span></button>
+      ${mode === 'record' ? '' : `<button class="btn ${ui.review ? 'primary' : 'ghost'}" data-act="review" aria-pressed="${ui.review}" title="After-action review (R)">${ic('review')}<span>${ui.review ? 'Exit review' : 'Review'}</span></button>`}
       <button class="btn icon ghost" data-act="keys" aria-label="Keyboard shortcuts (?)" title="Keyboard shortcuts (?)">${ic('help')}</button>`;
     }
     // ------------------------------------------------------------------ edge rail (One reference): the TALON mascot, agent dots only while active, controls
@@ -1673,6 +1728,14 @@ export async function mountConsole(app) {
         switch (d.act) {
             case 'pop':
                 return ui.pop === d.pop ? closePop() : openPop(d.pop, a);
+            case 'resume-record':
+                closePop();
+                void resumeRecord();
+                return;
+            case 'return-live':
+                closePop();
+                void returnLive();
+                return;
             case 'situation': {
                 const target = d.sit === 'random' ? SITUATIONS[Math.floor(Math.random() * SITUATIONS.length)].id : d.sit;
                 closePop();
@@ -2186,11 +2249,31 @@ export async function mountConsole(app) {
     // Theme posture first (A3): stored tokens apply before the first paint, and the
     // engine's palette rides the same CSS variables (readDesignTokens → setPalette).
     applyTheme(store.get('theme', 'dark'));
-    await mount(ui.sit, params.get('phase'));
+    // P1 record loop: a first-time visitor to the canonical console boots INSIDE the record —
+    // reviewing the closed S-04 permitted-burn incident — until the S-05 breakout preempts.
+    // Suites and deep links are unaffected: the choreography requires both `situation` and
+    // `intro` params to be absent, and `?boot=live|record` forces either path.
+    const bootMode = params.get('boot');
+    const choreo = (bootMode === 'record') || (!params.has('situation') && !params.has('intro') && !params.has('phase') && !store.get('recordIntro', false) && ui.sit === 'wui-breakout' && bootMode !== 'live');
+    if (choreo) {
+        await mount('falsepos');
+        ui.recordMode = true;
+        ui.review = true;
+        player.setTime(6);
+        ui.liveT = 6;
+        ui.lastSeen = 6;
+    }
+    else {
+        await mount(ui.sit, params.get('phase'));
+    }
     if (params.get('autoplay') === '1')
         startPlay();
     $('#boot').classList.add('gone');
-    if (!store.get('intro', false) && params.get('intro') !== '0')
+    if (choreo) {
+        window.sentinelBoot = { preempt: () => void runPreemption(), resume: () => void resumeRecord(), live: () => void returnLive() };
+        window.setTimeout(() => void runPreemption(), 9000);
+    }
+    else if (!store.get('intro', false) && params.get('intro') !== '0')
         intro(0);
 }
 // ============================================================================

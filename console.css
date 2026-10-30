@@ -872,6 +872,8 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .toast { pointer-events: auto; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3); border-radius: var(--r-pill); background: var(--surface-glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow-2); font-size: var(--fs-body); max-width: min(560px, 90vw); animation: pop-in var(--dur-base) var(--ease-out); }
 .toast.critical { border-color: color-mix(in srgb, var(--critical) 50%, transparent); }
 .toast.needs { border-color: color-mix(in srgb, var(--needs) 45%, transparent); }
+.bmchip { color: var(--talon-ink); border-color: color-mix(in srgb, var(--talon-ink) 40%, transparent); background: color-mix(in srgb, var(--talon-ink) 10%, transparent); cursor: pointer; }
+.bmchip:hover { border-color: var(--talon-ink); }
 .scrim { position: absolute; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; background: var(--p-alpha-b-50); animation: fade var(--dur-base); padding: var(--s-4); }
 @keyframes fade { from { opacity: 0; } }
 .modal { width: min(440px, 100%); border-radius: var(--r-xl); padding: var(--s-8) var(--s-6) var(--s-6); text-align: center; display: grid; gap: var(--s-3); justify-items: center; background: var(--surface-glass-strong); animation: pop-in var(--dur-slow) var(--ease-out); }
