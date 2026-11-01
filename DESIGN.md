@@ -19,8 +19,9 @@ Section names below refer to `console.css` headers (line numbers drift; section 
   `TIER 1` header.
 - **Zero-raw-hex enforcement:** no raw `#hex` or `rgba()` literal may appear in `console.css`
   outside the two token blocks (`:root` and `:root[data-theme="daylight"]`). Everything else —
-  including tints, shadows, masks and the wordmark gradient — is a Tier 3 token. Scanned clean as
-  of 2026-10-28; keep it that way.
+  including tints, shadows, masks and the wordmark gradient — is a Tier 3 token. The daylight
+  component-adjustment literals were promoted to named Tier-3 tokens (2026-11-01) and the
+  contract is enforced by the verify zero-raw-hex scanner; keep it that way.
 - **Alias layer:** `--n-0..12`, `--state-*`, `--map-*`, `--red-5`-style hue steps are kept as
   aliases to Tier 1/2 because the TS bridge and older rules read them. New CSS must not add
   consumers of the legacy hues.
@@ -90,9 +91,10 @@ violet (`--talon`) means *TALON activity*. Three states were re-tokenized off re
 | mic recording / PTT active | red | `--talon` violet (`.rail .rbtn.mic[aria-pressed="true"]`) |
 | interrupt-budget pips | red | `--needs` amber (`.pips i.on`) |
 | drone battery < 25% | red | `--needs` amber (`.batt.low/.batt.warn`); red stays reserved for auto-land / link-lost failure states |
+| session-mode LIVE dot | red | `--working` blue (`.live` — liveness is carried by the blink + the word; a session state is not life safety) |
 
-Enforced by the verify guard (§7): it parses the live stylesheet and fails if any `.mic`, `.pips`
-or `.batt.low` rule applies `--critical` or any red alias/literal, and asserts the live DOM renders
+Enforced by the verify guard (§7): it parses the live stylesheet and fails if any `.mic`, `.pips`,
+`.live` or `.batt.low` rule applies `--critical` or any red alias/literal, and asserts the live DOM renders
 a sub-25% battery in the resolved amber.
 
 ## 6 · Tactile motion grammar
@@ -106,9 +108,12 @@ a sub-25% battery in the resolved amber.
 - **Compositor-only fills:** bars animate `transform: scaleX(var(--fill))` (160ms, origin left) —
   never `width`. The width transition survives only for legacy width-set bars; new code sets
   `--fill`. The TALON drawer displaces `#cards` with `translateX`, never `right`.
-- **Entrance/exit asymmetry:** entrances 120ms, exits 80ms — leaving is always faster than
-  arriving. Popovers set `transform-origin` by anchor: rail popovers `top right`, topbar popovers
-  `.from-top` → `top center`.
+- **Entrance/exit asymmetry:** leaving is always faster than arriving — surface entrances run
+  200ms (`--dur-base`), tips/labels enter at 120ms and exit at 80ms, and the modal intentionally
+  runs slower (320ms) as an interruption. Popovers set `transform-origin` by anchor: rail popovers
+  `top right`, topbar popovers `.from-top` → `top center`. Theme swaps run under
+  `html.theme-swapping` (transitions suppressed for the flip, restored after) so the daylight
+  toggle doesn't smear ~35 simultaneous colour transitions.
 - **Scroll fades:** `.fade-y` (and `.wbody`, `.pbody`, `#cards`) and `.fade-x` (`.slots`) mask their
   overflow edges via registered `--fade-start/--fade-end` props animated on the element's own
   scroll timeline.
@@ -121,31 +126,61 @@ a sub-25% battery in the resolved amber.
   name="theme-color">` tracks the theme.
 - **Field High-Lux (daylight) theme:** `:root[data-theme="daylight"]` overrides every semantic
   token — warm tactical alabaster surfaces (`#F2F0EA` / `#E6E3DA`), deep obsidian ink `#11141C`,
-  bold 1.5px structural borders, zero reliance on outer glow. Toggle in Settings
-  (`EOC Darkroom` / `Field High-Lux`). **Documented limitation:** the 3D terrain keeps its dark
-  lighting in every theme — `--plan-*` deliberately stay the dark values so the bridge keeps
-  feeding the dark map; only the CSS surface aliases (`--map-*`, `--state-*`, `--viz-*`,
-  `--prov-*`) switch to darker map-ink variants.
+  bold 2px structural borders, zero reliance on outer glow. Toggle in Settings
+  (`EOC Darkroom` / `Field High-Lux`). The 3D terrain follows the theme: `applyTheme()` drives
+  `engine.setLighting('day' | 'night', 900)` — a daylight cockpit, not light chrome on a black
+  canvas (P7, audit 2026-10-30). `--plan-*` deliberately stay the dark-theme values so the
+  bridge keeps feeding the map's line colours; the CSS surface aliases (`--map-*`, `--state-*`,
+  `--viz-*`, `--prov-*`) switch to darker map-ink variants, so the 2D board swatch for a zone
+  and the 3D line for the same zone intentionally disagree in Field High-Lux.
 
 ## 7 · Verify / e2e as the enforcement layer
 
-`node tools/verify.mjs` (38 checks) and `node tools/e2e.mjs` (31 checks) are the contract, not a
-smoke test. The three design-system guards (verify, `design-system guards` section):
+`node tools/verify.mjs` (45 checks) and `node tools/e2e.mjs` (32 checks) are the contract, not a
+smoke test. The design-system guards (verify, `design-system guards` section):
 
 1. **Red discipline** — fetches `/console.css` in-page, strips comments, splits every innermost
-   rule block, and fails if any rule whose selector matches `.mic`, `.pips` or `.batt.low` applies
-   `--critical` / a red alias / a red literal (whitespace-tolerant); asserts the `.batt.low` rule
+   rule block, and fails if any rule whose selector matches `.mic`, `.pips`, `.live` or `.batt.low`
+   applies `--critical` / a red alias / a red literal (whitespace-tolerant); asserts the `.batt.low` rule
    uses `--needs`; then, live at T+76 where FT-01 is below the 25% handover floor, polls the fleet
    widget and asserts the low-battery readout's computed colour equals the resolved `--needs`.
 2. **`--text-4` contrast** — resolves `--text-4` and the live `.widget` background in-page
    (alpha composited over `--bg-canvas`), computes the WCAG relative-luminance ratio, and requires
    ≥ 4.5:1 against both the widget surface and the documented token surface `#101218`.
-3. **Dock overflow affordance** — at 1280×800 (`phase=D`) asserts `.slots` clips, that
+3. **Zero-raw-hex scanner** — strips the two token blocks (`:root`, `:root[data-theme="daylight"]`)
+   and fails on any remaining `#hex`/`rgba()` literal in the stylesheet (DESIGN.md §1 contract).
+4. **Dock overflow affordance** — at 1280×800 (`phase=D`) asserts `.slots` clips, that
    `.dock-more` then exists, is visible, counts the clipped widgets (`+2 widgets ▸`) and scrolling
    on click advances `.slots.scrollLeft`; at 1920 asserts no overflow and no pill.
+5. **1920 floor viewport (e2e `V2`)** — at 1920×1080 with a decision card open: no two `.topbar`
+   children's boxes intersect (the flex shrink chain is intact end to end), `.tools` is clear of
+   the `#cards` lane (the cards-open tools shift), and the page has no horizontal overflow.
 
 Everything else the suites hold the line on: two-tier authority with citations, the 2-per-10-min
 budget over a whole run, lapse-on-silence, dissent records, ack loops, scrub determinism (map +
 TALON restore exactly), ≤ 20 draw calls per beat, axe-core 0 violations, and the adversarial
 battery (worst-case items, six options, time edges, 200% zoom) in e2e. Do not weaken a check to
 make a change pass — change the change.
+
+## 8 · Viewport contract & owner rulings (2026-11-01)
+
+- **Product floor: 1920×1080 (16:9).** Mockup targets: **2560×1440 and 3840×2160 (≤ 32″)** for
+  case-study stills. 1280–1680 stays as insurance only: the ≤1310 compaction tier and the V1 check
+  remain, but no design work, optimization or guard priority below 1920.
+- **Fixed component scale is deliberate.** Type and chrome are px-frozen — no rem conversion —
+  so the prototype renders pixel-identical at every target width (case-study mockups demand it).
+  The 200% zoom battery remains the accessibility backstop for the whole surface.
+- **The right lane belongs to the decision stack.** `.cards`/`.chat` keep the
+  `2·GAP+RAIL` anchor; when the lane is occupied (`cards-open` / `chat-open`), `.tools` step
+  aside by `−(PANEL+GAP)` with the standard ease — the operator never loses map navigation while
+  a decision is open. Guarded by e2e `V2`.
+- **On-the-record overrides** (per the hallmark audit mechanism — stated reasons, not oversights):
+  - *Tracked-caps labels stay.* The caps voice is the console's avionics identity; every caps
+    label carries a value or an authority state, never decoration.
+  - *The 10.5px data-ink floor stays* (§2) — mono data badges and chart axes at 10.5px are the
+    deliberate density choice for control-room viewing distances.
+  - *The focus ring stays TALON violet.* Focus is an instrument state wearing the console's
+    interaction hue; the 2px+4px ring geometry — not colour — carries the meaning.
+- **Concentric radius formula (reconciled):** `r_inner = max(var(--r-xs), r_outer − padding)` —
+  the floor is 4px, matching every applied value (coa, dissent, menu-item). The earlier comment
+  saying `max(2px, …)` was wrong arithmetic, not a wrong build.

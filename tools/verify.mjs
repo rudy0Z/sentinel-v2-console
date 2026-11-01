@@ -340,15 +340,33 @@ async function open(q, w = 1600, h = 960, pinned) {
     const needs = getComputedStyle(probe).color;
     probe.remove();
     return {
-      mic: bad('\\.mic'), pips: bad('\\.pips'),
+      mic: bad('\\.mic'), pips: bad('\\.pips'), live: bad('\\.live'),
       battLowRules: battLow.length, battLowRed: battLow.filter((r) => RED.test(r.body)).map((r) => r.sel), battLowAmber: battLow.some((r) => /--needs/.test(r.body)),
       lowFound: !!low, lowColor: low ? getComputedStyle(low).color : null, needs,
     };
   });
   check(
-    'red discipline: no .mic / .pips / .batt.low rule applies --critical or red (amber --needs instead); live <25% battery computes to the resolved --needs',
-    red.mic.length === 0 && red.pips.length === 0 && red.battLowRules >= 1 && red.battLowRed.length === 0 && red.battLowAmber && red.lowFound && red.lowColor === red.needs,
+    'red discipline: no .mic / .pips / .live / .batt.low rule applies --critical or red (amber --needs, LIVE is --working); live <25% battery computes to the resolved --needs',
+    red.mic.length === 0 && red.pips.length === 0 && red.live.length === 0 && red.battLowRules >= 1 && red.battLowRed.length === 0 && red.battLowAmber && red.lowFound && red.lowColor === red.needs,
     JSON.stringify(red)
+  );
+
+  // Zero-raw-hex contract (DESIGN.md §1): no raw #hex / rgba() literal may appear in
+  // console.css outside the two token blocks (:root and :root[data-theme="daylight"]).
+  // The two blocks are stripped by anchored block match, then the remainder is scanned.
+  const rawscan = await page.evaluate(async () => {
+    const css = await (await fetch('/console.css')).text();
+    const stripped = css
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/(^|\n):root\s*\{\n[\s\S]*?\n\}/g, '$1 ')
+      .replace(/(^|\n):root\[data-theme="daylight"\]\s*\{\n[\s\S]*?\n\}/g, '$1 ')
+      .replace(/:root\s*\{[^{}]*\}/g, ' ');
+    return [...stripped.matchAll(/#[0-9A-Fa-f]{3,8}\b|rgba?\(/g)].map((m) => m[0]);
+  });
+  check(
+    'zero-raw-hex: no raw color literal outside the two :root token blocks',
+    rawscan.length === 0,
+    rawscan.length ? `${rawscan.length} literals: ${[...new Set(rawscan)].slice(0, 8).join(' ')}` : 'clean'
   );
 
   // --text-4 (axis labels, timestamps, micro copy) clears WCAG AA 4.5:1 against the
@@ -469,8 +487,16 @@ async function open(q, w = 1600, h = 960, pinned) {
   });
   await sleep(400);
   await page.evaluate(() => document.querySelector('[data-act="hail"]')?.click());
-  await sleep(400);
-  const ducked = await page.evaluate(() => !document.querySelector('#ptt')?.hidden);
+  // poll, don't sleep: the PTT banner lands on the next rAF render, and software GL
+  // can stall a frame well past a fixed wait under load
+  const ducked = await page.evaluate(async () => {
+    const t0 = Date.now();
+    for (;;) {
+      if (!document.querySelector('#ptt')?.hidden) return true;
+      if (Date.now() - t0 > 5000) return false;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  });
   check('command bridge: 4 ICS-205 leaders, TAK sync chip, hail ducks TALON', bridge.n === 4 && bridge.synced && ducked, JSON.stringify({ bridge, ducked }));
 
   // R3 — mic presence tri-state.
@@ -492,8 +518,16 @@ async function open(q, w = 1600, h = 960, pinned) {
   await page.evaluate(() => document.querySelector('.rail [data-act="panel"]')?.click());
   await sleep(500);
   await page.evaluate(() => document.querySelector('.entry .chip.modmea')?.click());
-  await sleep(400);
-  const modmea = await page.evaluate(() => document.querySelector('.entry .chip.modmea')?.getAttribute('aria-pressed'));
+  // poll, don't sleep: the re-render lands on the next rAF render (software GL under load)
+  const modmea = await page.evaluate(async () => {
+    const t0 = Date.now();
+    for (;;) {
+      const v = document.querySelector('.entry .chip.modmea')?.getAttribute('aria-pressed');
+      if (v === 'true') return v;
+      if (Date.now() - t0 > 5000) return v ?? 'missing';
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  });
   check('epistemic layer: fragility line, PLAN DRIFT badge, MOD-vs-MEA compare toggle', frag && drift === 'PLAN DRIFT' && modmea === 'true', JSON.stringify({ frag, drift, modmea }));
 
   // R5 — layout guards: COA collapse keeps options reachable at a laptop viewport; daylight drives the terrain.

@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dock · Dimensional Drawing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;600;700&display=swap">
+<style>
+:root{--paper:#ececec;--sheet:#ffffff;--ink:#111;--ink2:#444;--ink3:#7a7a7a;--fill:#f3f3f3;--fill2:#e6e6e6;--f:'Arimo','Helvetica Neue',Helvetica,Arial,sans-serif;color-scheme:light}
+body{background:var(--paper);color:var(--ink);font-family:var(--f)}
+.wrap{max-width:1760px;margin:0 auto;padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.scroll{overflow-x:auto;background:var(--sheet);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+svg{display:block;width:100%;min-width:1100px;height:auto}
+.tb{background:var(--sheet);border:1.2px solid var(--ink);border-radius:16px;overflow:hidden;display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr;margin-bottom:24px}
+.tb>div{border-right:.8px solid var(--ink);border-bottom:.8px solid var(--ink);padding:10px 14px;min-width:0}
+.tb .big{grid-row:span 2;display:flex;flex-direction:column;justify-content:space-between;gap:12px}
+.tb h1{font-size:clamp(28px,4vw,44px);line-height:1;margin:4px 0 0;font-weight:400;letter-spacing:.1em;text-transform:uppercase}
+.lbl{text-transform:uppercase;letter-spacing:.06em;font-size:9.5px;color:var(--ink2);font-weight:400}
+.tb .v{font-size:13px;margin-top:2px;letter-spacing:.05em;text-transform:uppercase;font-variant-numeric:tabular-nums}
+.tb .big .v{font-size:11px;color:var(--ink2);line-height:1.6;text-transform:none;letter-spacing:.02em}
+.tb .notes{grid-column:1/-1;border-right:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 24px;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);line-height:1.9}
+.tb .notes ol{margin:4px 0 0;padding-left:20px}
+.tb .figs{grid-column:1/-1;border-right:0;border-bottom:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px 18px}
+.tb .figs>div{border-left:.8px solid var(--ink);padding-left:14px}
+.tb .figs>div:first-child{border-left:0;padding-left:0}
+.tb .figs .v{font-size:18px;letter-spacing:.06em;text-transform:none;margin-top:4px}
+.tb .nh{font-weight:700;font-size:13px;letter-spacing:.06em}
+.tb .nh span{font-weight:400;font-size:11.5px;margin-left:6px}
+@media (max-width:640px){.tb{grid-template-columns:1fr 1fr}.tb .big{grid-column:1/-1;grid-row:auto}}
+.sheetwrap{margin-bottom:28px}
+.foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);padding:10px 2px 0}
+.foot b{font-weight:700;color:var(--ink)}
+/* drawing */
+.u{font-family:var(--f);text-transform:uppercase;letter-spacing:.07em}
+.border{fill:none;stroke:var(--ink);stroke-width:1.2}
+.obj{fill:var(--sheet);stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.well{fill:var(--fill);stroke:var(--ink);stroke-width:1}
+.slot{fill:none;stroke:var(--ink2);stroke-width:.8;stroke-dasharray:4 3}
+.hug{fill:var(--fill2);stroke:var(--ink);stroke-width:1}
+.thin{fill:none;stroke:var(--ink);stroke-width:.8}
+.ph{fill:none;stroke:var(--ink3);stroke-width:.8;stroke-dasharray:14 3 3 3}
+.cl{fill:none;stroke:var(--ink3);stroke-width:.7;stroke-dasharray:16 3 2 3}
+.dl{stroke:var(--ink);stroke-width:.7;fill:none}
+.ext{stroke:var(--ink);stroke-width:.55;fill:none}
+.arrow{fill:var(--ink)}
+.hl{stroke:var(--ink2);stroke-width:.7}
+.env{fill:none;stroke:var(--ink);stroke-width:.8;stroke-dasharray:10 3 2 3}
+.dt{font:400 11px var(--f);fill:var(--ink);paint-order:stroke;stroke:var(--sheet);stroke-width:4px;stroke-linejoin:round}
+.dts{font:400 9.5px var(--f);fill:var(--ink2);letter-spacing:.06em;text-transform:uppercase;paint-order:stroke;stroke:var(--sheet);stroke-width:3px}
+.sl{font:400 9px var(--f);fill:var(--ink2);letter-spacing:.08em;text-transform:uppercase}
+.nt{font:400 11.5px var(--f);fill:var(--ink);letter-spacing:.06em;text-transform:uppercase}
+.nth{font:700 13px var(--f);fill:var(--ink);letter-spacing:.06em}
+.vt{font:400 12px var(--f);fill:var(--ink);letter-spacing:.1em;text-transform:uppercase}
+.nb{fill:var(--sheet);stroke:var(--ink);stroke-width:.9}
+.nbt{font:400 9.5px var(--f);fill:var(--ink)}
+.lead{stroke:var(--ink);stroke-width:.7;fill:none}
+.dot{fill:var(--ink)}
+.th{font:400 10.5px var(--f);fill:var(--ink);letter-spacing:.05em;text-transform:uppercase}
+.tc{font:400 10.5px var(--f);fill:var(--ink)}
+</style>
+<style>body{margin:0}</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="tb">
+    <div class="big">
+      <div><div class="lbl">UI command console · dimensional drawing</div><h1>Dock</h1></div>
+      <div class="v">Situation board: a horizontal strip of independent glass widgets above the bottom edge. Widget anatomy, width ladder, header internals, overflow pill, calm-mode restack.</div>
+    </div>
+    <div><div class="lbl">Dwg no.</div><div class="v">UI-CONSOLE-003</div></div>
+    <div><div class="lbl">Rev</div><div class="v">A · 2026-11-01</div></div>
+    <div><div class="lbl">Sheets</div><div class="v">9 · sheet 3</div></div>
+    <div><div class="lbl">Units</div><div class="v">CSS px @ 1×</div></div>
+    <div><div class="lbl">Scale</div><div class="v">As noted</div></div>
+    <div><div class="lbl">Source</div><div class="v">console.css · .dock / .widget block</div></div>
+    <div class="notes">
+      <div><span class="nh">NOTES:<span>(UNLESS OTHERWISE SPECIFIED)</span></span><ol>
+        <li>Do not scale from screen. Read the numbers. CSS px @ 1×, dark theme.</li>
+        <li>Widgets are independent cards, never one shared bar; bottom-aligned so collapsed widgets keep the shared baseline.</li>
+        <li>Height SLOTS is fixed; the .min state collapses a widget to its header only (height auto).</li>
+        <li>Composition: operator pins lead, TALON slots follow (max 3), leftovers last. An unused slot stays empty.</li></ol></div>
+      <div><span class="nh" aria-hidden="true">&nbsp;</span><ol start="5">
+        <li>by-talon widgets carry a 6px square before the title, a reason line in the header, and a violet-tinted border.</li>
+        <li>Feed widget drops the glass over the media body; the header stays glass; an inset hairline bounds the media.</li>
+        <li>Strip clips at 1280: the dock-more pill counts clipped widgets and scrolls them into view (verify-guarded).</li>
+        <li>Calm mode restacks the strip as a 340px left column from CHAT-TOP (dashed in plan).</li></ol></div>
+    </div>
+    <div class="figs">
+      <div><div class="lbl">SLOTS · dock h</div><div class="v">204 / 172</div></div>
+      <div><div class="lbl">H-HD · header</div><div class="v">38</div></div>
+      <div><div class="lbl">S3 · body pad</div><div class="v">12</div></div>
+      <div><div class="lbl">S2 · strip gap</div><div class="v">8</div></div>
+      <div><div class="lbl">R1 · widget</div><div class="v">R-LG = 10</div></div>
+      <div><div class="lbl">FADE · scroll mask</div><div class="v">32</div></div>
+      <div><div class="lbl">CALM-W</div><div class="v">340</div></div>
+    </div>
+  </header>
+  <div class="sheetwrap"><div class="scroll"><svg id="sh1" viewBox="0 0 1700 1060" role="img" aria-label="Single-sheet dimensional drawing of the situation dock: 0.7:1 plan of the widget strip with width ladder, 1:1 widget anatomy with header and body chains, feed widget variant, dock-more pill detail, by-talon header detail, calm-mode column schematic, variable tables"></svg></div>
+  <div class="foot"><span>2026-11-01 &nbsp;|&nbsp; UI command console reference · dark theme</span><span><b>Dock, architecture</b> &nbsp;|&nbsp; 3 / 9</span></div></div>
+</div>
+<script>
+(function(){
+const NS='http://www.w3.org/2000/svg';let sv,A,HAT,uid=0;
+function mk(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)if(a[k]!=null)e.setAttribute(k,a[k]);(p||sv).appendChild(e);return e}
+function tx(x,y,s,c,a,p){const t=mk('text',Object.assign({x:x,y:y,class:c||'dt'},a||{}),p);t.textContent=s;return t}
+function begin(id){sv=document.getElementById(id);sv.innerHTML='';const n=uid++;const d=mk('defs',{});const m=mk('marker',{id:'ar'+n,viewBox:'0 0 10 10',refX:10,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse',markerUnits:'userSpaceOnUse'},d);mk('path',{d:'M0,1.7 L10,5 L0,8.3 z',class:'arrow'},m);
+ const pt=mk('pattern',{id:'hat'+n,width:5,height:5,patternUnits:'userSpaceOnUse',patternTransform:'rotate(45)'},d);mk('line',{x1:0,y1:0,x2:0,y2:5,class:'hl'},pt);A='url(#ar'+n+')';HAT='url(#hat'+n+')';rr(20,20,1660,1020,16,'border')}
+function dimH(x1,x2,y,e1,e2,l,o){o=o||{};[[x1,e1],[x2,e2]].forEach(([x,e])=>{if(e==null)return;const s=Math.sign(y-e)||1;mk('line',{x1:x,y1:e+s*3,x2:x,y2:y+s*5,class:'ext'})});
+ if(x2-x1>=28)mk('line',{x1:x1,y1:y,x2:x2,y2:y,class:'dl','marker-start':A,'marker-end':A});else{mk('line',{x1:x1-13,y1:y,x2:x1,y2:y,class:'dl','marker-end':A});mk('line',{x1:x2+13,y1:y,x2:x2,y2:y,class:'dl','marker-end':A});mk('line',{x1:x1,y1:y,x2:x2,y2:y,class:'dl'})}
+ tx((x1+x2)/2+(o.dx||0),(o.below?y+13:y-4)+(o.dy||0),l,o.c||'dt',{'text-anchor':'middle'})}
+function dimV(y1,y2,x,e1,e2,l,o){o=o||{};[[y1,e1],[y2,e2]].forEach(([y,e])=>{if(e==null)return;const s=Math.sign(x-e)||1;mk('line',{x1:e+s*3,y1:y,x2:x+s*5,y2:y,class:'ext'})});
+ if(y2-y1>=28)mk('line',{x1:x,y1:y1,x2:x,y2:y2,class:'dl','marker-start':A,'marker-end':A});else{mk('line',{x1:x,y1:y1-13,x2:x,y2:y1,class:'dl','marker-end':A});mk('line',{x1:x,y1:y2+13,x2:x,y2:y2,class:'dl','marker-end':A});mk('line',{x1:x,y1:y1,x2:x,y2:y2,class:'dl'})}
+ const c=(y1+y2)/2;if(o.side){const r=o.side==='r';tx(r?x+6:x-6,c+4,l,o.c||'dt',{'text-anchor':r?'start':'end'})}else tx(x-5,c,l,o.c||'dt',{'text-anchor':'middle',transform:'rotate(-90 '+(x-5)+' '+c+')'})}
+function callout(px,py,ex,ey,l,dir,c){const s=dir||(ex>=px?1:-1);mk('circle',{cx:px,cy:py,r:1.8,class:'dot'});mk('polyline',{points:px+','+py+' '+ex+','+ey+' '+(ex+s*10)+','+ey,class:'lead'});tx(ex+s*14,ey+4,l,c||'dt',{'text-anchor':s>0?'start':'end'})}
+function rad(cx,cy,r,c,l,L){const sx=c.includes('l')?-1:1,sy=c.includes('t')?-1:1;const ox=cx-sx*r,oy=cy-sy*r;const px=ox+sx*r*Math.SQRT1_2,py=oy+sy*r*Math.SQRT1_2;callout(px,py,px+sx*L,py+sy*L,l,sx)}
+function nb(x,y,n){mk('rect',{x:x-6,y:y-6,width:12,height:12,class:'nb'});tx(x,y+3.5,String(n),'nbt',{'text-anchor':'middle'})}
+function rr(x,y,w,h,r,c){return mk('rect',{x:x,y:y,width:w,height:h,rx:r,class:c})}
+function detailRef(cx,cy,r,lbl,lx,ly){mk('circle',{cx:cx,cy:cy,r:r,class:'ph'});const a=Math.atan2(ly-cy,lx-cx);mk('line',{x1:cx+r*Math.cos(a),y1:cy+r*Math.sin(a),x2:lx,y2:ly,class:'lead'});tx(lx+(lx<cx?-4:4),ly+4,lbl,'dts',{'text-anchor':lx<cx?'end':'start'})}
+function slotLabel(x,y,w,h,l,al){tx(al==='l'?x+6:x+w/2,y+h/2+3.2,l,'sl',{'text-anchor':al==='l'?'start':'middle'})}
+function title(x,y,t,s){tx(x,y,t,'vt',{'text-anchor':'middle'});if(s)tx(x,y+14,s,'dts',{'text-anchor':'middle'})}
+function notes(list){const NX=50,NY=58;tx(NX,NY,'NOTES:','nth');tx(NX+62,NY,'(UNLESS OTHERWISE SPECIFIED)','nt');
+ list.forEach(([n,t],i)=>{const y=NY+30+i*24;if(n){nb(NX+6,y-4,n);tx(NX+22,y,t,'nt')}else tx(NX,y,t,'nt')})}
+function table(x,y,ttl,rows){const ws=[40,88,96],rh=17;tx(x,y-8,ttl,'vt');
+ const all=[['Code','Variable','Value']].concat(rows);all.forEach((r,i)=>{let cx2=x;r.forEach((c,j)=>{mk('rect',{x:cx2,y:y+i*rh,width:ws[j],height:rh,class:'thin'});tx(cx2+(j?ws[j]/2:6),y+i*rh+12,c,i?'tc':'th',{'text-anchor':j?'middle':'start'});cx2+=ws[j]})});return y+all.length*rh+36}
+
+const VAR={
+ widths:[['W-FEED','feed','344'],['W-WX','weather','336'],['W-FLEET','fleet · evac · events','316'],['W-GROW','growth','380'],['W-STR','structures','300']],
+ height:[['SLOTS','widget h','204 · 172@≤780h'],['H-HD','header h','38'],['H-MIN','collapse btn (sm icon)','26'],['S3','wbody pad','12'],['S2','strip gap','8']],
+ radius:[['R1','widget','R-LG = 10'],['R2','seg / cells inside body','R-SM = 6'],['R3','urow / zrow hover','R-XS = 4'],['R-P','dock-more','H÷2 = 13']],
+ fade:[['FADE','--fade-len','32'],['MASK','scroll fades','fade-x on .slots'],['OVER','dock-more overflow','scrollBy(cw)']],
+ calm:[['CW','calm column w','340'],['CT','calm top','CHAT-TOP = 76'],['CMH','calm max-h','VH−TB−SLOTS−60'],['CFH','feed h in calm','SLOTS']]
+};
+
+begin('sh1');
+notes([[1,'STRIP = FLEX ROW, ALIGN-END, OVERFLOW-X AUTO, NO SCROLLBAR (MASK FADES INSTEAD).'],
+ [2,'WIDGET WIDTHS COME FROM THE LADDER (TABLE RIGHT); FLEX 0 0 AUTO — NEVER SQUEEZE.'],
+ [3,'HEADER: H3 · GROW(REASON) · EXTRA(SEG/CHIPS) · COLLAPSE · PIN(TALON ONLY). PAD 0·S2·0·S3.'],
+ [4,'BODY: FLEX-1, PAD 0·S3·S3, OVERFLOW AUTO. EMPTY STATE CENTERS.'],
+ [5,'DOCK-MORE PILL RENDERS ONLY WHEN THE STRIP CLIPS; IT FLOATS AT THE DOCK TOP-RIGHT.'],
+ [6,'CALM MODE: NO INCIDENT — THE STRIP BECOMES A LEFT COLUMN (DASHED); THE MAP OWNS THE REST.'],
+ [7,'WIDGET-IN ENTRANCE: 6PX UP · 200MS · EASE-OUT. EXITS ARE FASTER PER THE MOTION CONTRACT.'],
+ [8,'ANCHORS: LEFT = RIGHT = BOTTOM = GAP (SHEET 01). ABOVE IT: TIMELINE AT DOCKH+2·GAP.']]);
+
+/* ---- PLAN VIEW 0.7:1 ---- */
+{const k=.7,PX=340,PY=330;const X=v=>PX+v*k,Y=v=>PY+v*k;
+ const W=1256,SH=204;
+ rr(X(0),Y(0),W*k,SH*k,10*k,'obj');
+ let wx=0;const ws=[[336,'WX'],[316,'FLEET'],[380,'GROWTH'],[344,'FEED']];
+ for(let i=0;i<4;i++){const w=Math.min(ws[i][0],1256-wx-8);if(w<=0)break;
+  rr(X(wx),Y(0),w*k,SH*k,10*k,i<3?'well':'slot');
+  slotLabel(X(wx),Y(0),w*k,38*k,ws[i][1]+' · '+ws[i][0],'l');
+  if(i===3){mk('line',{x1:X(wx+w),y1:Y(0),x2:X(wx+w),y2:Y(SH),class:'ext'});tx(X(wx+w/2),Y(90),'CLIPPED','sl',{'text-anchor':'middle'})}
+  wx+=w+8;}
+ mk('line',{x1:X(0),y1:Y(0),x2:X(0),y2:Y(SH),class:'obj'});mk('line',{x1:X(W),y1:Y(0),x2:X(W),y2:Y(SH),class:'obj'});
+ // dock-more pill
+ rr(X(W-150),Y(-34),110*k,26,13,'hug');tx(X(W-95*k),Y(-17),'+N WIDGETS ▸','sl',{'text-anchor':'middle'});
+ // dims
+ dimH(X(0),X(336),Y(-64),Y(0),Y(-34),'W-WX');dimH(X(344),X(660),Y(-64),null,Y(-34),'W-FLEET');dimH(X(668),X(1048),Y(-64),null,Y(-34),'W-GROWTH');dimH(X(1056),X(1256),Y(-64),null,Y(-34),'CLIP',{c:'dts'});
+ dimH(X(336),X(344),Y(-64),null,Y(-34),'S2',{dx:0});
+ dimH(X(0),X(W),Y(-96),Y(-80),Y(-80),'DOCK W = 100VW − 2·GAP');
+ const by=Y(SH+40);
+ dimV(Y(0),Y(SH),X(W+30),X(W),X(W),'SLOTS',{side:'r'});dimV(Y(SH),Y(SH+12),X(W+30),null,null,'GAP',{side:'r'});
+ dimV(Y(-34),Y(-34+0),0,0,0,'');
+ tx(X(W*k/2),by+26,'BOTTOM ANCHOR: DOCK BOTTOM = GAP · WIDGETS ALIGN-END','dts',{'text-anchor':'middle'});
+ nb(X(120),Y(20),1);nb(X(1100),Y(-14),5);nb(X(560),Y(100),3);
+ detailRef(X(200),Y(102),40,'DETAIL A',X(80),Y(170));
+ detailRef(X(1130),Y(60),44,'DETAIL B',X(1240),Y(140));
+ rad(X(0),Y(SH),10*k,'bl','R1',16);
+ title(X(W*k/2),Y(SH+96),'Plan view · dock strip','Scale 0.7:1 · four of seven widget types shown');}
+
+/* ---- DETAIL A · widget anatomy 1:1 ---- */
+{const AX=70,AY=600;const X=v=>AX+v,Y=v=>AY+v;
+ const W=316,SH=204;
+ rr(X(0),Y(0),W,SH,10,'obj');
+ mk('line',{x1:X(0),y1:Y(38),x2:X(W),y2:Y(38),class:'hl'});
+ slotLabel(X(0),Y(0),W,38,'','l');
+ rr(X(12),Y(11),70,16,2,'slot');tx(X(12),Y(23),'H3 · 11.5 · 600','sl');
+ tx(X(92),Y(23),'GROW · REASON · 11 · ELLIPSIS','sl');
+ rr(X(W-64),Y(6),26,26,4,'hug');xboxa(X(W-58),Y(12),14);
+ rr(X(W-32),Y(6),26,26,4,'hug');xboxa(X(W-26),Y(12),14);
+ // body wells
+ rr(X(12),Y(50),W-24,34,6,'well');slotLabel(X(12),Y(50),W-24,34,'CELL · WELL','l');
+ rr(X(12),Y(92),W-24,20,4,'well');tx(X(12),Y(105),'UROW · 14·40·1FR·AUTO','sl');
+ mk('line',{x1:X(12),y1:Y(128),x2:X(W-12),y2:Y(128),class:'hl'});tx(X(12),Y(140),'ZROW · 1FR·AUTO · HAIRLINE DIVIDERS','sl');
+ dimV(Y(0),Y(38),X(W+18),X(W),X(W),'H-HD',{side:'r'});
+ dimV(Y(38),Y(SH-12),X(W+18),null,null,'FLEX',{side:'r',c:'dts'});
+ dimV(Y(SH-12),Y(SH),X(W+18),null,null,'S3',{side:'r'});
+ dimV(Y(0),Y(SH),X(W+50),X(W+18),X(W+18),'SLOTS',{side:'r'});
+ dimH(X(0),X(12),Y(SH+24),Y(SH),Y(SH),'S3',{below:true,dx:-4});dimH(X(12),X(W-12),Y(SH+24),Y(SH),Y(SH),'BODY FILL',{below:true,c:'dts'});dimH(X(W-12),X(W),Y(SH+24),Y(SH),Y(SH),'S3',{below:true,dx:4});
+ dimH(X(0),X(W),Y(-18),Y(38),Y(-18),'W-FLEET = 316');
+ rad(X(0),Y(SH),10,'bl','R1',16);rad(X(W),Y(0),10,'tr','R1',16);
+ nb(X(W-16),Y(19),3);nb(X(30),Y(60),4);
+ title(X(W/2),Y(SH+72),'Detail A · widget anatomy','Scale 1:1 · header + body chains');
+ function xboxa(x,y,s){mk('rect',{x:x,y:y,width:s,height:s,class:'thin'});mk('path',{d:'M'+x+','+y+' l'+s+','+s+' M'+(x+s)+','+y+' l'+(-s)+','+s,class:'thin'})}}
+
+/* ---- DETAIL A2 · feed widget variant 1:1 ---- */
+{const AX=460,AY=600;const X=v=>AX+v,Y=v=>AY+v;
+ const W=344,SH=204;
+ rr(X(0),Y(0),W,SH,10,'thin',{stroke:'var(--ink)','stroke-width':1.2});
+ rr(X(0),Y(0),W,38,0,'well');tx(X(12),Y(23),'H3','sl');tx(X(60),Y(23),'GROW','sl');
+ rr(X(W-96),Y(6),26,20,4,'hug');tx(X(W-90),Y(20),'EO','sl');rr(X(W-66),Y(6),26,20,4,'hug');tx(X(W-60),Y(20),'IR','sl');
+ rr(X(W-34),Y(6),26,26,4,'hug');xboxb(X(W-28),Y(12),14);
+ rr(X(1),Y(39),W-2,SH-40,0,'thin');
+ tx(X(W/2),Y(110),'MEDIA SLOT · FULL BLEED','sl',{'text-anchor':'middle'});
+ tx(X(W/2),Y(124),'INSET HAIRLINE · α-W-10','sl',{'text-anchor':'middle'});
+ callout(X(W-1),Y(100),X(W+30),Y(60),'OUTLINE-MEDIA-INSET',1);
+ nb(X(W-16),Y(19),6);
+ title(X(W/2),Y(SH+72),'Detail A2 · feed variant','Scale 1:1 · glassless body, glass header');
+ function xboxb(x,y,s){mk('rect',{x:x,y:y,width:s,height:s,class:'thin'});mk('path',{d:'M'+x+','+y+' l'+s+','+s+' M'+(x+s)+','+y+' l'+(-s)+','+s,class:'thin'})}}
+
+/* ---- DETAIL B · by-talon header 2:1 ---- */
+{const q=2,BX=880,BY=600;const X=v=>BX+v*q,Y=v=>BY+v*q;
+ rr(X(0),Y(0),160,38,0,'thin');
+ mk('rect',{x:X(12),y:Y(15),width:6,height:6,rx:2,class:'dot'});
+ tx(X(24),Y(22),'TITLE','sl');
+ tx(X(78),Y(22),'TALON · REASON · 11 · ELLIPSIS','sl');
+ rr(X(206),Y(6),26,26,4,'hug');xboxc(X(212),Y(12),14);
+ rr(X(238),Y(6),26,26,4,'hug');xboxc(X(244),Y(12),14);
+ dimH(X(12),X(18),Y(-12),Y(15),Y(-0),'SQ 6',{dx:0});
+ tx(X(100),Y(52),'BORDER TINT: TALON 22% · PIN BUTTON PRESENT','dts',{'text-anchor':'middle'});
+ nb(X(230),Y(-4),5);
+ title(BX+140,BY+84,'Detail B · by-talon header','Scale 2:1 · operator headers swap title for a slot-picker button');
+ function xboxc(x,y,s){mk('rect',{x:x,y:y,width:s,height:s,class:'thin'});mk('path',{d:'M'+x+','+y+' l'+s+','+s+' M'+(x+s)+','+y+' l'+(-s)+','+s,class:'thin'})}}
+
+/* ---- DETAIL C · dock-more pill 2:1 ---- */
+{const q=2,CX=880,CY=760;const X=v=>CX+v*q,Y=v=>CY+v*q;
+ rr(X(0),Y(0),104,26,13,'hug');
+ tx(X(52),Y(16),'+2 WIDGETS ▸','sl',{'text-anchor':'middle'});
+ dimV(Y(0),Y(26),X(-14),X(0),X(0),'26',{side:'l'});
+ dimH(X(0),X(10),Y(40),Y(26),Y(26),'PX 10',{below:true,dx:-2});
+ callout(X(96),Y(13),X(150),Y(-14),'AMBER BORDER · NEEDS 45%',1);
+ tx(CX+52,Y(56),'POSITION: RIGHT S1 · BOTTOM 100%−S4 (INSIDE DOCK TOP)','dts',{'text-anchor':'middle'});
+ title(CX+52,Y(84),'Detail C · dock-more pill','Scale 2:1 · verify-guarded overflow affordance');}
+
+/* ---- CALM MODE schematic 0.28 ---- */
+{const s=.28,KX=1210,KY=600;const X=v=>KX+v*s,Y=v=>KY+v*s;
+ rr(X(0),Y(0),340*s,420*s,10*s,'slot');
+ for(let i=0;i<3;i++){rr(X(0),Y(i*140),340*s,132*s,10*s,i===2?'slot':'well');slotLabel(X(0),Y(i*140),340*s,26*s,'WIDGET','l')}
+ rr(X(0),Y(3*140),340*s,72*s,10*s,'well');slotLabel(X(0),Y(3*140),340*s,72*s,'FEED · SLOTS H','l');
+ dimH(X(0),X(340),Y(-24),Y(0),Y(-24),'CW = 340');
+ dimV(Y(0),Y(468),X(340*s+16),X(340*s),X(340*s),'CMH MAX',{side:'r',c:'dts'});
+ tx(KX+340*s/2,KY+468*s/2+40,'','l');
+ title(KX+50,KY+180,'Calm mode','Scale 0.28:1 · left column, dashed');}
+
+/* ---- TABLES ---- */
+{let y=table(1420,86,'Width ladder',VAR.widths);y=table(1420,y,'Heights',VAR.height);y=table(1420,y,'Radius',VAR.radius);y=table(1420,y,'Scroll fade',VAR.fade);table(1420,y,'Calm mode',VAR.calm);}
+})();
+</script>
+</body>
+</html>

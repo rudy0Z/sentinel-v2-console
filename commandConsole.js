@@ -269,6 +269,7 @@ export async function mountConsole(app) {
         engine.setPalette(patch);
     }
     const themeMode = () => (document.documentElement.getAttribute('data-theme') === 'daylight' ? 'daylight' : 'dark');
+    let themeTimer = 0;
     function applyTheme(mode) {
         if (mode === 'daylight')
             document.documentElement.setAttribute('data-theme', 'daylight');
@@ -279,6 +280,11 @@ export async function mountConsole(app) {
         // P7: the 3D engine follows the theme — Field High-Lux is a daylight cockpit, not
         // light chrome floating on a black canvas (visual audit 2026-10-30, split-brain HIGH).
         engine.setLighting(mode === 'daylight' ? 'day' : 'night', 900);
+        // Swap instantly: ~35 simultaneous colour transitions read as a smear (review 07 §P1-4).
+        // html.theme-swapping kills transitions for the swap, then they come back.
+        document.documentElement.classList.add('theme-swapping');
+        window.clearTimeout(themeTimer);
+        themeTimer = window.setTimeout(() => document.documentElement.classList.remove('theme-swapping'), 420);
         applyTokens();
         schedule();
     }
@@ -462,6 +468,8 @@ export async function mountConsole(app) {
         renderAttention(ts);
         updateCountdowns(ps);
         app.classList.toggle('chat-open', ui.panel);
+        // the decision lane is occupied — the map tools step aside (review C3)
+        app.classList.toggle('cards-open', $('#cards').children.length > 0);
         app.classList.toggle('calm', isCalm(ps));
         updateInsets();
     }
@@ -774,6 +782,9 @@ export async function mountConsole(app) {
         const el = $('#cards');
         if (!changed('cards', k))
             return;
+        // an overflowing unscrolled stack fades its last card instead of slicing it (review 04 §P1-3);
+        // layout reads only on content change + resize — never per frame
+        el.classList.toggle('overflows', el.scrollHeight > el.clientHeight + 4);
         if (!mine.length && !routed.length)
             return void (el.innerHTML = '');
         let html = issued;
@@ -923,7 +934,7 @@ export async function mountConsole(app) {
         tr.setAttribute('aria-valuemax', String(sit.clock.end));
         tr.setAttribute('aria-valuenow', String(Math.round(ps.t * 10) / 10));
         tr.setAttribute('aria-valuetext', `${fmtT(ps.t)}${sit.meta.epoch ? ` · ${player.wallClock(ps.t)}` : ''}`);
-        $('#tlfill').style.width = `${x * 100}%`;
+        $('#tlfill').style.setProperty('--fill', x.toFixed(4)); // compositor-only fill (bar contract)
         $('#tlhead').style.left = `${x * 100}%`;
         $('#tlfuture').style.left = `${live * 100}%`;
         const mk = talon.markers(ps.t, ui.review ? sit.clock.end : Math.max(ui.liveT, ps.t));
@@ -1054,6 +1065,8 @@ export async function mountConsole(app) {
     }
     const feedHost = document.createElement('div');
     feedHost.className = 'feedhost';
+    let dockRO = null;
+    let cardsRO = null;
     const batHist = new Map();
     const wxHist = new Map();
     let structOpen = false;
@@ -1098,15 +1111,25 @@ export async function mountConsole(app) {
         const c = composition(ps, ts);
         const slots = $('#slots');
         const layout = [...c.op.map((w) => ({ w, by: 'op', reason: '' })), ...c.talonSlots.map((s) => ({ w: s.w, by: 'talon', reason: s.reason }))];
-        if (changed('layout', layout.map((l) => l.w + l.by + (ui.min.has(l.w) ? '·' : '')))) {
-            slots.innerHTML = layout.map((l, i) => `<article class="widget glass ${l.w === 'feed' ? 'feed' : ''} ${l.by === 'talon' ? 'by-talon' : ''} ${ui.min.has(l.w) ? 'min' : ''}" data-w="${l.w}" data-slot="${i}"><header></header><div class="wbody" tabindex="0"></div></article>`).join('');
+        // Collapse state is a class toggle, not a rebuild: rebuilding the strip on any
+        // collapse replayed the 200ms widget-in entrance on every widget (review 07 §P2-5).
+        if (changed('layout', layout.map((l) => l.w + l.by).join('|'))) {
+            slots.innerHTML = layout.map((l, i) => `<article class="widget glass ${l.w === 'feed' ? 'feed' : ''} ${l.by === 'talon' ? 'by-talon' : ''}" data-w="${l.w}" data-slot="${i}"><header></header><div class="wbody" tabindex="0"></div></article>`).join('');
             for (const k of [...keys.keys()])
                 if (k.startsWith('w:'))
                     keys.delete(k);
         }
-        slots.querySelectorAll('.widget').forEach((el, i) => renderWidget(el, layout[i], ps, ts));
+        slots.querySelectorAll('.widget').forEach((el, i) => {
+            el.classList.toggle('min', ui.min.has(layout[i].w));
+            renderWidget(el, layout[i], ps, ts);
+        });
         if (!layout.some((l) => l.w === 'feed') && engine.getPip())
             engine.closeDronePip();
+        // D3 reactive: viewport changes clip/declip the strip without a layout-tuple change —
+        // observe the strip so the +N pill tracks the real geometry at every width. Same for
+        // the cards stack: its max-h moves when the chat opens.
+        dockRO ?? (dockRO = (() => { const ro = new ResizeObserver(() => updateDockMore()); ro.observe($('#slots')); return ro; })());
+        cardsRO ?? (cardsRO = (() => { const el = $('#cards'); const ro = new ResizeObserver(() => el.classList.toggle('overflows', el.scrollHeight > el.clientHeight + 4)); ro.observe(el); return ro; })());
         updateDockMore();
     }
     // D3: the silent dock overflow gets a voice. When the widget strip clips (2 of 5 at
@@ -1192,7 +1215,7 @@ export async function mountConsole(app) {
             const wasCut = cpSpec?.type === 'marker' ? /T\+\d{1,2}:\d{2}/.exec(cpSpec.title ?? '')?.[0] : undefined;
             const revKnown = !!wasCut && !!growth && growth.switchAt !== null && (ps.t >= growth.switchAt || ps.hindsight);
             html = b
-                ? `${(b.zones ?? []).map((z) => `<div class="zrow"><b><i class="sw" style="${z.state === 'proposed' ? `background:transparent;border:1.5px dashed ${sw[z.id] ?? 'var(--text-3)'};box-sizing:border-box` : `background:${sw[z.id] ?? 'var(--text-3)'}`}"></i>${esc(z.name)} · ${esc(z.kind)}${z.state === 'proposed' ? ' <span class="chip" style="height:18px" title="Drawn on the plan, not yet authorized — hollow dashed swatch vs committed solid">proposed</span>' : ''}</b><small>${z.households ? `${z.households} homes` : ''}${typeof z.cleared === 'number' ? ` · <b class="num" style="display:inline;color:var(--text-1)">${z.cleared}%</b>` : ''}</small>${typeof z.cleared === 'number' ? `<div class="bar"><i style="--fill:${(z.cleared / 100).toFixed(2)}"></i></div>` : ''}</div>`).join('')}
+                ? `${(b.zones ?? []).map((z) => `<div class="zrow"><b><i class="sw" style="${z.state === 'proposed' ? `background:transparent;border:1.5px dashed ${sw[z.id] ?? 'var(--text-3)'};box-sizing:border-box` : `background:${sw[z.id] ?? 'var(--text-3)'}`}"></i>${esc(z.name)} · ${esc(z.kind)}${z.state === 'proposed' ? ' <span class="chip" style="height:18px" title="Drawn on the plan, not yet authorized — hollow dashed swatch vs committed solid">proposed</span>' : ''}</b><small>${z.households ? `${z.households} ${z.households === 1 ? 'home' : 'homes'}` : ''}${typeof z.cleared === 'number' ? ` · <b class="num" style="display:inline;color:var(--text-1)">${z.cleared}%</b>` : ''}</small>${typeof z.cleared === 'number' ? `<div class="bar"><i style="--fill:${(z.cleared / 100).toFixed(2)}"></i></div>` : ''}</div>`).join('')}
           ${(b.routes ?? []).map((r) => {
                     const was = wasCut && revKnown && /T\+/i.test(r.status) && !r.status.includes(wasCut) ? ` <span class="was">(was ${wasCut})</span>` : '';
                     return `<div class="srow"><i class="dot ${r.level ?? 'muted'}"></i><span style="color:var(--text-1)">${esc(r.name)}</span><span style="margin-left:auto">${esc(r.status)}${was}</span></div>`;
@@ -1206,7 +1229,7 @@ export async function mountConsole(app) {
             k = [Math.round(ps.t * 2), ps.hindsight, ps.layers.some((x) => x.id === 'fire-rev')];
             html = growth ? `${growthChart(growth, ps)}<div class="clegend" style="margin-top:6px"><span><i style="background:var(--map-fire)"></i>Burned</span><span><i style="border-top:2px solid var(--map-fire)"></i>+15 min</span><span><i style="border-top:2px dashed var(--map-fire)"></i>+30 min</span><span><i style="border-top:2px dotted var(--map-red)"></i>+60 min</span></div>` : '';
             const st = engine.getFieldStats();
-            extra = `<span class="prov modeled"${provTitle('modeled')}>mod</span>${st ? `<span class="chip num" title="Burned so far · modeled">${fmtN(st.reachedArea / 4046.86)} ac</span><span class="chip num" title="Homes inside the 60-minute projection · modeled">${fmtN(st.threatened)} homes</span>` : ''}`;
+            extra = `<span class="prov modeled"${provTitle('modeled')}>mod</span>${st ? `<span class="chip num" title="Burned so far · modeled">${fmtN(st.reachedArea / 4046.86)} ac</span><span class="chip num" title="Homes inside the 60-minute projection · modeled">${fmtN(st.threatened)} ${st.threatened === 1 ? 'home' : 'homes'}</span>` : ''}`;
         }
         else if (l.w === 'structures') {
             const risk = structureRisk(ps);

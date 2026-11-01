@@ -290,6 +290,40 @@ const quiet = (errs) => errs.length === 0;
   check('V-viewport: no console errors', quiet(v1.errors));
   await v1.page.close();
 }
+// Product floor is 1920×1080 16:9 (DESIGN.md §8): the topbar never overprints and the
+// map tools are never click-covered while the decision lane is occupied.
+{
+  const v2 = await open('situation=wui-breakout&phase=D', 1920, 1080);
+  // poll, don't sleep: the tools step aside on the next rAF render after the cards land,
+  // and software GL under battery load can stall frames past a fixed wait
+  const r2 = await v2.page.evaluate(async () => {
+    const read = () => {
+      const kids = [...document.querySelector('#topbar').children].map((el) => el.getBoundingClientRect());
+      let topbarOverlaps = 0;
+      for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) {
+        const a = kids[i], b = kids[j];
+        const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (w > 1 && h > 1) topbarOverlaps++;
+      }
+      const tools = document.querySelector('.tools').getBoundingClientRect();
+      const cards = document.querySelector('#cards').getBoundingClientRect();
+      const tw = Math.min(tools.right, cards.right) - Math.max(tools.left, cards.left);
+      const th = Math.min(tools.bottom, cards.bottom) - Math.max(tools.top, cards.top);
+      return { topbarOverlaps, topbarKids: kids.length, toolsCovered: tw > 1 && th > 1, cardsOpen: cards.width > 0, tools: [tools.left, tools.right].map(Math.round), cards: [cards.left, cards.right].map(Math.round), overflow: document.documentElement.scrollWidth > innerWidth + 1 };
+    };
+    const t0 = Date.now();
+    for (;;) {
+      const v = read();
+      if (v.topbarOverlaps === 0 && !v.toolsCovered && !v.overflow) return v;
+      if (Date.now() - t0 > 5000) return v;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  });
+  await shot(v2.page, 'floor-1920');
+  check('V2 1920×1080: topbar children never intersect; tools clear of the open decision lane; no page overflow', r2.topbarOverlaps === 0 && !r2.toolsCovered && r2.overflow === false, JSON.stringify(r2));
+  await v2.page.close();
+}
 
 function player_situation_end(page) { return 140; } // wui clock end — clamped check uses the known situation
 
