@@ -136,7 +136,7 @@ a sub-25% battery in the resolved amber.
 
 ## 7 · Verify / e2e as the enforcement layer
 
-`node tools/verify.mjs` (45 checks) and `node tools/e2e.mjs` (32 checks) are the contract, not a
+`node tools/verify.mjs` (45 checks) and `node tools/e2e.mjs` (35 checks) are the contract, not a
 smoke test. The design-system guards (verify, `design-system guards` section):
 
 1. **Red discipline** — fetches `/console.css` in-page, strips comments, splits every innermost
@@ -155,6 +155,23 @@ smoke test. The design-system guards (verify, `design-system guards` section):
 5. **1920 floor viewport (e2e `V2`)** — at 1920×1080 with a decision card open: no two `.topbar`
    children's boxes intersect (the flex shrink chain is intact end to end), `.tools` is clear of
    the `#cards` lane (the cards-open tools shift), and the page has no horizontal overflow.
+6. **Both-open decision lane (e2e `V3`)** — with chat AND a decision card open (1920×1080 and
+   1280×800): the tools take the double step (their transform is exactly `2×` the stack's, i.e.
+   `−2·(PANEL+GAP)`), every tool button hit-tests to itself (elementFromPoint), the tools rect
+   stays clear of the displaced stack, and the page has no horizontal overflow. The check settles
+   the 200ms transform first — the tools were already at −1 step from `cards-open`, so a naive
+   overlap read can pass mid-flight (2026-11-02 walkthrough audit, §7 of the sign-off). The
+   settle also gates on a frame firing after the class flip and on zero live CSSTransitions:
+   under software GL at 1920 the flip's frame landed after the first stable reads and the check
+   read the pre-click state as "settled" (2026-11-04).
+7. **Avionics layer (e2e `V4`)** — the signature spatial interactions keep the map honest and
+   clickable: the HUD frame + live bearing/range pill render from `engine.getView()`; the
+   counterfactual time lens focuses the real spread-field isochrone (`+30M` → `engine.
+   getHorizonFocus() === 30`) with its readout computed from the same field the widgets use; the
+   spatial tether draws on hover and clears on mouseout; the right-click ground probe shows a real
+   `engine.pick()` result and Escape dismisses it; and both overlays are `pointer-events: none` so
+   map hit-testing is untouched. Journey pages `bringToFront()` on open — a background tab
+   throttles rAF until every transition-timed read freezes (found by V3 at 1280, 2026-11-03).
 
 Everything else the suites hold the line on: two-tier authority with citations, the 2-per-10-min
 budget over a whole run, lapse-on-silence, dissent records, ack loops, scrub determinism (map +
@@ -173,7 +190,10 @@ make a change pass — change the change.
 - **The right lane belongs to the decision stack.** `.cards`/`.chat` keep the
   `2·GAP+RAIL` anchor; when the lane is occupied (`cards-open` / `chat-open`), `.tools` step
   aside by `−(PANEL+GAP)` with the standard ease — the operator never loses map navigation while
-  a decision is open. Guarded by e2e `V2`.
+  a decision is open. Guarded by e2e `V2`. When BOTH are open the stack travels with the chat, so
+  the tools take a second step (`−2·(PANEL+GAP)`) and stay on the map — guarded by e2e `V3`
+  (2026-11-02 walkthrough audit: the single step made all 7 tools click-dead under the displaced
+  stack at every width).
 - **On-the-record overrides** (per the hallmark audit mechanism — stated reasons, not oversights):
   - *Tracked-caps labels stay.* The caps voice is the console's avionics identity; every caps
     label carries a value or an authority state, never decoration.
@@ -181,6 +201,25 @@ make a change pass — change the change.
     deliberate density choice for control-room viewing distances.
   - *The focus ring stays TALON violet.* Focus is an instrument state wearing the console's
     interaction hue; the 2px+4px ring geometry — not colour — carries the meaning.
-- **Concentric radius formula (reconciled):** `r_inner = max(var(--r-xs), r_outer − padding)` —
-  the floor is 4px, matching every applied value (coa, dissent, menu-item). The earlier comment
-  saying `max(2px, …)` was wrong arithmetic, not a wrong build.
+- **Concentric radius formula — the 4px Optical Floor (2026-11-02 ruling):**
+  `r_inner = clamp(4px, r_outer − padding, 8px)`. A well separated from the card wall by the
+  stack gap (`.coa`, `.dissent`, `.menu-item`) reads optically sharp and boxy below 4px next to
+  the 8px `.opt` rows above it; the 8px cap keeps inner wells from rounding past the control
+  radius above them. The strict `max(2, R−pad)` arithmetic was the drawing's finding; the
+  applied 4px was always the intent.
+- **Inspector anchors to the readout line:** `left: 2·GAP = 24` — the old `3·GAP + TOOLS` term
+  predated the tools' bottom-right home and has no left-side meaning anymore. The transient
+  **inspector yields to the chat card at ≤1360px** (`ui.panel && innerWidth ≤ 1360 → ui.sel
+  dismissed`) so the map is never squeezed between two glass walls on laptop widths.
+- **COA collapse is height-aware:** on a compare card the COA table defaults collapsed at
+  `innerHeight < 1000` (stricter than the ≤900h breakpoint the drawings proposed), **stays
+  collapsed whenever a dissent box is open on that card**, and the operator can always toggle —
+  so options + gate + fragility never clip below `CARDS-MH`.
+- **Signature interactions are provenance-honest (2026-11-03 ruling).** The spatial tether, the
+  counterfactual time lens and the ground probe may only ever display values derived from live
+  state — unit anchors via `engine.projectPoint`, acreage via `reachedAreaAt` (the same arrival
+  field the map draws), battery from the session trail, ground data from `engine.pick()`. No
+  hardcoded coordinates, no invented telemetry, ever: a fabricated number on this console breaks
+  the product's own truth guard. The time lens lives INSIDE the `.coa` region so the coa-shut
+  height guard hides it exactly when the collapse tier needs the space; a focused horizon keeps
+  its own tether up until the lens returns to NOW or the card closes.

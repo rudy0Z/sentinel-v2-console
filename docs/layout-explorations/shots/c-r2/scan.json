@@ -1,0 +1,73 @@
+[
+  {
+    "w": 1920,
+    "fails": [
+      "Text under 11px: 10.5px \"Plan gate\"; 10.5px \"TFR · UAS FLOOR < 150′\"; 10.5px \"HDG 340° · R 5.2 KM · T+0:06\"; 10.5px \"[MEA] FT-01 · 412 °C core · 19\""
+    ],
+    "warns": [
+      "Default-reach font: Geist. If DIRECTION.md does not say why this face and not another, it is the default talking.",
+      "14 text elements at 11px: 11.5px \"10:00 LEFT\"; 11.5px \"T+0:06\"; 11.5px \"A. Rao · Operator on authority\"",
+      "Running text under 13px: 11.5px \"Projection: west-southwest at \"; 11.5px \"FT-02 launched from dock D-2. \"; 11.5px \"Confirmed: active fire. FT-01 \""
+    ],
+    "facts": {
+      "fonts": {
+        "Geist": "55%",
+        "Geist Mono": "45%"
+      },
+      "sizes": [
+        14,
+        12.5,
+        12,
+        11.5,
+        11,
+        10.5,
+        10,
+        9.5
+      ],
+      "body": 11.5,
+      "hues": [
+        30,
+        210
+      ],
+      "boxes": 3,
+      "cardGrids": 0,
+      "defaultIcons": 0,
+      "focusStops": 6
+    }
+  },
+  {
+    "w": 1440,
+    "fails": [
+      "Text under 11px: 10.5px \"Plan gate\"; 10.5px \"TFR · UAS FLOOR < 150′\"; 10.5px \"HDG 340° · R 5.2 KM · T+0:06\"; 10.5px \"[MEA] FT-01 · 412 °C core · 19\""
+    ],
+    "warns": [
+      "Default-reach font: Geist. If DIRECTION.md does not say why this face and not another, it is the default talking.",
+      "14 text elements at 11px: 11.5px \"10:00 LEFT\"; 11.5px \"T+0:06\"; 11.5px \"A. Rao · Operator on authority\"",
+      "Running text under 13px: 11.5px \"Projection: west-southwest at \"; 11.5px \"FT-02 launched from dock D-2. \"; 11.5px \"Confirmed: active fire. FT-01 \""
+    ],
+    "facts": {
+      "fonts": {
+        "Geist": "55%",
+        "Geist Mono": "45%"
+      },
+      "sizes": [
+        14,
+        12.5,
+        12,
+        11.5,
+        11,
+        10.5,
+        10,
+        9.5
+      ],
+      "body": 11.5,
+      "hues": [
+        30,
+        210
+      ],
+      "boxes": 3,
+      "cardGrids": 0,
+      "defaultIcons": 0
+    }
+  }
+]

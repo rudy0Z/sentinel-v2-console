@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Metrics &amp; Decisions · Dimensional Drawing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;600;700&display=swap">
+<style>
+:root{--paper:#ececec;--sheet:#ffffff;--ink:#111;--ink2:#444;--ink3:#7a7a7a;--fill:#f3f3f3;--fill2:#e6e6e6;--f:'Arimo','Helvetica Neue',Helvetica,Arial,sans-serif;color-scheme:light}
+body{background:var(--paper);color:var(--ink);font-family:var(--f);margin:0}
+.wrap{max-width:1760px;margin:0 auto;padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.scroll{overflow-x:auto;background:var(--sheet);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+svg{display:block;width:100%;min-width:1100px;height:auto}
+.tb{background:var(--sheet);border:1.2px solid var(--ink);border-radius:16px;overflow:hidden;display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr;margin-bottom:24px}
+.tb>div{border-right:.8px solid var(--ink);border-bottom:.8px solid var(--ink);padding:10px 14px;min-width:0}
+.tb .big{grid-row:span 2;display:flex;flex-direction:column;justify-content:space-between;gap:12px}
+.tb h1{font-size:clamp(28px,4vw,44px);line-height:1;margin:4px 0 0;font-weight:400;letter-spacing:.1em;text-transform:uppercase}
+.lbl{text-transform:uppercase;letter-spacing:.06em;font-size:9.5px;color:var(--ink2);font-weight:400}
+.tb .v{font-size:13px;margin-top:2px;letter-spacing:.05em;text-transform:uppercase;font-variant-numeric:tabular-nums}
+.tb .big .v{font-size:11px;color:var(--ink2);line-height:1.6;text-transform:none;letter-spacing:.02em}
+.tb .notes{grid-column:1/-1;border-right:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 24px;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);line-height:1.9}
+.tb .notes ol{margin:4px 0 0;padding-left:20px}
+.tb .figs{grid-column:1/-1;border-right:0;border-bottom:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px 18px}
+.tb .figs>div{border-left:.8px solid var(--ink);padding-left:14px}
+.tb .figs>div:first-child{border-left:0;padding-left:0}
+.tb .figs .v{font-size:18px;letter-spacing:.06em;text-transform:none;margin-top:4px}
+.tb .nh{font-weight:700;font-size:13px;letter-spacing:.06em}
+.tb .nh span{font-weight:400;font-size:11.5px;margin-left:6px}
+@media (max-width:640px){.tb{grid-template-columns:1fr 1fr}.tb .big{grid-column:1/-1;grid-row:auto}}
+.sheetwrap{margin-bottom:28px}
+.foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);padding:10px 2px 0}
+.foot b{font-weight:700;color:var(--ink)}
+/* drawing */
+.u{font-family:var(--f);text-transform:uppercase;letter-spacing:.07em}
+.border{fill:none;stroke:var(--ink);stroke-width:1.2}
+.obj{fill:var(--sheet);stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.well{fill:var(--fill);stroke:var(--ink);stroke-width:1}
+.slot{fill:none;stroke:var(--ink2);stroke-width:.8;stroke-dasharray:4 3}
+.hug{fill:var(--fill2);stroke:var(--ink);stroke-width:1}
+.thin{fill:none;stroke:var(--ink);stroke-width:.8}
+.ph{fill:none;stroke:var(--ink3);stroke-width:.8;stroke-dasharray:14 3 3 3}
+.cl{fill:none;stroke:var(--ink3);stroke-width:.7;stroke-dasharray:16 3 2 3}
+.dl{stroke:var(--ink);stroke-width:.7;fill:none}
+.ext{stroke:var(--ink);stroke-width:.55;fill:none}
+.arrow{fill:var(--ink)}
+.hl{stroke:var(--ink2);stroke-width:.7}
+.env{fill:none;stroke:var(--ink);stroke-width:.8;stroke-dasharray:10 3 2 3}
+.dt{font:400 11px var(--f);fill:var(--ink);paint-order:stroke;stroke:var(--sheet);stroke-width:4px;stroke-linejoin:round}
+.dts{font:400 9.5px var(--f);fill:var(--ink2);letter-spacing:.06em;text-transform:uppercase;paint-order:stroke;stroke:var(--sheet);stroke-width:3px}
+.sl{font:400 9px var(--f);fill:var(--ink2);letter-spacing:.08em;text-transform:uppercase}
+.nt{font:400 11.5px var(--f);fill:var(--ink);letter-spacing:.06em;text-transform:uppercase}
+.nth{font:700 13px var(--f);fill:var(--ink);letter-spacing:.06em}
+.vt{font:400 12px var(--f);fill:var(--ink);letter-spacing:.1em;text-transform:uppercase}
+.nb{fill:var(--sheet);stroke:var(--ink);stroke-width:.9}
+.nbt{font:400 9.5px var(--f);fill:var(--ink)}
+.lead{stroke:var(--ink);stroke-width:.7;fill:none}
+.dot{fill:var(--ink)}
+.th{font:400 10.5px var(--f);fill:var(--ink);letter-spacing:.05em;text-transform:uppercase}
+.tc{font:400 10.5px var(--f);fill:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="tb">
+    <div class="big">
+      <div><div class="lbl">UI command console · dimensional drawing</div><h1>Metrics &amp; Decisions</h1></div>
+      <div class="v">Product architecture specification: North Star &amp; Guardrail metrics, 48m → 90s compression loop, Two-Tier Authority matrix, Rejected alternatives, 1:N fleet economics, and the 4px optical radius floor ruling.</div>
+    </div>
+    <div><div class="lbl">Dwg no.</div><div class="v">UI-CONSOLE-010</div></div>
+    <div><div class="lbl">Rev</div><div class="v">A · 2026-11-02</div></div>
+    <div><div class="lbl">Sheets</div><div class="v">10 · sheet 10</div></div>
+    <div><div class="lbl">Units</div><div class="v">SEC / RATIO / PX</div></div>
+    <div><div class="lbl">Scale</div><div class="v">Schematic</div></div>
+    <div><div class="lbl">Source</div><div class="v">talon.ts · DESIGN.md · verify.mjs</div></div>
+    <div class="notes">
+      <div><span class="nh">NOTES:<span>(UNLESS OTHERWISE SPECIFIED)</span></span><ol>
+        <li>North Star Metric (NSM): Verified Decision-to-Execution Latency (T_detect → [MEA] + Operator Auth + Statutory ACK ≤ 90s).</li>
+        <li>Optimizing for raw click speed alone induces Automation Bias; NSM requires [MEA] sensor proof + statutory sign-off.</li>
+        <li>Guardrail G1 (False-Dispatch Suppression): 0% municipal dispatch on permitted burns (caught by SO-2 recon).</li>
+        <li>Guardrail G2 (Epistemic Calibration): ≥1.5s minimum reading floor + 1-keystroke Q/W/E dissent when field contradicts MOD.</li></ol></div>
+      <div><span class="nh" aria-hidden="true">&nbsp;</span><ol start="5">
+        <li>Guardrail G3 (ISA-18.2 Attention Budget): Hard cap of ≤ 2 interrupts / 10 min; excess items demote to queued asks.</li>
+        <li>Rejected patterns (Detail B): Persistent Chat Sidebar (modality collision), V1 20-Scene Wizard (breaks on T+89), Full Red Borders.</li>
+        <li>Business ROI (Detail C): Exception-based supervision shifts fleet economics from 1:1 pilot-to-dock to 1:N (15–25 docks/operator).</li>
+        <li>Radius conflict resolution (Detail D): R_in = clamp(4, R_out − PAD, 8) establishes a 4px optical floor for separated inner wells.</li></ol></div>
+    </div>
+    <div class="figs">
+      <div><div class="lbl">NSM · latency</div><div class="v">48m → 90s</div></div>
+      <div><div class="lbl">G1 · false dispatch</div><div class="v">0% (SO-2)</div></div>
+      <div><div class="lbl">G3 · ISA-18.2 cap</div><div class="v">2 / 10 MIN</div></div>
+      <div><div class="lbl">KEY · triage cost</div><div class="v">1 KEY [1–3]</div></div>
+      <div><div class="lbl">MAP · unoccluded</div><div class="v">≥ 62% @ 1920</div></div>
+      <div><div class="lbl">ROI · fleet ratio</div><div class="v">1:1 → 1:20</div></div>
+      <div><div class="lbl">QA · verify gates</div><div class="v">45 V + 32 E2E PASS</div></div>
+    </div>
+  </header>
+  <div class="sheetwrap"><div class="scroll"><svg id="sh1" viewBox="0 0 1700 1060" role="img" aria-label="Single-sheet dimensional drawing of product metrics and design decisions: 48-minute to 90-second North Star compression diagram, 2x2 Two-Tier Authority matrix, 3 rejected UI alternatives, 1-to-N fleet supervision funnel, 4px optical radius floor resolution, and metric tables"></svg></div>
+  <div class="foot"><span>2026-11-02 &nbsp;|&nbsp; UI command console reference · product architecture</span><span><b>Metrics &amp; decisions, architecture</b> &nbsp;|&nbsp; 10 / 10</span></div></div>
+</div>
+<script>
+(function(){
+const NS='http://www.w3.org/2000/svg';let sv,A,HAT,uid=0;
+function mk(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)if(a[k]!=null)e.setAttribute(k,a[k]);(p||sv).appendChild(e);return e}
+function tx(x,y,s,c,a,p){const t=mk('text',Object.assign({x:x,y:y,class:c||'dt'},a||{}),p);t.textContent=s;return t}
+function begin(id){sv=document.getElementById(id);sv.innerHTML='';const n=uid++;const d=mk('defs',{});const m=mk('marker',{id:'ar'+n,viewBox:'0 0 10 10',refX:10,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse',markerUnits:'userSpaceOnUse'},d);mk('path',{d:'M0,1.7 L10,5 L0,8.3 z',class:'arrow'},m);
+ const pt=mk('pattern',{id:'hat'+n,width:5,height:5,patternUnits:'userSpaceOnUse',patternTransform:'rotate(45)'},d);mk('line',{x1:0,y1:0,x2:0,y2:5,class:'hl'},pt);A='url(#ar'+n+')';HAT='url(#hat'+n+')';rr(20,20,1660,1020,16,'border')}
+function dimH(x1,x2,y,e1,e2,l,o){o=o||{};[[x1,e1],[x2,e2]].forEach(([x,e])=>{if(e==null)return;const s=Math.sign(y-e)||1;mk('line',{x1:x,y1:e+s*3,x2:x,y2:y+s*5,class:'ext'})});
+ if(x2-x1>=28)mk('line',{x1:x1,y1:y,x2:x2,y2:y,class:'dl','marker-start':A,'marker-end':A});else{mk('line',{x1:x1-13,y1:y,x2:x1,y2:y,class:'dl','marker-end':A});mk('line',{x1:x2+13,y1:y,x2:x2,y2:y,class:'dl','marker-end':A});mk('line',{x1:x1,y1:y,x2:x2,y2:y,class:'dl'})}
+ tx((x1+x2)/2+(o.dx||0),(o.below?y+13:y-4)+(o.dy||0),l,o.c||'dt',{'text-anchor':'middle'})}
+function dimV(y1,y2,x,e1,e2,l,o){o=o||{};[[y1,e1],[y2,e2]].forEach(([y,e])=>{if(e==null)return;const s=Math.sign(x-e)||1;mk('line',{x1:e+s*3,y1:y,x2:x+s*5,y2:y,class:'ext'})});
+ if(y2-y1>=28)mk('line',{x1:x,y1:y1,x2:x,y2:y2,class:'dl','marker-start':A,'marker-end':A});else{mk('line',{x1:x,y1:y1-13,x2:x,y2:y1,class:'dl','marker-end':A});mk('line',{x1:x,y1:y2+13,x2:x,y2:y2,class:'dl','marker-end':A});mk('line',{x1:x,y1:y1,x2:x,y2:y2,class:'dl'})}
+ const c=(y1+y2)/2;if(o.side){const r=o.side==='r';tx(r?x+6:x-6,c+4,l,o.c||'dt',{'text-anchor':r?'start':'end'})}else tx(x-5,c,l,o.c||'dt',{'text-anchor':'middle',transform:'rotate(-90 '+(x-5)+' '+c+')'})}
+function callout(px,py,ex,ey,l,dir,c){const s=dir||(ex>=px?1:-1);mk('circle',{cx:px,cy:py,r:1.8,class:'dot'});mk('polyline',{points:px+','+py+' '+ex+','+ey+' '+(ex+s*10)+','+ey,class:'lead'});tx(ex+s*14,ey+4,l,c||'dt',{'text-anchor':s>0?'start':'end'})}
+function nb(x,y,n){mk('rect',{x:x-6,y:y-6,width:12,height:12,class:'nb'});tx(x,y+3.5,String(n),'nbt',{'text-anchor':'middle'})}
+function rr(x,y,w,h,r,c){return mk('rect',{x:x,y:y,width:w,height:h,rx:r,class:c})}
+function slotLabel(x,y,w,h,l,al){tx(al==='l'?x+6:x+w/2,y+h/2+3.2,l,'sl',{'text-anchor':al==='l'?'start':'middle'})}
+function title(x,y,t,s){tx(x,y,t,'vt',{'text-anchor':'middle'});if(s)tx(x,y+14,s,'dts',{'text-anchor':'middle'})}
+function notes(list){const NX=50,NY=58;tx(NX,NY,'NOTES:','nth');tx(NX+62,NY,'(UNLESS OTHERWISE SPECIFIED)','nt');
+ list.forEach(([n,t],i)=>{const y=NY+28+i*23;if(n){nb(NX+6,y-4,n);tx(NX+22,y,t,'nt')}else tx(NX,y,t,'nt')})}
+function table(x,y,ttl,rows){const ws=[42,88,94],rh=17;tx(x,y-8,ttl,'vt');
+ const all=[['Code','Metric / Rule','Target']].concat(rows);all.forEach(([c0,c1,c2],i)=>{let cx2=x;[c0,c1,c2].forEach((c,j)=>{mk('rect',{x:cx2,y:y+i*rh,width:ws[j],height:rh,class:'thin'});tx(cx2+(j?ws[j]/2:6),y+i*rh+12,c,i?'tc':'th',{'text-anchor':j?'middle':'start'});cx2+=ws[j]})});return y+all.length*rh+34}
+
+const VAR={
+ nsm:[['NSM','verified latency','≤ 90 SEC'],['BASE','manual chain','48 MIN'],['G1','false dispatch','0% ON PERMIT'],['G2','dissent capture','≤ 2 SEC [Q/W/E]'],['G3','interrupt cap','2 / 10 MIN'],['ACK','statutory ack','≤ 18 SEC']],
+ bench:[['FITT','gate actuation','1 KEY [1–3]'],['OCC','map unoccluded','≥ 62% @ 1920'],['REFL','map reflows','0 (L0 FIXED)'],['WCAG','min contrast','≥ 4.5:1 AA'],['FLR','type floor','10.5M / 11 UI'],['E2E','automated gates','45 V + 32 E2E PASS']],
+ auth:[['SO-2','drone launch/IR','AUTONOMOUS'],['SO-1','airspace yield','AUTO <150 AGL'],['OWN','fleet / staging','IC DIRECT [1–3]'],['REQ','evac / contraflow','LASD / OES ACK'],['EXP','gate expiry','SAFE HOLD ONLY'],['TXT','typed approval','REFUSED (180MS)']],
+ roi:[['1:1','legacy piloting','1 OP : 1 DOCK'],['1:N','sentinel calm+gate','1 OP : 20 DOCKS'],['SAV','false alarm save','$35K–$65K / INC'],['201','handoff export','0 MIN PREP']],
+ rej:[['REJ1','chat sidebar','MODALITY CLASH'],['REJ2','20-scene wizard','FAILS AT T+89'],['REJ3','full red border','HALATION GLARE'],['REJ4','hold-to-approve','MOTOR LATENCY']]
+};
+
+begin('sh1');
+notes([[1,'NORTH STAR METRIC (NSM): VERIFIED DECISION-TO-EXECUTION LATENCY (T+00 ANOMALY → [MEA] + AUTH + ACK ≤ 90S).'],
+ [2,'WHY NOT RAW CLICK SPEED? OPTIMIZING FOR SUB-SECOND CLICKS INDUCES AUTOMATION BIAS (BLIND RUBBER-STAMPING).'],
+ [3,'GUARDRAIL G1 (FALSE-POSITIVE SUPPRESSION): SO-2 AUTONOMOUS RECON FILTERS PERMITTED BURNS BEFORE HUMAN ESCALATION.'],
+ [4,'GUARDRAIL G2 (EPISTEMIC CALIBRATION): T+89 MODEL DRIFT EXPOSES [MOD] VS [MEA] DELTA; DISSENT LOGS IN 1 KEYSTROKE.'],
+ [5,'GUARDRAIL G3 (ISA-18.2 ALARM BUDGET): MAX 2 INTERRUPTS / 10 MIN; P0 LIFE-SAFETY PREEMPTS; P2 QUEUES SILENTLY.'],
+ [6,'REJECTED OPTIONS (DETAIL B) DOCUMENT WHY V1 LINEAR WIZARDS AND CHAT SIDEBARS FAIL UNDER 03:47 AM COGNITIVE PANIC.'],
+ [7,'BUSINESS ROI (DETAIL C): EXCEPTION-BASED SUPERVISION SHIFTS FLEET UNIT ECONOMICS FROM 1:1 PILOTING TO 1:N (20 DOCKS).'],
+ [8,'CONCENTRIC RADIUS RESOLUTION (DETAIL D): R_in = CLAMP(4, R_out − PAD, 8) RESOLVES THE SHEET 04 FORMULA CONFLICT.']]);
+
+/* ---- DETAIL A (TOP RIGHT-CENTER) · 2x2 AUTHORITY & EPISTEMIC MATRIX ---- */
+{const AX=790,AY=78,W=540,H=184;
+ rr(AX,AY,W,H,8,'obj');
+ mk('line',{x1:AX+W/2,y1:AY,x2:AX+W/2,y2:AY+H,class:'thin'});
+ mk('line',{x1:AX,y1:AY+H/2,x2:AX+W,y2:AY+H/2,class:'thin'});
+ // Quadrant 1: Top-Left (Measured + Reversible)
+ rr(AX+10,AY+10,W/2-20,H/2-20,4,'well');
+ tx(AX+20,AY+28,'Q1 · [MEA] + REVERSIBLE KINEMATICS','sl');
+ tx(AX+20,AY+46,'SO-2 AUTONOMOUS EXECUTION','dt');
+ tx(AX+20,AY+62,'LAUNCH UAS · SLEW GIMBAL · TRIANGULATE','dts');
+ // Quadrant 2: Top-Right (Measured + Irreversible)
+ rr(AX+W/2+10,AY+10,W/2-20,H/2-20,4,'hug');
+ mk('line',{x1:AX+W/2+12,y1:AY+16,x2:AX+W/2+12,y2:AY+H/2-16,class:'thin','stroke-width':2.5});
+ tx(AX+W/2+22,AY+28,'Q2 · [MEA] + IRREVERSIBLE PUBLIC IMPACT','sl');
+ tx(AX+W/2+22,AY+46,'P0 STATUTORY OPERATOR GATE [1–3]','dt');
+ tx(AX+W/2+22,AY+62,'MANDATORY EVAC (REQ→LASD) · T+89 PATCH','dts');
+ // Quadrant 3: Bottom-Left (Modeled + Reversible)
+ rr(AX+10,AY+H/2+10,W/2-20,H/2-20,4,'slot');
+ tx(AX+20,AY+H/2+28,'Q3 · [MOD] + REVERSIBLE PREPARATION','sl');
+ tx(AX+20,AY+H/2+46,'SILENT STAGING & BY-TALON DOCK SLOTS','dt');
+ tx(AX+20,AY+H/2+62,'ROTHERMEL ISOCHRONES · DRAFT ROUTE PREVIEW','dts');
+ // Quadrant 4: Bottom-Right (Modeled + Irreversible)
+ rr(AX+W/2+10,AY+H/2+10,W/2-20,H/2-20,4,'well');
+ tx(AX+W/2+22,AY+H/2+28,'Q4 · [MOD] + IRREVERSIBLE CONSEQUENCE','sl');
+ tx(AX+W/2+22,AY+H/2+46,'BLOCKED UNTIL [MEA] OR DISSENT [Q/W/E]','dt');
+ tx(AX+W/2+22,AY+H/2+62,'NEVER AUTO-EXECUTES · SILENCE = SAFE HOLD','dts');
+ // Axis labels
+ dimH(AX,AX+W/2,AY-14,AY,AY,'REVERSIBLE (FLEET INTERNAL)',{c:'dts'});
+ dimH(AX+W/2,AX+W,AY-14,AY,AY,'IRREVERSIBLE (PUBLIC / STATUTORY)',{c:'dts'});
+ dimV(AY,AY+H/2,AX-16,AX,AX,'[MEA] TRUTH',{side:'l',c:'dts'});
+ dimV(AY+H/2,AY+H,AX-16,AX,AX,'[MOD] PHYSICS',{side:'l',c:'dts'});
+ nb(AX+W-16,AY+24,1);nb(AX+W-16,AY+H-20,4);
+ title(AX+W/2,AY+H+22,'Detail A · two-tier authority & epistemic matrix','Decision rights mapped by reversibility × data provenance');}
+
+/* ---- PLAN VIEW · 48-MIN BASELINE VS. 90-SEC NORTH STAR COMPRESSION ---- */
+{const PX=90,PY=338,W=1240;
+ // Legacy 48-min bar
+ rr(PX,PY,W,34,6,'slot');
+ mk('rect',{x:PX,y:PY,width:W,height:34,rx:6,fill:HAT,'fill-opacity':.22});
+ const leg=[[0,220,'1. 911 / CAMERA CALL QUEUE (8M)'],[220,540,'2. MANUAL RADIO RELAY & CAD TYPING (14M)'],[540,920,'3. 1:1 PILOT DISPATCH & VISUAL CHECK (16M)'],[920,1240,'4. COUNTY OES / SHERIFF PHONE CHAIN (10M)']];
+ leg.forEach(([x0,x1,lbl],i)=>{if(i>0)mk('line',{x1:PX+x0,y1:PY,x2:PX+x0,y2:PY+34,class:'hl'});tx(PX+(x0+x1)/2,PY+21,lbl,'sl',{'text-anchor':'middle'})});
+ dimH(PX,PX+W,PY-16,PY,PY,'LEGACY BASELINE = 48 MIN (2,880 SEC) · HIGH COGNITIVE FRICTION & FALSE-ALARM WASTE');
+
+ // Sentinel 90-sec compressed bar (expanded to show internal architecture)
+ const SY=PY+76,SH=68;
+ rr(PX,SY,W,SH,10,'obj');
+ const stages=[
+  [0,170,'T+00..15S · PREEMPT','S-04 BOOKMARKED · SO-2 LAUNCH','well'],
+  [170,390,'T+15..45S · [MEA] RECON','FT-01/02 IR LOCK · G1 FILTER','well'],
+  [390,670,'T+45..75S · P0 GATE [1–3]','COA ISOLATION · REQ→LASD/OES','hug'],
+  [670,880,'T+75..89S · EXEC HEALTH','WEA ACK (18S) · FT-03 SPEAKER','well'],
+  [880,1080,'T+89..93S · MODEL DIFF','MOD≠MEA (-14M) · PATCH ENC-3B','hug'],
+  [1080,1240,'T+93..125S · HANDOFF','SIGNED ICS-201 DOSSIER','well']
+ ];
+ stages.forEach(([x0,x1,t1,t2,cls],i)=>{
+  rr(PX+x0+4,SY+6,x1-x0-8,SH-12,6,cls);
+  tx(PX+(x0+x1)/2,SY+28,t1,'dt',{'text-anchor':'middle'});
+  tx(PX+(x0+x1)/2,SY+46,t2,'dts',{'text-anchor':'middle'});
+ });
+ // Guardrail callouts along bottom of bar
+ dimH(PX,PX+670,SY+SH+22,SY+SH,SY+SH,'NORTH STAR METRIC (NSM): T_DETECT → VERIFIED [MEA] + HUMAN AUTH + OES ACK ≤ 90 SEC',{below:true});
+ dimH(PX+670,PX+1240,SY+SH+22,SY+SH,SY+SH,'ADAPTIVE RECOVERY & COURT-ADMISSIBLE ICS-201 RECORD',{below:true,c:'dts'});
+ callout(PX+280,SY+6,PX+250,SY-18,'G1: 0% FALSE DISPATCH',-1);
+ callout(PX+530,SY+6,PX+560,SY-18,'G3: ISA-18.2 ≤2/10M',1);
+ callout(PX+980,SY+6,PX+990,SY-18,'G2: EPISTEMIC DIFF + Q/W/E',1);
+ nb(PX+520,SY+34,1);nb(PX+280,SY+34,3);nb(PX+980,SY+34,4);
+ title(PX+W/2,SY+SH+56,'Plan view · 48-minute manual chain vs. 90-second verified command loop','North Star Metric (NSM) bounded by Guardrails G1 (False-Positive), G2 (Calibration), and G3 (Interrupt Budget)');}
+
+/* ---- DETAIL B (BOTTOM LEFT) · 3 REJECTED ARCHITECTURE ALTERNATIVES ---- */
+{const BX=90,BY=610,BW=182,BH=220,GAP=22;
+ const cards=[
+  ['REJECTED 01 · CHAT SIDEBAR','PERSISTENT LLM THREAD','MODALITY COLLISION (WICKENS):','READING/TYPING TEXT COLLIDES','WITH 3D SPATIAL TRACKING &','RADIO NETS. REPLACED BY [1–3]','TRANSIENT GATE CARDS + RAIL.'],
+  ['REJECTED 02 · V1 20-SCENE WIZARD','LINEAR STEP-BY-STEP FUNNEL','FAILS NON-LINEAR PHYSICS:','WILDFIRES JUMP ROADS MID-STEP','(T+89 SPOT-1). REPLACED BY','NON-REFLOWING L0 MAP + LIVE','SURGICAL PLAN PATCHES.'],
+  ['REJECTED 03 · FULL RED + HOLD','4PX RED BORDER + 2S HOLD','SENSORY & MOTOR FAILURE:','FULL BORDERS CAUSE HALATION','GLARE IN DARK EOC; 2S HOLD','ADDS PANIC LATENCY. REPLACED','BY 2PX EDGE BAR + ACK LATCH.']
+ ];
+ cards.forEach(([hdr,sub,l1,l2,l3,l4,l5],i)=>{
+  const x=BX+i*(BW+GAP);
+  rr(x,BY,BW,BH,8,'obj');
+  // schematic mini-diagram at top of each rejected card
+  rr(x+12,BY+12,BW-24,74,4,'well');
+  if(i===0){
+   // chat bubbles crossed out
+   rr(x+20,BY+20,90,14,4,'slot');rr(x+58,BY+40,102,14,4,'slot');rr(x+20,BY+60,140,16,4,'hug');
+  } else if(i===1){
+   // linear nodes 1->2->3->broken
+   for(let j=0;j<4;j++){mk('circle',{cx:x+34+j*38,cy:BY+48,r:10,class:j===2?'hug':'slot'});if(j<3)mk('line',{x1:x+44+j*38,y1:BY+48,x2:x+24+(j+1)*38,y2:BY+48,class:'thin'})}
+  } else {
+   // heavy border box crossed out
+   mk('rect',{x:x+28,y:BY+22,width:BW-56,height:54,rx:6,fill:'none',stroke:'var(--ink)','stroke-width':3.5});
+  }
+  // diagonal rejection strike across mini-diagram
+  mk('line',{x1:x+14,y1:BY+84,x2:x+BW-14,y2:BY+14,class:'thin','stroke-dasharray':'4 3'});
+  tx(x+12,BY+104,hdr,'dt');
+  tx(x+12,BY+118,sub,'sl');
+  mk('line',{x1:x+12,y1:BY+126,x2:x+BW-12,y2:BY+126,class:'hl'});
+  [l1,l2,l3,l4,l5].forEach((ln,k)=>tx(x+12,BY+142+k*14,ln,'dts'));
+ });
+ nb(BX+BW-14,BY+100,6);
+ title(BX+(3*BW+2*GAP)/2,BY+BH+36,'Detail B · rejected design explorations','Why conversational wrappers, V1 linear wizards, and heavy borders were eliminated');}
+
+/* ---- DETAIL C (BOTTOM CENTER) · 1:1 TO 1:N FLEET SUPERVISION ECONOMICS ---- */
+{const CX=715,CY=610,CW=345,CH=220;
+ rr(CX,CY,CW,CH,8,'obj');
+ // Left: 1:1 Legacy
+ rr(CX+14,CY+16,130,68,6,'slot');
+ tx(CX+79,CY+34,'LEGACY 1:1 MODEL','sl',{'text-anchor':'middle'});
+ tx(CX+79,CY+52,'1 PILOT = 1 FEED','dt',{'text-anchor':'middle'});
+ tx(CX+79,CY+68,'HIGH OPEX BOTTLENECK','dts',{'text-anchor':'middle'});
+ // Arrow
+ mk('line',{x1:CX+148,y1:CY+50,x2:CX+182,y2:CY+50,class:'dl','marker-end':A});
+ // Right: 1:N Funnel
+ rr(CX+186,CY+16,145,68,6,'hug');
+ tx(CX+258,CY+34,'SENTINEL 1:N MODEL','sl',{'text-anchor':'middle'});
+ tx(CX+258,CY+52,'1 DUTY OFFICER : 20 DOCKS','dt',{'text-anchor':'middle'});
+ tx(CX+258,CY+68,'EXCEPTION-BASED GATING','dts',{'text-anchor':'middle'});
+ // 3 architectural enablers below
+ const en=[
+  ['1. CALM MODE (SHEET 03)','0 INCIDENTS → 340PX LEFT COL · 0 INTERRUPTS'],
+  ['2. DYNAMIC BY-TALON SLOTS (MAX 3)','AI PROMOTES RELEVANT FEEDS WITH REASON LINE'],
+  ['3. ISA-18.2 BUDGET (2 / 10 MIN)','SO-2 HANDLES ROUTINE RECON; ONLY GATES PAGE IC']
+ ];
+ en.forEach(([e1,e2],i)=>{
+  const ey=CY+98+i*38;
+  rr(CX+14,ey,CW-28,32,4,'well');
+  tx(CX+22,ey+14,e1,'dt');
+  tx(CX+22,ey+26,e2,'dts');
+ });
+ nb(CX+CW-16,CY+28,7);
+ title(CX+CW/2,CY+CH+36,'Detail C · 1:1 → 1:N fleet unit economics','How attention architecture unlocks enterprise scale for FlytBase');}
+
+/* ---- DETAIL D (BOTTOM RIGHT-CENTER) · 4PX OPTICAL FLOOR RADIUS RESOLUTION ---- */
+{const DX=1090,DY=610,DW=245,DH=220;
+ rr(DX,DY,DW,DH,8,'obj');
+ // Nested corner illustration at 3:1
+ const kx=DX+36,ky=DY+26;
+ // Outer card corner R1 = 10 (scaled 3x = 30)
+ mk('path',{d:'M'+kx+','+(ky+90)+' v-60 a30,30 0 0 1 30,-30 h110',class:'obj',fill:'none'});
+ // Inner well (.coa / .dissent) at inset 16 (scaled 3x = 48), R4 = 4 (scaled 3x = 12)
+ const ix=kx+48,iy=ky+36;
+ mk('path',{d:'M'+ix+','+(iy+54)+' v-42 a12,12 0 0 1 12,-12 h80',class:'hug',fill:'var(--fill2)'});
+ dimH(kx,ix,ky+102,ky+90,iy+54,'PAD 16',{below:true});
+ callout(kx+9,ky+9,DX+170,DY+28,'R1 = 10',1);
+ callout(ix+4,iy+4,DX+170,DY+56,'R4 = 4 (APPLIED)',1);
+ tx(DX+14,DY+142,'SHEET 04 CONFLICT RESOLUTION:','dt');
+ tx(DX+14,DY+158,'STRICT FORMULA MAX(2, 10−16) = 2PX','dts');
+ tx(DX+14,DY+174,'LOOKS SHARP BELOW R=8 OPT ROWS.','dts');
+ tx(DX+14,DY+192,'RULING: R_in = CLAMP(4, R_out−PAD, 8)','dt');
+ tx(DX+14,DY+206,'4PX OPTICAL FLOOR GOVERNS ALL WELLS.','dts');
+ nb(DX+DW-16,DY+140,8);
+ title(DX+DW/2,DY+DH+36,'Detail D · 4px optical floor','Resolving the Sheet 00/04 concentric radius note');}
+
+/* ---- TABLES (RIGHT COLUMN) ---- */
+{let y=table(1420,86,'North Star & guardrails',VAR.nsm);
+ y=table(1420,y,'Verified benchmarks',VAR.bench);
+ y=table(1420,y,'Authority tiers',VAR.auth);
+ y=table(1420,y,'Business ROI',VAR.roi);
+ table(1420,y,'Rejected options',VAR.rej);}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+[
+  {
+    "w": 1920,
+    "fails": [
+      "Text under 11px: 10.5px \"S-05 · 34°04.7′N 118°52.2″W · \"; 10.5px \"Plan\"; 10.5px \"TFR · AIR ATTACK OPS · UAS FLO\"; 10.5px \"3 need you · 2 working · budge\""
+    ],
+    "warns": [
+      "Default-reach font: Geist. If DIRECTION.md does not say why this face and not another, it is the default talking.",
+      "18 text elements at 11px: 11px \"GATE 10:00 LEFT\"; 11.5px \"LIVE · Jan 14 · 03:53 PST\"; 11.5px \"T+0:06\"",
+      "Running text under 13px: 11.5px \"Projection: west-southwest at \"; 11.5px \"FT-02 launched from dock D-2. \"; 11.5px \"Confirmed: active fire. FT-01 \"",
+      "12 small letter-spaced uppercase labels. An eyebrow over every section stops meaning anything."
+    ],
+    "facts": {
+      "fonts": {
+        "Geist": "55%",
+        "Geist Mono": "45%"
+      },
+      "sizes": [
+        14.5,
+        13,
+        12.5,
+        12,
+        11.5,
+        11,
+        10.5,
+        10,
+        9.5
+      ],
+      "body": 11.3,
+      "hues": [
+        30,
+        150,
+        210
+      ],
+      "boxes": 9,
+      "cardGrids": 0,
+      "defaultIcons": 0,
+      "focusStops": 3
+    }
+  },
+  {
+    "w": 1440,
+    "fails": [
+      "Text under 11px: 10.5px \"S-05 · 34°04.7′N 118°52.2″W · \"; 10.5px \"Plan\"; 10.5px \"TFR · AIR ATTACK OPS · UAS FLO\"; 10.5px \"3 need you · 2 working · budge\""
+    ],
+    "warns": [
+      "Default-reach font: Geist. If DIRECTION.md does not say why this face and not another, it is the default talking.",
+      "18 text elements at 11px: 11px \"GATE 10:00 LEFT\"; 11.5px \"LIVE · Jan 14 · 03:53 PST\"; 11.5px \"T+0:06\"",
+      "Running text under 13px: 11.5px \"Projection: west-southwest at \"; 11.5px \"FT-02 launched from dock D-2. \"; 11.5px \"Confirmed: active fire. FT-01 \"",
+      "12 small letter-spaced uppercase labels. An eyebrow over every section stops meaning anything."
+    ],
+    "facts": {
+      "fonts": {
+        "Geist": "55%",
+        "Geist Mono": "45%"
+      },
+      "sizes": [
+        14.5,
+        13,
+        12.5,
+        12,
+        11.5,
+        11,
+        10.5,
+        10,
+        9.5
+      ],
+      "body": 11.3,
+      "hues": [
+        30,
+        150,
+        210
+      ],
+      "boxes": 9,
+      "cardGrids": 0,
+      "defaultIcons": 0
+    }
+  }
+]

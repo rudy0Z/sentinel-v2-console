@@ -41,11 +41,11 @@ td b{font-weight:700}
   <header class="tb">
     <div class="big">
       <div><div class="lbl">UI command console · dimensional drawing set</div><h1>Anatomy Index</h1></div>
-      <div class="v">Nine sheets: the whole-screen shell, each floating region, and the shared control kit. Architecture only — slots, spacing, radii, shadows, layers. Monochrome by design.</div>
+      <div class="v">Ten sheets: the whole-screen shell, each floating region, the shared control kit, and the metrics-and-decisions record. Architecture only — slots, spacing, radii, shadows, layers. Monochrome by design.</div>
     </div>
     <div><div class="lbl">Dwg no.</div><div class="v">UI-CONSOLE-000</div></div>
     <div><div class="lbl">Rev</div><div class="v">A · 2026-11-01</div></div>
-    <div><div class="lbl">Sheets</div><div class="v">9 + index</div></div>
+    <div><div class="lbl">Sheets</div><div class="v">10 + index</div></div>
     <div><div class="lbl">Units</div><div class="v">CSS px @ 1×</div></div>
     <div><div class="lbl">Scale</div><div class="v">As noted</div></div>
     <div><div class="lbl">Source</div><div class="v">console.css · commandConsole.ts</div></div>
@@ -96,6 +96,10 @@ td b{font-weight:700}
     <p>Buttons (32/26 · r6/r4), chips (22 · pill), segmented wells, switch (28×16), kbd, state dots, provenance badges, pips, dual press idiom, focus ring, radius map.</p>
     <a href="09-control-kit.html">Open sheet</a></div>
 
+  <div class="sheet"><h2>10 · Metrics &amp; Decisions<span>UI-CONSOLE-010</span></h2>
+    <p>Product architecture: 48m → 90s North Star compression loop, two-tier authority matrix, rejected alternatives, 1:N fleet economics, and the 4px optical radius floor ruling.</p>
+    <a href="10-metrics-and-decisions.html">Open sheet</a></div>
+
   <div class="sheet">
     <h2>Observed token system<span>summary</span></h2>
     <p>Recurring values across all sheets (dark theme).</p>
@@ -105,7 +109,7 @@ td b{font-weight:700}
           <tr><th>System</th><th>Values</th></tr>
           <tr><td><b>Spacing scale</b> (--s-*)</td><td>4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 (strict 4px grid); --gap = 12; component gap 12; compact gap 8</td></tr>
           <tr><td><b>Control heights</b></td><td>row 52 · cells 36 · posture 30 · status-pill 28 · btn 32 / sm 26 · seg-btn 24 · chip 22 · widget header 38 · opt 40 (34 compact) · field 42 · readout 26 · timeline 60</td></tr>
-          <tr><td><b>Radii</b> (--r-*)</td><td>4 · 6 · 8 · 10 · 12 · pill(999). Concentric rule: r_in = max(2, r_out − pad). CONFLICT: applied inner radius on coa/dissent/menu is 4 where the formula yields 2</td></tr>
+          <tr><td><b>Radii</b> (--r-*)</td><td>4 · 6 · 8 · 10 · 12 · pill(999). Concentric rule (2026-11-02 ruling): r_in = clamp(4, r_out − pad, 8) — the 4px Optical Floor; 8px cap keeps wells under the control radius</td></tr>
           <tr><td><b>Elevation</b></td><td>shadow-1 = 0 8 24 · 35% · shadow-2 = 0 18 50 · 50% · glass = inset rim + 0.5px hairline + 0 2 6 · 35% + 0 18 44 −18 · 50% · backdrop blur(10) sat(140%)</td></tr>
           <tr><td><b>Inset wells</b></td><td>seg/clock/op: 0 1 2 · 60% · input: 0 1 2 · 50% · field: 0 1 3 · 55% (+ top specular highlight token)</td></tr>
           <tr><td><b>Layers</b> (--z-*)</td><td>map 0 · map-ui 10 · dock 20 · talon 30 · topbar 40 · popover 60 · toast 70 · modal 80 · boot 90</td></tr>

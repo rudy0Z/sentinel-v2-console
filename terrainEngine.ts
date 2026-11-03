@@ -355,6 +355,15 @@ export interface Engine {
   getFieldStats(): FieldStats | null;
   /** Topmost interactive line or marker layer within `tolerancePx` of a client point. */
   pickLayer(clientX: number, clientY: number, tolerancePx?: number): string | null;
+  /** Screen-space anchor (client px) of a unit or overlay layer — the spatial tether's target. */
+  projectPoint(id: string): { x: number; y: number; visible: boolean } | null;
+  /** Project an arbitrary world point (map x/z) to client px. */
+  projectWorld(p: Vec2, lift?: number): { x: number; y: number; visible: boolean } | null;
+  /** Reached area (m²) at scene time + extraMin — the counterfactual horizon readout. */
+  reachedAreaAt(extraMin: number): number | null;
+  /** Dim non-focused projection isochrones (null = all equal). Pure view state. */
+  setHorizonFocus(offsetMin: number | null): void;
+  getHorizonFocus(): number | null;
   setUnits(units: UnitSpec[]): void;
   /** Ring a unit chip (e.g. hovered in a shell list); null clears. */
   highlightUnit(id: string | null): void;
@@ -1591,6 +1600,7 @@ uniform float uTintFade;
 uniform float uScale;
 uniform vec3 uIsoT;     // contour offsets (minutes)
 uniform vec3 uIsoOn;
+uniform vec3 uIsoDim;   // per-band multiplier: the counterfactual lens dims non-focused horizons
 uniform vec3 uIsoStyle; // 0 solid, 1 dashed, 2 dotted
 uniform vec3 uIsoW;     // px
 uniform vec3 uIsoC0;
@@ -1736,8 +1746,9 @@ void main() {
       float l = isoLine(arr, fwA, uClock + uIsoT[k], uIsoW[k], uIsoStyle[k], s);
       float lc = isoLine(arr, fwA, uClock + uIsoT[k], uIsoW[k] + 2.5, uIsoStyle[k], s);
       vec3 ic = k == 0 ? uIsoC0 : (k == 1 ? uIsoC1 : uIsoC2);
-      c = mix(c, cas, lc * 0.55 * day * annot);
-      c = mix(c, ic, l * 0.92 * annot);
+      float dim = uIsoDim[k];
+      c = mix(c, cas, lc * 0.55 * day * annot * dim);
+      c = mix(c, ic, l * 0.92 * annot * dim);
     }
     if (uArrInfo.z > 0.0) {
       float e = isoLine(arr, fwA, uClock, uArrInfo.z, 0.0, 0.0);
@@ -2492,6 +2503,7 @@ function fieldUniforms(clock: { value: number }) {
     uClock: clock,
     uIsoT: { value: new THREE.Vector3(15, 30, 60) },
     uIsoOn: { value: new THREE.Vector3(0, 0, 0) },
+    uIsoDim: { value: new THREE.Vector3(1, 1, 1) },
     uIsoStyle: { value: new THREE.Vector3(0, 1, 2) },
     uIsoW: { value: new THREE.Vector3(2, 2, 2) },
     uIsoC0: { value: hexToVec3(PALETTE.fire) },
@@ -2561,6 +2573,7 @@ class TacticalTerrainEngine implements Engine {
   private layers = new Map<string, LayerRec>();
   private baseVisible: Record<string, boolean> = { contours: true, graticule: true, roads: true, buildings: true, units: true, drones: true, vegetation: true };
   private units: UnitRec[] = [];
+  private horizonFocus: number | null = null;
   private markerPoints: THREE.Points | null = null;
   private segLines: THREE.LineSegments | null = null;
 
@@ -2865,6 +2878,50 @@ class TacticalTerrainEngine implements Engine {
     const v = { reachedArea: n * cell, threatened, destroyed, structures: this.buildingCentroids.length };
     this.statsCache = { clock: this.clock, v };
     return v;
+  }
+
+  /** Reached area (m²) at scene time + extraMin — pure function of clock and field, scrub-safe. */
+  reachedAreaAt(extraMin: number): number | null {
+    const f = this.field;
+    if (!f) return null;
+    const t = this.clock + extraMin;
+    let n = 0;
+    for (let i = 0; i < f.data.length; i++) if (f.data[i] <= t) n++;
+    const cell = (this.hf.width / f.spec.cols) * (this.hf.height / f.spec.rows);
+    return n * cell;
+  }
+
+  /** Screen anchor (client px) of a unit or overlay layer — the spatial tether's target. */
+  projectPoint(id: string): { x: number; y: number; visible: boolean } | null {
+    const key = id.toLowerCase();
+    const u = this.units.find((x) => x.spec.id.toLowerCase() === key);
+    if (u) return this.projectWorld(this.unitAnchor(u), 90);
+    const rec = this.layers.get(id);
+    const s = rec?.spec;
+    if (!rec || !rec.visible || !s) return null;
+    if (s.type === 'marker') return this.projectWorld(s.position, 6);
+    if ((s.type === 'line' || s.type === 'polygon') && 'points' in s && s.points.length) {
+      return this.projectWorld(s.points[Math.floor(s.points.length / 2)], (s as { lift?: number }).lift ?? 3);
+    }
+    if (s.type === 'field' && s.origin) return this.projectWorld(s.origin, 3);
+    return null;
+  }
+
+  /** Project a world point (map x/z) to client px — same math as pickLayer's toScreen. */
+  projectWorld(p: Vec2, lift = 3): { x: number; y: number; visible: boolean } | null {
+    const cr = this.canvas.getBoundingClientRect();
+    const v = new THREE.Vector3(p[0], this.hf.sample(p[0], p[1]) * this.exag + lift, -p[1]).project(this.active);
+    return { x: cr.left + ((v.x + 1) / 2) * this.width, y: cr.top + ((1 - v.y) / 2) * this.height, visible: v.z >= -1 && v.z <= 1 };
+  }
+
+  setHorizonFocus(offsetMin: number | null): void {
+    this.horizonFocus = offsetMin;
+    this.applyFieldUniforms();
+    this.invalidate();
+  }
+
+  getHorizonFocus(): number | null {
+    return this.horizonFocus;
   }
 
   pickLayer(clientX: number, clientY: number, tolerancePx = 9): string | null {
@@ -3677,6 +3734,7 @@ class TacticalTerrainEngine implements Engine {
       const iso = isos[k];
       F.uIsoOn.value.setComponent(k, iso && on ? 1 : 0);
       if (!iso) continue;
+      F.uIsoDim.value.setComponent(k, this.horizonFocus == null || iso.offset === this.horizonFocus ? 1 : 0.22);
       F.uIsoT.value.setComponent(k, iso.offset);
       F.uIsoStyle.value.setComponent(k, styles[iso.style ?? 'solid']);
       F.uIsoW.value.setComponent(k, iso.width ?? 1.8);

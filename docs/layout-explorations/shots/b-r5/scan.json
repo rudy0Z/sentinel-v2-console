@@ -1,0 +1,80 @@
+[
+  {
+    "w": 1920,
+    "fails": [
+      "Text under 11px: 10.5px \"S-05 · 34°04.7′N 118°52.2″W · \"; 10.5px \"Plan P-1 · Gate\"; 10.5px \"TFR · AIR ATTACK OPS · UAS FLO\"; 10.5px \"3 need you · 2 working\""
+    ],
+    "warns": [
+      "Default-reach font: Geist. If DIRECTION.md does not say why this face and not another, it is the default talking.",
+      "18 text elements at 11px: 11.5px \"LIVE · Jan 14 · 03:53 PST\"; 11.5px \"T+0:06\"; 11.5px \"A. Rao · Operator on authority\"",
+      "Running text under 13px: 11.5px \"Adapted from playbook ENC-3 (p\"; 11.5px \"Projection: west-southwest at \"; 11.5px \"FT-02 launched from dock D-2. \"",
+      "7 small letter-spaced uppercase labels. An eyebrow over every section stops meaning anything.",
+      "3 em dashes in visible copy. A period or colon usually reads cleaner."
+    ],
+    "facts": {
+      "fonts": {
+        "Geist": "59%",
+        "Geist Mono": "41%"
+      },
+      "sizes": [
+        15,
+        13,
+        12.5,
+        12,
+        11.5,
+        11,
+        10.5,
+        10,
+        9.5
+      ],
+      "body": 11.5,
+      "hues": [
+        30,
+        210,
+        150
+      ],
+      "boxes": 7,
+      "cardGrids": 0,
+      "defaultIcons": 0,
+      "focusStops": 5
+    }
+  },
+  {
+    "w": 1440,
+    "fails": [
+      "Text under 11px: 10.5px \"S-05 · 34°04.7′N 118°52.2″W · \"; 10.5px \"Plan P-1 · Gate\"; 10.5px \"TFR · AIR ATTACK OPS · UAS FLO\"; 10.5px \"3 need you · 2 working\""
+    ],
+    "warns": [
+      "Default-reach font: Geist. If DIRECTION.md does not say why this face and not another, it is the default talking.",
+      "18 text elements at 11px: 11.5px \"LIVE · Jan 14 · 03:53 PST\"; 11.5px \"T+0:06\"; 11.5px \"A. Rao · Operator on authority\"",
+      "Running text under 13px: 11.5px \"Adapted from playbook ENC-3 (p\"; 11.5px \"Projection: west-southwest at \"; 11.5px \"FT-02 launched from dock D-2. \"",
+      "3 em dashes in visible copy. A period or colon usually reads cleaner."
+    ],
+    "facts": {
+      "fonts": {
+        "Geist": "60%",
+        "Geist Mono": "40%"
+      },
+      "sizes": [
+        15,
+        13,
+        12.5,
+        12,
+        11.5,
+        11,
+        10.5,
+        10,
+        9.5
+      ],
+      "body": 11.5,
+      "hues": [
+        30,
+        210,
+        150
+      ],
+      "boxes": 7,
+      "cardGrids": 0,
+      "defaultIcons": 0
+    }
+  }
+]

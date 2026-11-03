@@ -19,6 +19,9 @@ async function open(q, w = 1600, h = 960) {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/favicon|fonts/.test(m.text())) errors.push(m.text()); });
   await page.setViewport({ width: w, height: h });
+  // journeys leak pages by design; a background tab throttles rAF to a crawl and freezes
+  // every transition-timed read — each journey's page comes to the front as it opens
+  await page.bringToFront();
   await page.goto(`http://127.0.0.1:8137/?intro=0&${q}`, { waitUntil: 'load' });
   await page.waitForFunction('window.player && window.talon && document.querySelector(".boot.gone")', { timeout: 120000 });
   await sleep(1200);
@@ -115,8 +118,17 @@ const quiet = (errs) => errs.length === 0;
   const kb = await open('situation=wui-breakout&phase=D'); // fresh live page
   const kbOpen = await kb.page.evaluate(() => talon.state().open.some((o) => o.item.id === 'plan'));
   await kb.page.keyboard.press('1');
-  await sleep(700);
-  const kbDone = await kb.page.evaluate(() => ({ committed: player.getState().committed, disabledInPast: true }));
+  // poll, don't sleep: the commit lands after the 180ms latch + a render, and software GL
+  // under battery load can stall frames past a fixed wait
+  const kbDone = await kb.page.evaluate(async () => {
+    const t0 = Date.now();
+    for (;;) {
+      if (player.getState().committed) break;
+      if (Date.now() - t0 > 5000) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return { committed: player.getState().committed, disabledInPast: true };
+  });
   check('X2 keyboard: "1" authorizes the live plan card; past-viewing disables decisions', kbOpen && kbDone.committed, JSON.stringify({ kbOpen, committed: kbDone.committed }));
   await kb.page.close();
   check('W-journeys: no console errors', quiet(errors));
@@ -248,8 +260,15 @@ const quiet = (errs) => errs.length === 0;
   await shot(page, 'break-cards');
   check('B1 worst-case long item renders (wraps, stack scrolls, no overlay bleed)', b.long.ok && b.longRendered && b.stackScroll, JSON.stringify({ rendered: b.longRendered, scroll: b.stackScroll }));
   await page.evaluate(() => { talon.answer('plan', 'authorize'); player.setTime(6.7); });
-  await sleep(700);
-  const sixCount = await page.evaluate(() => document.querySelectorAll('#cards .opt').length);
+  // poll, don't sleep: the post-answer re-render lands on the next rAF frame
+  const sixCount = await page.evaluate(async () => {
+    const t0 = Date.now();
+    for (;;) {
+      const n = document.querySelectorAll('#cards .opt').length;
+      if (n >= 6 || Date.now() - t0 > 5000) return n;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  });
   check('B2 six options: renderer survives, all reachable in the top card', b.six.ok && sixCount >= 6, `opts=${sixCount}`);
   check('B3 optionless ask: renders without crash (flagged as a finding)', b.zero.ok);
   check('B4 governance holds at the boundary: dup/empty/uncited rejected, interrupt demoted', !b.dup.ok && !b.emptyTitle.ok && !b.uncited.ok && b.demoted, JSON.stringify({ dup: b.dup.ok, empty: b.emptyTitle.ok, uncited: b.uncited.ok, demoted: b.demoted }));
@@ -323,6 +342,128 @@ const quiet = (errs) => errs.length === 0;
   await shot(v2.page, 'floor-1920');
   check('V2 1920×1080: topbar children never intersect; tools clear of the open decision lane; no page overflow', r2.topbarOverlaps === 0 && !r2.toolsCovered && r2.overflow === false, JSON.stringify(r2));
   await v2.page.close();
+}
+
+// V3 — the both-open state (chat + decision card): the displaced stack and the tools both travel,
+// so the tools take a SECOND step (−2·(PANEL+GAP)) and stay clickable (2026-11-02 walkthrough audit).
+{
+  for (const [w, h] of [[1920, 1080], [1280, 800]]) {
+    const v3 = await open(`situation=wui-breakout&phase=D`, w, h);
+    const r3 = await v3.page.evaluate(async () => {
+      const openChat = () => { const b = document.querySelector('[data-act="panel"]'); if (b && !document.querySelector('.app.chat-open')) b.click(); };
+      openChat();
+      // transitions advance on frames — under software GL a frame can be >1s apart, so
+      // "two identical reads" is not "settled" unless a frame fired in between
+      let frames = 0;
+      const orig = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (fn) => orig((t) => { frames++; fn(t); });
+      const waitTransitions = async () => {
+        const t0 = Date.now();
+        // a frame must fire after the class flip before the pending transitions even register
+        // in getAnimations — at 1920 under software GL that frame can land after this check's
+        // first two stable reads, which would settle on the pre-click state (V3 1920, 2026-11-04)
+        const f0 = frames;
+        for (;;) {
+          if (frames === f0 && Date.now() - t0 < 5000) { await new Promise((r) => orig((t) => { frames++; r(t); })); continue; }
+          const anims = document.getAnimations ? document.getAnimations().filter((a) => a instanceof CSSTransition) : [];
+          if (!anims.length || Date.now() - t0 > 5000) return;
+          await Promise.race([Promise.all(anims.map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 400))]);
+        }
+      };
+      await waitTransitions();
+      const tx = (el) => { const m = /matrix\(1, 0, 0, 1, (-?[\d.]+),/.exec(getComputedStyle(el).transform); return m ? Math.round(parseFloat(m[1])) : 0; };
+      const read = () => {
+        const tools = document.querySelector('.tools');
+        const cards = document.querySelector('#cards');
+        const tr = tools.getBoundingClientRect(), cr = cards.getBoundingClientRect();
+        const covered = [...tools.querySelectorAll('button')].filter((b) => {
+          const r = b.getBoundingClientRect();
+          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return !hit || !b.contains(hit);
+        }).length;
+        const tw = Math.min(tr.right, cr.right) - Math.max(tr.left, cr.left);
+        const th = Math.min(tr.bottom, cr.bottom) - Math.max(tr.top, cr.top);
+        return { bothOpen: !!document.querySelector('.app.chat-open.cards-open'), covered, toolsCovered: tw > 1 && th > 1, toolsTx: tx(tools), cardsTx: tx(cards), tools: [tr.left, tr.right].map(Math.round), cards: [cr.left, cr.right].map(Math.round), overflow: document.documentElement.scrollWidth > innerWidth + 1 };
+      };
+      // settle: rects stable across at least one fired animation frame — and no CSSTransition
+      // still live, so a frozen mid-flight transform can't masquerade as the settled state
+      const t0 = Date.now();
+      let prev = '', framesAtPrev = 0, v = read();
+      for (;;) {
+        v = read();
+        const key = JSON.stringify([v.tools, v.cards, v.toolsTx, v.cardsTx]);
+        const liveTx = document.getAnimations ? document.getAnimations().filter((a) => a instanceof CSSTransition).length : 0;
+        if (v.bothOpen && v.covered === 0 && !v.toolsCovered && !v.overflow && key === prev && frames !== framesAtPrev && liveTx === 0) break;
+        if (key !== prev) framesAtPrev = frames;
+        prev = key;
+        if (Date.now() - t0 > 10000) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      const panel = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--panel-w'));
+      const doubleStep = Math.abs(v.toolsTx - 2 * v.cardsTx) <= 2 && Math.abs(v.cardsTx + (panel + 12)) <= 2;
+      return { ...v, doubleStep };
+    });
+    await shot(v3.page, `bothopen-${w}`);
+    check(`V3 ${w}×${h}: chat + card both open — tools take the double step, every tool clickable, clear of the displaced stack, no overflow`, r3.bothOpen && r3.doubleStep && r3.covered === 0 && !r3.toolsCovered && r3.overflow === false, JSON.stringify(r3));
+    await v3.page.close();
+  }
+}
+
+// V4 — the avionics layer (2026-11-03 craft pass): HUD frame + bearing, the counterfactual
+// time lens wired to the real spread field, the spatial tether, and the right-click ground
+// probe. All waits poll — cold swiftshader rAF can starve a fixed sleep.
+{
+  const v4 = await open('situation=wui-breakout&phase=D', 1920, 1080);
+  const r4 = await v4.page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const out = { hud: !!document.querySelector('#hudFrame'), bearing: '', lens: 'absent', lensFocus: null, lensRead: false, tetherOn: false, tetherTag: '', tetherLine: false, tetherOff: false, probe: 'closed', probeEsc: false, pass: false };
+    for (let i = 0; i < 40 && !document.querySelector('.tl-stop'); i++) await sleep(150);
+    out.bearing = document.querySelector('#hudBearing')?.textContent ?? '';
+    const b30 = document.querySelector('.tl-stop[data-min="30"]');
+    if (b30) {
+      b30.click();
+      for (let i = 0; i < 30; i++) { await sleep(150); const nb = document.querySelector('.tl-stop[data-min="30"]'); if (nb && nb.getAttribute('aria-pressed') === 'true') break; }
+      out.lens = document.querySelector('.tl-stop[data-min="30"]')?.getAttribute('aria-pressed') ?? 'gone';
+      out.lensFocus = window.engine.getHorizonFocus();
+      out.lensRead = (document.querySelector('.tl-read')?.textContent ?? '').includes('+30m');
+      // reset to NOW: a focused horizon keeps its own tether up by design — the hover
+      // on/off test below needs the plain tether
+      const b0 = document.querySelector('.tl-stop[data-min="0"]');
+      if (b0) {
+        b0.click();
+        for (let i = 0; i < 30; i++) { await sleep(150); if (window.engine.getHorizonFocus() === null) break; }
+      }
+      out.lensReset = window.engine.getHorizonFocus() === null;
+    }
+    const row = document.querySelector('.urow[data-unit]');
+    if (row) {
+      row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      for (let i = 0; i < 20; i++) { await sleep(120); const g = document.querySelector('#tetherG'); if (g && g.style.display !== 'none') break; }
+      const g = document.querySelector('#tetherG');
+      out.tetherOn = !!g && g.style.display !== 'none';
+      out.tetherTag = document.querySelector('.tether-tagtext')?.textContent ?? '';
+      out.tetherLine = (document.querySelector('.tether-line')?.getAttribute('d') ?? '').length > 10;
+      row.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+      for (let i = 0; i < 20; i++) { await sleep(120); const g2 = document.querySelector('#tetherG'); if (!g2 || g2.style.display === 'none') break; }
+      out.tetherOff = (document.querySelector('#tetherG')?.style.display ?? 'none') === 'none';
+    }
+    const canvas = document.querySelector('canvas');
+    const cr = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: cr.left + cr.width * 0.4, clientY: cr.top + cr.height * 0.45 }));
+    for (let i = 0; i < 20; i++) { await sleep(120); const pr = document.querySelector('#mapProbe'); if (pr && !pr.hidden) break; }
+    const pr = document.querySelector('#mapProbe');
+    out.probe = pr && !pr.hidden ? (pr.querySelector('.mpp-coords')?.textContent ?? '').trim() : 'closed';
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await sleep(300);
+    out.probeEsc = !!document.querySelector('#mapProbe')?.hidden;
+    // pointer-events: none on the overlays — map hit-testing is untouched
+    out.canvasHit = (document.elementFromPoint(cr.left + cr.width * 0.4, cr.top + cr.height * 0.45))?.tagName === 'CANVAS';
+    out.pass = out.hud && /HDG/.test(out.bearing) && out.lens === 'true' && out.lensFocus === 30 && out.lensRead && out.lensReset !== false && out.tetherOn && out.tetherOff && out.tetherLine && out.probe.length > 5 && out.probe !== 'closed' && out.probeEsc && out.canvasHit;
+    return out;
+  });
+  await shot(v4.page, 'avionics-1920');
+  check('V4 avionics: HUD bearing, time-lens +30M focus, spatial tether on/off, ground probe + Escape, canvas hit untouched', r4.pass, JSON.stringify(r4));
+  await v4.page.close();
 }
 
 function player_situation_end(page) { return 140; } // wui clock end — clamped check uses the known situation

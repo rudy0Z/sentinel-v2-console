@@ -499,21 +499,30 @@ async function open(q, w = 1600, h = 960, pinned) {
   });
   check('command bridge: 4 ICS-205 leaders, TAK sync chip, hail ducks TALON', bridge.n === 4 && bridge.synced && ducked, JSON.stringify({ bridge, ducked }));
 
-  // R3 — mic presence tri-state.
+  // R3 — mic presence tri-state. The R2 hail holds the duck (listening) until [M] releases it,
+  // and under software GL a render frame can lag past a fixed sleep — poll the DOM, don't sleep.
   await page.keyboard.press('Escape');
-  await sleep(300);
+  await page.waitForFunction("!!document.querySelector('.rbtn.mic')", { timeout: 8000 });
   const m0 = await page.evaluate(() => !!document.querySelector('.rbtn.mic.muted'));
   await page.keyboard.press('m');
-  await sleep(300);
-  const m1 = await page.evaluate(() => ({ muted: !!document.querySelector('.rbtn.mic.muted'), pressed: document.querySelector('.rbtn.mic')?.getAttribute('aria-pressed') }));
+  let m1;
+  try {
+    await page.waitForFunction(
+      () => { const m = document.querySelector('.rbtn.mic'); return !!m && m.classList.contains('muted') && m.getAttribute('aria-pressed') === 'false'; },
+      { timeout: 8000 },
+    );
+    m1 = { muted: true, pressed: 'false' };
+  } catch {
+    m1 = await page.evaluate(() => ({ muted: !!document.querySelector('.rbtn.mic.muted'), pressed: document.querySelector('.rbtn.mic')?.getAttribute('aria-pressed') }));
+  }
   check('mic presence: on the net by default, [M] mutes the ears only', !m0 && m1.muted && m1.pressed === 'false', JSON.stringify({ m0, m1 }));
 
   // R4 — epistemic layer: fragility on the plan gate, drift badge after the correction, MOD/MEA toggle.
   await page.evaluate(() => { player.setTime(-28); talon.answer('prepos', 'yes'); player.setTime(7.2); });
-  await sleep(700);
+  await page.waitForFunction(() => !!document.querySelector('.gate .fragility'), { timeout: 10000 }).catch(() => {});
   const frag = await page.evaluate(() => !!document.querySelector('.gate .fragility'));
   await page.evaluate(() => player.setTime(90));
-  await sleep(800);
+  await page.waitForFunction(() => !!document.querySelector('.gatechip.drift'), { timeout: 10000 }).catch(() => {});
   const drift = await page.evaluate(() => document.querySelector('.gatechip.drift')?.textContent ?? 'none');
   await page.evaluate(() => document.querySelector('.rail [data-act="panel"]')?.click());
   await sleep(500);

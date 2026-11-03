@@ -219,7 +219,7 @@
   --opt-bg-rec: linear-gradient(180deg, var(--p-alpha-w-08) 0%, var(--p-alpha-w-04) 100%);
   --opt-shadow: inset 0 1px 0 var(--p-alpha-w-06), 0 2px 4px var(--p-alpha-b-35);
   --opt-shadow-active: inset 0 1px 0 var(--p-alpha-w-02), inset 0 1px 3px var(--p-alpha-b-55);
-  --opt-k-shadow: 0 1px 0 var(--p-alpha-b-50);
+  --opt-k-shadow: inset 0 1px 0 var(--border-specular-top), 0 2px 0 var(--p-alpha-b-50);
 
   /* themed surfaces (Tier 3): the only raw literals live in the two :root blocks */
   --glass-shadow: inset 0 1px 0 var(--p-alpha-w-10), inset 0 0 0 .5px var(--p-alpha-w-05), 0 2px 6px var(--p-alpha-b-35), 0 18px 44px -18px var(--p-alpha-b-50);
@@ -285,7 +285,9 @@
   --s-8: 32px;
   --s-10: 40px;
 
-  /* radius (concentric: r_inner = max(var(--r-xs), r_outer − padding) — the floor is 4px, matching the applied coa/dissent/menu values) */
+  /* radius (concentric: r_inner = clamp(4px, r_outer − padding, 8px) — the 4px Optical Floor:
+     a well separated from the card wall by stack gap reads boxy below 4px next to 8px controls;
+     the 8px cap keeps inner wells from rounding past the control radius above them) */
   --r-xs: 4px;
   --r-sm: 6px;
   --r-md: 8px;
@@ -481,6 +483,9 @@ button.chip:hover { color: var(--text-1); border-color: var(--border-strong); ba
    aside by the same displacement the card stack uses — the operator never loses map navigation
    while a decision is open (review C3: tools were click-dead under open cards) */
 .app.chat-open .tools, .app.cards-open .tools { transform: translateX(calc(-1 * (var(--panel-w) + var(--gap)))); }
+/* both lanes open: the card stack travels with the chat (−1 step), so the tools take a SECOND
+   step and stay clear of the displaced stack at every contracted width (2026-11-02 audit, e2e V3) */
+.app.chat-open.cards-open .tools { transform: translateX(calc(-2 * (var(--panel-w) + var(--gap)))); }
 .toolgroup { display: grid; border-radius: var(--r-md); overflow: hidden; }
 .toolgroup .btn { width: var(--tools-w); height: var(--tools-w); border-radius: 0; border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; color: var(--icon); padding: 0; box-shadow: var(--highlight-top); }
 .toolgroup .btn:last-child { border-bottom: 0; }
@@ -523,7 +528,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .legend-row svg { width: 28px; height: 12px; flex: none; }
 
 /* ---- inspector (doc 12 rule 6: every mark is interrogable) */
-.inspector { position: absolute; z-index: var(--z-map-ui); left: calc(var(--gap) * 3 + var(--tools-w)); top: calc(var(--gap) * 2 + var(--topbar-h)); width: 300px; border-radius: var(--r-lg); padding: var(--s-3) var(--s-4) var(--s-4); animation: pop-in var(--dur-base) var(--ease-out); }
+.inspector { position: absolute; z-index: var(--z-map-ui); left: calc(var(--gap) * 2); top: calc(var(--gap) * 2 + var(--topbar-h)); width: 300px; border-radius: var(--r-lg); padding: var(--s-3) var(--s-4) var(--s-4); animation: pop-in var(--dur-base) var(--ease-out); } /* left = 2·GAP, on the readout line — the old 3·GAP+TOOLS term predates the tools' bottom-right home */
 .inspector header { display: flex; align-items: flex-start; gap: var(--s-2); margin-bottom: var(--s-2); }
 .inspector h2 { margin: 0; font-size: var(--fs-title); font-weight: var(--fw-semibold); line-height: var(--lh-tight); }
 .inspector .sub { color: var(--text-3); font-size: var(--fs-caption); margin-top: 2px; }
@@ -1176,3 +1181,109 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 :root[data-theme="daylight"] .exercise::before { background: var(--bg-surface-1); }
 :root[data-theme="daylight"] .track .mk::before { box-shadow: 0 0 0 2px var(--bg-surface-3); }
 :root[data-theme="daylight"] .chart .hdot { stroke: var(--bg-surface-2); }
+
+/* ==========================================================================
+   AVIONICS CRAFT & SIGNATURE SPATIAL INTERACTIONS (2026-11-03)
+   Spatial tether · counterfactual time lens · ground probe · HUD frame · cadence.
+   Tokens only — the zero-raw-hex scanner holds (§1).
+   ========================================================================== */
+
+/* 1 · Spatial tether: a fixed SVG bridge between a UI row and its live map anchor.
+   z = just under the decision cards, so the line never overprints card text. */
+.tether-svg { position: fixed; inset: 0; pointer-events: none; z-index: calc(var(--z-talon) - 1); overflow: visible; }
+.tether-bg { stroke: var(--bg-canvas); stroke-width: 3.4px; stroke-linecap: round; stroke-linejoin: round; opacity: .5; }
+.tether-line { stroke: var(--talon); stroke-width: 1.4px; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 6 4; animation: tether-flow 1.2s linear infinite; }
+.tether-svg[data-tone="done"] .tether-line { stroke: var(--done); stroke-dasharray: none; }
+.tether-svg[data-tone="needs"] .tether-line { stroke: var(--needs); }
+.tether-svg[data-tone="critical"] .tether-line { stroke: var(--critical); }
+.tether-dot { fill: var(--talon); stroke: var(--bg-canvas); stroke-width: 1.4px; }
+.tether-svg[data-tone="done"] .tether-dot, .tether-svg[data-tone="done"] .tether-pip { fill: var(--done); }
+.tether-svg[data-tone="needs"] .tether-dot, .tether-svg[data-tone="needs"] .tether-pip { fill: var(--needs); }
+.tether-svg[data-tone="critical"] .tether-dot, .tether-svg[data-tone="critical"] .tether-pip { fill: var(--critical); }
+.tether-knee { fill: var(--talon); opacity: .6; }
+.tether-svg[data-tone="done"] .tether-knee { fill: var(--done); }
+.tether-svg[data-tone="needs"] .tether-knee { fill: var(--needs); }
+.tether-svg[data-tone="critical"] .tether-knee { fill: var(--critical); }
+.tether-ret { stroke: var(--talon); stroke-width: 1.3px; fill: none; }
+.tether-svg[data-tone="done"] .tether-ret { stroke: var(--done); }
+.tether-svg[data-tone="needs"] .tether-ret { stroke: var(--needs); }
+.tether-svg[data-tone="critical"] .tether-ret { stroke: var(--critical); }
+.tether-ring { stroke: var(--talon); stroke-width: 1px; fill: none; opacity: .35; transform-box: fill-box; transform-origin: center; animation: reticle-pulse 1.8s var(--ease-out) infinite; }
+.tether-svg[data-tone="done"] .tether-ring { stroke: var(--done); }
+.tether-svg[data-tone="needs"] .tether-ring { stroke: var(--needs); }
+.tether-svg[data-tone="critical"] .tether-ring { stroke: var(--critical); }
+.tether-pip { fill: var(--talon); }
+.tether-tagbg { fill: var(--bg-surface-1); stroke: var(--border-strong); stroke-width: 1px; }
+.tether-tagtext { font: var(--fw-semibold) var(--fs-badge)/1 var(--font-mono); letter-spacing: .04em; fill: var(--text-1); text-anchor: middle; }
+@keyframes tether-flow { to { stroke-dashoffset: -20; } }
+@keyframes reticle-pulse { 0% { transform: scale(.85); opacity: .5; } 100% { transform: scale(1.45); opacity: 0; } }
+
+/* 2 · Counterfactual time lens — lives INSIDE the COA region, so the coa-shut
+   height guard (CARDS-MH at <1000h, dissent forces shut) is untouched. */
+.time-lens { display: grid; gap: 5px; padding: 7px 8px; margin-bottom: var(--s-2); border-radius: var(--r-xs); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: var(--inset-well); }
+.tl-stops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; padding: 2px; border-radius: var(--r-xs); background: var(--bg-canvas); border: 1px solid var(--border-subtle); }
+.tl-stop { height: 22px; border: 0; border-radius: 3px; background: transparent; color: var(--text-2); font: var(--fw-medium) var(--fs-badge)/1 var(--font-mono); letter-spacing: .04em; cursor: pointer; transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+.tl-stop:hover { color: var(--text-1); background: var(--surface-hover); }
+.tl-stop[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); font-weight: var(--fw-bold); box-shadow: var(--highlight-top), 0 0 0 1px var(--border-strong); }
+.tl-read { display: flex; align-items: center; gap: 8px; min-width: 0; font: var(--fw-normal) var(--fs-caption)/1.3 var(--font-mono); color: var(--text-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tl-read b { color: var(--text-1); font-weight: var(--fw-semibold); }
+.tl-sep { width: 1px; height: 12px; background: var(--border); flex: none; }
+.tl-empty { color: var(--text-3); }
+@media (max-height: 900px) { .time-lens { padding: 5px 7px; } .tl-read { display: none; } }
+
+/* 3 · Ground probe — a transient glass pill anchored to a real engine pick(). */
+.map-probe { position: fixed; z-index: var(--z-popover); width: 252px; padding: 10px 12px; border-radius: var(--r-md); display: grid; gap: 7px; box-shadow: var(--shadow-2); animation: pop-in var(--dur-base) var(--ease-out); }
+.map-probe[hidden] { display: none !important; }
+.mpp-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.mpp-x { appearance: none; border: 0; background: transparent; color: var(--text-3); font: var(--fw-semibold) 14px/1 var(--font-sans); cursor: pointer; padding: 2px 4px; border-radius: var(--r-xs); }
+.mpp-x:hover { color: var(--text-1); background: var(--surface-hover); }
+.mpp-coords { font: var(--fw-semibold) var(--fs-caption)/1.2 var(--font-mono); color: var(--text-1); }
+.mpp-facts { font: var(--fw-normal) var(--fs-micro)/1.4 var(--font-mono); color: var(--text-2); }
+.mpp-fire { display: flex; align-items: center; gap: 6px; font-size: var(--fs-micro); color: var(--text-2); }
+.mpp-acts { display: grid; gap: 4px; }
+.mpp-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 26px; padding: 0 8px; border-radius: var(--r-xs); border: 1px solid var(--border); background: var(--bg-surface-1); color: var(--text-1); font: var(--fw-medium) var(--fs-caption)/1 var(--font-sans); cursor: pointer; transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform 40ms linear; }
+.mpp-btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.mpp-btn:active { transform: translateY(1px); }
+.mpp-btn .k-sub { font: var(--fw-semibold) var(--fs-badge)/1 var(--font-mono); color: var(--text-3); letter-spacing: .06em; }
+
+/* 4 · Optical HUD frame: corner registration marks + live bearing/range readout.
+   The marks are decorative (aria-hidden); the bearing text sits full-opacity on glass. */
+#hudFrame { position: fixed; inset: var(--gap); pointer-events: none; z-index: calc(var(--z-map-ui) - 1); }
+.hud-reg { position: absolute; width: 11px; height: 11px; opacity: .3; }
+.hud-reg::before, .hud-reg::after { content: ""; position: absolute; background: var(--text-3); }
+.hud-reg::before { top: 5px; left: 0; width: 11px; height: 1px; }
+.hud-reg::after { top: 0; left: 5px; width: 1px; height: 11px; }
+.hud-reg.tl { top: calc(var(--topbar-h) + 4px); left: 2px; }
+.hud-reg.tr { top: calc(var(--topbar-h) + 4px); right: calc(var(--rail-w2) + 2px); }
+.hud-reg.bl { bottom: calc(var(--dock-h, 0px) + 34px); left: 2px; }
+.hud-reg.br { bottom: calc(var(--dock-h, 0px) + 34px); right: calc(var(--rail-w2) + 2px); }
+#hudBearing { position: absolute; top: calc(var(--topbar-h) + 6px); left: 50%; transform: translateX(-50%); padding: 3px 10px; border-radius: var(--r-pill); background: var(--surface-glass); border: 1px solid var(--border-subtle); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); font: var(--fw-medium) var(--fs-badge)/1.2 var(--font-mono); letter-spacing: .08em; color: var(--text-2); }
+
+/* 5 · TALON cadence equalizer — panel header only; calm is a flat line, not noise. */
+.cadence { display: inline-flex; align-items: flex-end; gap: 2px; height: 10px; margin-left: 8px; }
+.cadence i { width: 2px; height: 4px; border-radius: 1px; background: var(--talon); animation: cadence-wave 1.1s var(--ease-in-out) infinite; transform-origin: bottom; }
+.cadence i:nth-child(2) { animation-delay: .15s; height: 7px; }
+.cadence i:nth-child(3) { animation-delay: .3s; height: 10px; }
+.cadence i:nth-child(4) { animation-delay: .45s; height: 6px; }
+.cadence i:nth-child(5) { animation-delay: .6s; height: 4px; }
+.cadence[data-state="needs"] i { background: var(--needs); animation-duration: .75s; }
+.cadence[data-state="working"] i { background: var(--talon); }
+.cadence[data-state="calm"] i { background: var(--text-3); animation: none; height: 3px; }
+@keyframes cadence-wave { 0%, 100% { transform: scaleY(.45); } 50% { transform: scaleY(1); } }
+
+/* 6 · Fleet endurance pips — same thresholds as the .batt warn classes. */
+.u-pips { display: inline-flex; align-items: center; gap: 2px; margin-right: 6px; flex: none; }
+.u-pips i { width: 4px; height: 6px; border-radius: 1px; background: var(--track-line); }
+.u-pips i.on { background: var(--done); }
+.u-pips i.warn { background: var(--needs); }
+
+/* 7 · Machined details: statutory-gate caution band + backlit keycap. */
+.gate { position: relative; overflow: hidden; }
+.gate::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--critical) 30%, transparent) 0 4px, transparent 4px 8px); opacity: .55; pointer-events: none; }
+.opt .k { transition: box-shadow 40ms linear, border-color var(--dur-fast) var(--ease-out); font-variant-numeric: tabular-nums; }
+.opt:hover .k { color: var(--text-1); }
+.opt:active .k { box-shadow: var(--inset-well); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tether-line, .tether-ring, .cadence i { animation: none !important; }
+}

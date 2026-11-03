@@ -124,7 +124,7 @@ function table(x,y,ttl,rows){const ws=[40,88,96],rh=17;tx(x,y-8,ttl,'vt');
  const all=[['Code','Variable','Value']].concat(rows);all.forEach((r,i)=>{let cx2=x;r.forEach((c,j)=>{mk('rect',{x:cx2,y:y+i*rh,width:ws[j],height:rh,class:'thin'});tx(cx2+(j?ws[j]/2:6),y+i*rh+12,c,i?'tc':'th',{'text-anchor':j?'middle':'start'});cx2+=ws[j]})});return y+all.length*rh+36}
 
 const VAR={
- anchors:[['TOOLS-R','tools right','2·GAP+RAIL = 68'],['TOOLS-B','tools bottom','DOCKH+2·GAP'],['RD-L','readout left','2·GAP = 24'],['RD-B','readout bottom','DOCKH+2·GAP'],['INSP-L','inspector left','3·GAP+TOOLS = 76'],['INSP-T','inspector top','2·GAP+TB = 76'],['Z','layer','L1 = 10']],
+ anchors:[['TOOLS-R','tools right','2·GAP+RAIL = 68'],['TOOLS-B','tools bottom','DOCKH+2·GAP'],['RD-L','readout left','2·GAP = 24'],['RD-B','readout bottom','DOCKH+2·GAP'],['INSP-L','inspector left','2·GAP = 24 · READOUT LINE'],['INSP-T','inspector top','2·GAP+TB = 76'],['Z','layer','L1 = 10']],
  sizes:[['T','tool button','40 × 40'],['GAP-T','group gap','8'],['GH1/2/3','group heights','80 / 120 / 80'],['RD','readout','H 26 · PAD 0 12'],['IW','inspector w','300'],['IP','inspector pad','12 16 16'],['FH','facts grid','84+1FR · 4/12']],
  radii:[['R-G','toolgroup','R-MD = 8'],['R-I','inspector','R-LG = 10'],['R-RD','readout','PILL = 13'],['R-BTN','inner buttons','0 (clipped by group)']],
  type:[['T-RD','readout','11 MONO · 500'],['T-IH','inspector h2','13.5 · 600'],['T-IS','inspector sub','11.5 · MUTED'],['T-F','facts','11.5 · KEY MUTED'],['ICON','tool icon','16 · STROKE 1.7']]
@@ -227,13 +227,13 @@ notes([[1,'THE TOP-LEFT OF THE MAP STAYS CLEAN: TOOLS CLUSTER BOTTOM-RIGHT, ABOV
 /* ---- ANCHOR DIAGRAM 0.3 ---- */
 {const s=.3,AX2=1000,AY2=640;const X=v=>AX2+v*s,Y=v=>AY2+v*s;
  rr(X(0),Y(0),1280*s,800*s,0,'thin');
- rr(X(76),Y(76),300*s,160*s,10*s,'obj');slotLabel(X(76),Y(76),300*s,40*s,'INSP','l');
+ rr(X(24),Y(76),300*s,160*s,10*s,'obj');slotLabel(X(24),Y(76),300*s,40*s,'INSP · 2·GAP','l');
  rr(X(1212-40),Y(276),40*s,296*s,8*s,'obj');slotLabel(X(1172),Y(276),40*s,60*s,'TOOLS','l');
  rr(X(24),Y(546),220*s,26*s,13*s,'obj');slotLabel(X(24),Y(546),220*s,26*s,'RD','l');
- dimH(X(0),X(76),Y(-24),Y(0),Y(0),'3·GAP+40',{c:'dts'});
+ dimH(X(0),X(24),Y(-24),Y(0),Y(0),'2·GAP = 24',{c:'dts'});
  dimH(X(1172),X(1280),Y(-24),Y(0),Y(0),'2·GAP+44',{c:'dts'});
  dimV(Y(76),Y(76+160),X(76+300*s+14),X(76+300*s),X(76+300*s),'76',{side:'r'});
- tx(AX2+192,AY2+260,'LEFT = 76 = 3·GAP + TOOLS','dts',{'text-anchor':'middle'});
+ tx(AX2+192,AY2+260,'LEFT = 24 = 2·GAP · READOUT LINE','dts',{'text-anchor':'middle'});
  tx(AX2+192,AY2+276,'RIGHT = 68 = 2·GAP + RAIL','dts',{'text-anchor':'middle'});
  title(AX2+192,AY2+302,'Anchor diagram','Scale 0.3:1 · L1 pieces');}
 

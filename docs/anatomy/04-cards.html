@@ -127,10 +127,10 @@ function table(x,y,ttl,rows){const ws=[40,88,96],rh=17;tx(x,y-8,ttl,'vt');
 const VAR={
  pad:[['S-T','card pad-top','12'],['S-X','card pad-x','16'],['S-B','card pad-bottom','16'],['S-G','card grid gap','12 · 8@≤900h'],['SG','opts gap / stack gap','4 / 8']],
  height:[['H-OPT','opt min-h','40 · 34@≤900h'],['Z-K','opt key','24'],['H-GATE','gate pad 8×12 · HUG','[HUG]'],['H-TA','dissent textarea min','56'],['H-COAT','coa-tog pad 5×2','[HUG]'],['META','meta row h','[HUG ≈ 16]']],
- radius:[['R1','card','R-LG = 10'],['R2','opt · gate','R-MD = 8'],['R3','opt key','R-XS = 4'],['R4','coa · dissent','R-XS = 4'],['RF','r_inner formula','MAX(2,R1−PAD) †']],
+ radius:[['R1','card','R-LG = 10'],['R2','opt · gate','R-MD = 8'],['R3','opt key','R-XS = 4'],['R4','coa · dissent','R-XS = 4'],['RF','r_inner formula','CLAMP(4,R1−PAD,8)']],
  edge:[['E-BAR','state bar w','2 · left −1'],['E-IN','state bar inset','14 top / bottom'],['E-TICK','corner ticks','10 × 1 · inset 2'],['E-DASH','routed border','1 dashed']],
  shadow:[['OPT-SH','opt shadow','INSET SPEC + 0 2 4 α-B-35'],['OPT-RA','opt press','INSET SPEC↓ + INSET 1 3 α-B-55'],['CARD-SH','card shadow','SHADOW-2 + 0.5px inset'],['TRAV','opt/btn travel','1PX · 40/120MS EXPO']],
- brk:[['B5','≤900h','pad-b→S3 · gap→S2 · opt 34'],['SHIFT','chat open','−(PANEL+GAP)'],['TOP','cards top','CHAT-TOP+4 = 80'],['MH','max-h','VH−TB−SLOTS−44']]
+ brk:[['B5','≤900h','pad-b→S3 · gap→S2 · opt 34'],['COA','auto-collapse','<1000H · DISSENT FORCES SHUT'],['SHIFT','chat open','−(PANEL+GAP)'],['TOP','cards top','CHAT-TOP+4 = 80'],['MH','max-h','VH−TB−SLOTS−44']]
 };
 
 begin('sh1');
@@ -142,7 +142,7 @@ notes([[1,'STACK: GRID GAP SG = 8, SCROLLS WITH FADE-Y MASK, NO SCROLLBAR, POINT
  [6,'COA UNDERLINE = COMMITTED OPTION; DRAFT RENDERS BESIDE, NEVER OVER.'],
  [7,'ALL CARD STATES SHARE GEOMETRY: ONLY THE 2PX BAR AND TINTS CHANGE.'],
  [8,'DASHED CARD = TALON DRAFT (PROPOSED, NOT EXECUTED).'],
- [0,'† CONFLICT: TOKEN COMMENT SAYS R_inner = MAX(2, R1−PAD) → COA WOULD BE 2; SOURCE APPLIES 4 (R-XS). THE APPLIED VALUE GOVERNS.']]);
+ [0,'RULING (2026-11-02): R_in = CLAMP(4, R_out−PAD, 8) — THE 4PX OPTICAL FLOOR. A WELL SET BACK BY THE STACK GAP READS BOXY BELOW 4PX NEXT TO THE 8PX OPT ROWS; 8PX CAP = CONTROL RADIUS.']]);
 
 /* ---- PLAN VIEW 0.8:1 · gate card ---- */
 {const k=.8,PX=170,PY=330;const X=v=>PX+v*k,Y=v=>PY+v*k;
@@ -273,7 +273,7 @@ notes([[1,'STACK: GRID GAP SG = 8, SCROLLS WITH FADE-Y MASK, NO SCROLLBAR, POINT
  title(EX3+100,Y(134),'Detail E · routed card','Scale 1:1');}
 
 /* ---- TABLES ---- */
-{let y=table(1420,86,'Padding · gap',VAR.pad);y=table(1420,y,'Heights',VAR.height);y=table(1420,y,'Radius †',VAR.radius);y=table(1420,y,'Edge + shadow',VAR.edge.concat(VAR.shadow));table(1420,y,'Anchors · compact',VAR.brk);}
+{let y=table(1420,86,'Padding · gap',VAR.pad);y=table(1420,y,'Heights',VAR.height);y=table(1420,y,'Radius',VAR.radius);y=table(1420,y,'Edge + shadow',VAR.edge.concat(VAR.shadow));table(1420,y,'Anchors · compact',VAR.brk);}
 })();
 </script>
 </body>

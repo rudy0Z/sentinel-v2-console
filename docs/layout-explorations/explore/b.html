@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Sentinel · Wire Room — layout exploration B</title>
+<style>
+  /* B · WIRE ROOM — shell: inbox. The thread is the spine and the record; the decision is
+     the newest transcript entry; the map is the reply column that answers the wire.
+     Owned EOC Darkroom tokens; compact operator density. */
+  @font-face { font-family: "Geist"; font-weight: 400; src: url("../assets/fonts/geist-400.woff2") format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 500; src: url("../assets/fonts/geist-500.woff2") format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 600; src: url("../assets/fonts/geist-600.woff2") format("woff2"); }
+  @font-face { font-family: "Geist Mono"; font-weight: 400; src: url("../assets/fonts/geist-mono-400.woff2") format("woff2"); }
+  @font-face { font-family: "Geist Mono"; font-weight: 500; src: url("../assets/fonts/geist-mono-500.woff2") format("woff2"); }
+
+  :root {
+    --s0: #07080B; --s1: #0C0E12; --s2: #101218; --s3: #161922;
+    --ink-1: #ECEEF2; --ink-2: #B6BDCB; --ink-3: #8E96A9; --ink-4: #7D86A0;
+    --line: rgba(236, 238, 242, .10); --line-strong: rgba(236, 238, 242, .20);
+    --talon: #9B8AFF; --talon-ink: #BBA9FF; --talon-soft: rgba(155, 138, 255, .14);
+    --needs: #FFB547; --critical: #E5533C; --done: #35C48D; --working: #3F8CFF;
+    --proposed: #8FB8FF; --committed: #00E5FF;
+    --sans: "Geist", "Segoe UI", system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { background: var(--s0); color: var(--ink-1); font: 400 12.5px/1.45 var(--sans); min-width: 1440px; overflow-x: auto; }
+  b { font-weight: 600; } button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .caps { font: 500 10.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+  .prov { font: 500 9.5px/1 var(--mono); padding: 1px 3px; border-radius: 3px; letter-spacing: .04em; }
+  .prov.mea { color: var(--done); border: 1px solid color-mix(in srgb, var(--done) 40%, transparent); }
+  .prov.mod { color: var(--talon-ink); border: 1px solid color-mix(in srgb, var(--talon) 45%, transparent); }
+  .prov.aut { color: var(--ink-3); border: 1px solid var(--line-strong); }
+
+  /* ── top status deck, with the gate clock as a tabular block ── */
+  .deck-top { display: flex; align-items: stretch; gap: 0; height: 64px; background: var(--s1); border-bottom: 1px solid var(--line); }
+  .deck-top > * { display: flex; align-items: center; padding: 0 16px; border-right: 1px solid var(--line); }
+  .wordmark { font: 700 13px/1 var(--sans); letter-spacing: .22em; }
+  .sitblock { flex-direction: column; align-items: flex-start !important; justify-content: center; gap: 2px; }
+  .sitblock b { font-size: 13px; }
+  .sitblock small { font: 400 10.5px/1 var(--mono); color: var(--ink-4); }
+  .gateblock { flex-direction: column; align-items: flex-start !important; justify-content: center; gap: 3px;
+    background: color-mix(in srgb, var(--needs) 7%, transparent); border-right: 1px solid color-mix(in srgb, var(--needs) 35%, transparent) !important; }
+  .gateblock .row { display: flex; align-items: baseline; gap: 10px; }
+  .gateblock b { font: 600 15px/1 var(--mono); color: var(--needs); letter-spacing: .02em; }
+  .gateblock .bar { width: 220px; height: 3px; border-radius: 2px; background: rgba(236,238,242,.12); overflow: hidden; }
+  .gateblock .bar i { display: block; height: 100%; width: 38%; background: var(--needs); }
+  .clock { gap: 8px; font: 500 11.5px/1 var(--mono); color: var(--ink-2); }
+  .clock .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--working);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--working) 22%, transparent); }
+  .grow { flex: 1; border-right: 0 !important; }
+  .who { gap: 8px; font: 500 11.5px/1 var(--sans); color: var(--ink-2); }
+  .who i { width: 7px; height: 7px; border-radius: 50%; background: var(--done); }
+
+  /* ── the room: wire spine + reply column ────────────────────── */
+  .room { display: grid; grid-template-columns: 520px minmax(0, 1fr); height: calc(100vh - 64px); min-height: 740px; }
+
+  .wirecol { background: var(--s1); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+  .wirehead { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--line); }
+  .wirehead .orb { width: 26px; height: 26px; border-radius: 50%; background: var(--s3); border: 1px solid color-mix(in srgb, var(--talon) 45%, transparent); display: grid; place-items: center; }
+  .wirehead .orb svg { width: 16px; height: 16px; }
+  .wirehead b { font: 600 12.5px/1 var(--sans); letter-spacing: .04em; }
+  .wirehead small { font: 400 10.5px/1 var(--mono); color: var(--ink-3); }
+  .wirehead .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .budget { display: inline-flex; gap: 3px; }
+  .budget i { width: 9px; height: 3px; border-radius: 1px; background: rgba(236,238,242,.16); }
+  .budget i.on { background: var(--needs); }
+
+  .wire { flex: 1; overflow: hidden; }
+  .wentry { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 10px 16px 10px 12px;
+    border-bottom: 1px solid var(--line); position: relative; }
+  .wentry time { font: 500 10.5px/1.5 var(--mono); color: var(--ink-4); text-align: right; }
+  .wentry .mark { position: absolute; left: 0; top: 12px; width: 3px; height: 16px; }
+  .wentry .mark.talon { background: var(--talon); } .wentry .mark.mea { background: var(--done); }
+  .wentry .et { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+  .wentry .et b { font-size: 11.5px; letter-spacing: .02em; }
+  .wentry p { font-size: 11.5px; color: var(--ink-2); }
+  .wentry .basis { display: inline-block; margin-top: 4px; font: 400 10px/1.3 var(--mono); color: var(--ink-4); }
+
+  /* the decision lives in the wire as the newest entry — a full document */
+  .working { grid-template-columns: 52px 1fr; display: grid; gap: 10px; padding: 12px 16px 14px 12px;
+    background: var(--s2); border-bottom: 1px solid var(--line); position: relative; }
+  .working::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--needs); }
+  .working time { font: 500 10.5px/1.5 var(--mono); color: var(--needs); text-align: right; padding-top: 2px; }
+  .wk-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .wk-head .caps { color: var(--needs); }
+  .wk-head .due { margin-left: auto; font: 600 11px/1 var(--mono); color: var(--needs); }
+  .working h1 { font: 600 15px/1.25 var(--sans); margin-bottom: 4px; }
+  .working .why { font-size: 11.5px; color: var(--ink-2); margin-bottom: 10px; }
+  .coa { width: 100%; table-layout: fixed; border-collapse: collapse; font: 400 10.5px/1.35 var(--mono); font-variant-numeric: tabular-nums; margin-bottom: 10px; }
+  .coa th { text-align: left; font: 500 9.5px/1 var(--mono); letter-spacing: .06em; color: var(--ink-4); padding: 3px 8px 5px 0; border-bottom: 1px solid var(--line-strong); }
+  .coa th.rec { color: var(--proposed); }
+  .coa td { color: var(--ink-2); padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); }
+  .coa td:first-child, .coa th:first-child { width: 118px; }
+  .coa td:first-child { color: var(--ink-3); }
+  .gblock { border: 1px solid color-mix(in srgb, var(--critical) 40%, transparent); border-radius: 6px;
+    background: color-mix(in srgb, var(--critical) 9%, transparent); padding: 8px 10px; position: relative; overflow: hidden; margin-bottom: 10px; }
+  .gblock::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--critical) 30%, transparent) 0 4px, transparent 4px 8px); }
+  .gblock b { display: block; font: 600 10.5px/1.35 var(--mono); letter-spacing: .03em; }
+  .gblock small { display: block; font-size: 10px; color: var(--ink-3); margin-top: 3px; }
+  .gblock small.frag { color: var(--needs); }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .opt { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 6px;
+    border: 1px solid var(--line-strong); background: var(--s3); text-align: left; font-weight: 500; font-size: 11.5px;
+    transition: transform 40ms linear; }
+  .opt:active { transform: translateY(1px); }
+  .opt.rec { border-color: color-mix(in srgb, var(--proposed) 50%, transparent); }
+  .opt .tag { margin-left: auto; font: 500 9.5px/1 var(--mono); color: var(--proposed); }
+  .wk-foot { display: flex; gap: 10px; margin-top: 8px; }
+  .wk-foot button { font: 500 10.5px/1 var(--sans); color: var(--ink-3); padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; }
+
+  /* ── the reply column: the map answers the wire ─────────────── */
+  .reply { position: relative; background: var(--s0); display: flex; flex-direction: column; }
+  .reply-map { position: relative; flex: 1; overflow: hidden; }
+  .reply-map img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 62% 40%; }
+  .coupling { position: absolute; inset: 0; pointer-events: none; }
+  .coupling path { fill: none; stroke: var(--talon); stroke-width: 1.3; stroke-dasharray: 5 4; opacity: .85; }
+  .rtag { position: absolute; background: var(--s1); border: 1px solid color-mix(in srgb, var(--talon) 45%, transparent);
+    border-radius: 4px; padding: 3px 8px; font: 600 10.5px/1 var(--mono); color: var(--ink-1); letter-spacing: .03em; }
+  .replybar { display: flex; align-items: stretch; height: 56px; background: var(--s1); border-top: 1px solid var(--line); }
+  .rbar-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 14px; border-right: 1px solid var(--line); min-width: 0; overflow: hidden; }
+  .rbar-cell b { font: 500 12px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rbar-cell small { font: 500 9.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4); display: flex; gap: 5px; align-items: center; }
+  .replybar .composer { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0 14px; }
+  .composer .field { flex: 1; min-width: 0; height: 30px; overflow: hidden; white-space: nowrap; display: flex; align-items: center; gap: 8px; padding: 0 10px;
+    border: 1px solid var(--line-strong); border-radius: 6px; background: var(--s2); color: var(--ink-4); font-size: 11.5px; }
+  .composer .kbd { width: 20px; height: 20px; border-radius: 4px; background: var(--s3); border: 1px solid var(--line-strong); border-bottom-width: 2px; display: grid; place-items: center; font: 600 10px/1 var(--mono); color: var(--ink-3); }
+  .composer .send { height: 30px; padding: 0 12px; border-radius: 6px; background: var(--talon-soft); border: 1px solid color-mix(in srgb, var(--talon) 45%, transparent); color: var(--talon-ink); font: 500 11px/1 var(--sans); }
+  @media (max-width: 1560px) { .rbar-cell.fleet { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .working { animation: none !important; } }
+  /* signature: the newest wire entry types itself in */
+  .working .why, .working .coa, .working .gblock, .working .opts { animation: teletype .9s steps(12) both; }
+  @keyframes teletype { from { opacity: 0; clip-path: inset(0 0 100% 0); } }
+</style>
+</head>
+<body>
+<header class="deck-top">
+  <div class="wordmark">SENTINEL</div>
+  <div class="sitblock"><b>Encinal Canyon · WUI breakout</b><small class="mono">S-05 · 34°04.7′N 118°52.2″W · Training exercise</small></div>
+  <div class="gateblock" aria-label="Decision gate clock">
+    <div class="row"><span class="caps" style="color:var(--needs)">Plan P-1 · Gate</span><b>10:00 LEFT</b></div>
+    <div class="bar" aria-hidden="true"><i></i></div>
+  </div>
+  <div class="clock"><span class="live-dot" aria-hidden="true"></span>LIVE <b>T+0:06</b> · Jan 14 · 03:53 PST</div>
+  <div class="grow"></div>
+  <span class="tfr mono" style="font:500 10.5px/1 var(--mono);color:var(--ink-2);padding:6px 10px;border:1px dashed var(--line-strong);border-radius:6px;white-space:nowrap">TFR · AIR ATTACK OPS · UAS FLOOR &lt; 150′</span>
+  <div class="who"><i aria-hidden="true"></i>A. Rao · Operator on authority</div>
+</header>
+
+<main class="room">
+  <section class="wirecol" aria-label="The wire — TALON transcript and record">
+    <div class="wirehead">
+      <span class="orb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4 L20 19 H4 Z" fill="none" stroke="var(--talon-ink)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="14.4" r="2" fill="var(--talon-ink)"/></svg></span>
+      <b>TALON · The wire</b><small>3 need you · 2 working</small>
+      <span class="right"><span class="budget" title="Interrupt budget 1 of 2 used (ISA-18.2)"><i class="on"></i><i></i></span></span>
+    </div>
+    <div class="wire">
+      <div class="working">
+        <time>T+0:06</time>
+        <div>
+          <div class="wk-head"><span class="caps">Egress · Proposal · Working item</span><span class="due">10:00 left</span></div>
+          <h1>Plan P-1: evacuate Zone 1, warn Zone 2</h1>
+          <p class="why">Adapted from playbook ENC-3 (pre-computed at T−0:42). Two changes: the wind is 8° more easterly, and Zone 2 is wider by 6 homes.</p>
+          <table class="coa">
+            <tr><th></th><th class="rec">COA A · all occupants to PCH</th><th>COA B · upper canyon north</th></tr>
+            <tr><td>Clear Zone 1</td><td><b style="color:var(--ink-1)">16 min</b></td><td>17 min</td></tr>
+            <tr><td>Through the hairpin</td><td>37 homes</td><td>16 homes</td></tr>
+            <tr><td>Drive to safety</td><td>5.5 km</td><td>0.9 km north</td></tr>
+            <tr><td>Smoke exposure</td><td>Low — away from the head</td><td>Upper canyon drives the flank</td></tr>
+          </table>
+          <div class="gblock">
+            <b>ORDER MANDATORY EVACUATION · ZONE 1 + WARNING ZONE 2</b>
+            <small>37 + 345 households · WEA ≈ 917 devices · reverse-911 ≈ 172 lines</small>
+            <small>✓ Alert geofence matches the zone polygons, no spill beyond 150 m <span class="prov mea" style="margin-left:4px">mea</span></small>
+            <small class="frag">Fragile if: holds while SH-12 keeps the hairpin open — a gust over 42 mph can spot fire across the north gorge</small>
+            <small>REQ → WEA · reverse-911 → Sheriff / County OES · If it lapses: nothing is sent · escalates to the Regional Duty Supervisor</small>
+          </div>
+          <div class="opts">
+            <button class="opt rec" type="button"><span class="kbd mono" style="width:20px;height:20px;border-radius:4px;background:var(--s3);border:1px solid var(--line-strong);border-bottom-width:2px;display:grid;place-items:center;font:600 10.5px/1 var(--mono);color:var(--ink-2)">1</span>Authorize P-1<span class="tag">Recommended</span></button>
+            <button class="opt" type="button"><span class="kbd mono" style="width:20px;height:20px;border-radius:4px;background:var(--s3);border:1px solid var(--line-strong);border-bottom-width:2px;display:grid;place-items:center;font:600 10.5px/1 var(--mono);color:var(--ink-2)">2</span>Reject plan</button>
+          </div>
+          <div class="wk-foot"><button type="button">Why?</button><button type="button">Show on map</button></div>
+        </div>
+      </div>
+      <div class="wentry">
+        <time>T+0:04</time><span class="mark talon" aria-hidden="true"></span>
+        <div><div class="et"><b>Spread</b><span class="prov mod">mod</span></div>
+        <p>Projection: west-southwest at 14 m/min. Within 2 hours it reaches 9 homes, the first at T+1:46, and Encinal Canyon Rd at T+2:09.</p></div>
+      </div>
+      <div class="wentry">
+        <time>T+0:04</time><span class="mark talon" aria-hidden="true"></span>
+        <div><div class="et"><b>Recon</b><span class="prov aut">aut</span></div>
+        <p>FT-02 launched from dock D-2. Mapping the perimeter on a 280 m orbit. FT-01 holds the head.</p></div>
+      </div>
+      <div class="wentry">
+        <time>T+0:02</time><span class="mark talon" aria-hidden="true"></span>
+        <div><div class="et"><b>Dispatch</b><span class="prov aut">aut</span></div>
+        <p>E-32 dispatched. From Triunfas Canyon. ETA 3 min.</p></div>
+      </div>
+      <div class="wentry">
+        <time>T+0:02</time><span class="mark mea" aria-hidden="true"></span>
+        <div><div class="et"><b>Recon</b><span class="prov mea">mea</span></div>
+        <p>Confirmed: active fire. FT-01 IR: flame front, 412 °C core. About 31 ac, 198 m from the nearest home and moving WSW with the wind.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="reply" aria-label="Reply column — the situation map">
+    <div class="reply-map">
+      <img src="../assets/map-1920.png" alt="Live terrain map answering the wire: burned area, evacuation zones, routes and unit positions">
+      <svg class="coupling" viewBox="0 0 1100 1016" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M 6 300 L 300 210"/>
+        <path d="M 6 560 L 430 470"/>
+      </svg>
+      <span class="rtag" style="left:296px;top:186px">T+0:04 Spread · +2h → Encinal Canyon Rd</span>
+      <span class="rtag" style="left:424px;top:446px;border-color:color-mix(in srgb, var(--done) 45%, transparent)">T+0:02 Recon · FT-01 head · 412 °C</span>
+      <span class="rtag" style="right:24px;bottom:20px;border-color:var(--line-strong);color:var(--ink-2)">Reply column — hover a wire line to tether it</span>
+    </div>
+    <div class="replybar" role="group" aria-label="Instruments and composer">
+      <div class="rbar-cell"><small>Wind <span class="prov mea">mea</span></small><b>ENE 22 G38 mph</b></div>
+      <div class="rbar-cell"><small>RH · Temp <span class="prov mea">mea</span></small><b>8% · 66 °F</b></div>
+      <div class="rbar-cell"><small>Fuel <span class="prov mea">mea</span></small><b>1-h 4% · ERC 78</b></div>
+      <div class="rbar-cell"><small>Growth <span class="prov mod">mod</span></small><b>5 ac · 0 in +60</b></div>
+      <div class="rbar-cell fleet" style="border-right:0"><small>Fleet</small><b>FT-01 81 · FT-02 100 · 4 more</b></div>
+      <div class="composer">
+        <div class="field"><span style="color:var(--talon-ink)">▸</span>Ask TALON · @unit to message<span class="kbd" style="margin-left:auto">V</span></div>
+        <button class="send" type="button">Transmit</button>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

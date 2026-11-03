@@ -84,7 +84,7 @@ svg{display:block;width:100%;min-width:1100px;height:auto}
         <li>HUG = sized by content · FLEX = takes remaining space · FILL = parent width.</li>
         <li>[TBD] = not defined in source. CONFLICT = source contradicts itself.</li>
         <li>One screen, no routes. Regions float; the map canvas never reflows.</li>
-        <li>TALON chat is the alternate occupant of the cards anchor (note 2).</li></ol></div>
+        <li>Card stack and chat: one anchor, two modes — solo at CARDS-R; together, chat holds CARDS-R and the stack displaces by SHIFT (note 2).</li></ol></div>
     </div>
     <div class="figs">
       <div><div class="lbl">GAP · screen margin</div><div class="v">12</div></div>
@@ -134,7 +134,7 @@ const VAR={
 
 begin('sh1');
 notes([[1,'REGIONS ARE ABSOLUTE; THE MAP CANVAS (L0) NEVER REFLOWS. DOCK AND TIMELINE SHARE THE BOTTOM BAND.'],
- [2,'CHAT AND CARDS SHARE ONE ANCHOR. OPENING THE CHAT SHIFTS THE CARD STACK LEFT BY SHIFT (TRANSFORM, NOT LAYOUT).'],
+ [2,'CHAT AND CARDS SHARE THE RIGHT ANCHOR (CARDS-R) WHEN SOLO. WHEN BOTH ARE ACTIVE, CHAT HOLDS THE ANCHOR AND DISPLACES THE CARD STACK LEFT BY SHIFT (TRANSFORM, NOT LAYOUT).'],
  [3,'TOOLS, READOUT AND TIMELINE ANCHOR TO DOCKH: BOTTOM = DOCKH + 2·GAP.'],
  [4,'CALM MODE (NO INCIDENT): DOCK WIDGETS RESTACK AS A 340PX LEFT COLUMN FROM CHAT-TOP.'],
  [5,'44 / 96 IN CARDS-MH / CHAT-MH = GAP + DOCK CLEARANCE, PER SOURCE COMMENT.'],
@@ -169,7 +169,7 @@ notes([[1,'REGIONS ARE ABSOLUTE; THE MAP CANVAS (L0) NEVER REFLOWS. DOCK AND TIM
  // readout
  rr(X(24),Y(546),176*k,26*k,13*k,'obj');slotLabel(X(24),Y(546),176*k,26*k,'READOUT','l');
  // inspector (transient)
- rr(X(76),Y(76),300*k,150*k,10*k,'slot');slotLabel(X(76),Y(76),300*k,150*k,'INSPECTOR · TRANSIENT','l');
+ rr(X(24),Y(76),300*k,150*k,10*k,'slot');slotLabel(X(24),Y(76),300*k,150*k,'INSPECTOR · TRANSIENT · 2·GAP','l');
  // rail
  const rX=1228,rCY=400,rT=rCY-125;
  rr(X(rX),Y(rT),40*k,58*k,29*k,'hug');slotLabel(X(rX),Y(rT),40*k,58*k,'AGENTS','l');
@@ -180,7 +180,7 @@ notes([[1,'REGIONS ARE ABSOLUTE; THE MAP CANVAS (L0) NEVER REFLOWS. DOCK AND TIM
  for(let i=1;i<3;i++)mk('line',{x1:X(840),y1:Y(80+i*108),x2:X(1212),y2:Y(80+i*108),class:'hl'});
  slotLabel(X(840),Y(80),372*k,108*k,'CARD 1','l');slotLabel(X(840),Y(188),372*k,108*k,'CARD 2','l');slotLabel(X(840),Y(296),372*k,20*k,'CARD N','l');
  // chat alternate (dashed)
- rr(X(840),Y(76),372*k,448*k,12*k,'slot');slotLabel(X(840),Y(508),372*k,16*k,'TALON CHAT · ALTERNATE OCCUPANT','l');
+ rr(X(840),Y(76),372*k,448*k,12*k,'slot');slotLabel(X(840),Y(508),372*k,16*k,'TALON CHAT · HOLDS THE ANCHOR WHEN OPEN','l');
  // displacement arrow
  mk('line',{x1:X(840),y1:Y(545),x2:X(456),y2:Y(545),class:'dl','marker-end':A});
  tx(X(648),Y(558),'SHIFT = −(PANEL+GAP)','dts',{'text-anchor':'middle'});
@@ -237,7 +237,7 @@ notes([[1,'REGIONS ARE ABSOLUTE; THE MAP CANVAS (L0) NEVER REFLOWS. DOCK AND TIM
  const G=z=>mk('g',{transform:'matrix('+a+','+b+','+c+','+dd+','+TX+','+(TY-z)+')'});
  const R2=(g,x,y,w,h,r,cls,extra)=>mk('rect',Object.assign({x:x,y:y,width:w,height:h,rx:r,class:cls,'vector-effect':'non-scaling-stroke'},extra||{}),g);
  let g=G(0);R2(g,0,0,1280,800,0,'thin',{fill:HAT,'fill-opacity':.2});
- g=G(gap);R2(g,1052,180,80,296,8,'thin');R2(g,80,440,180,30,13,'thin');R2(g,60,60,300,150,10,'thin');
+ g=G(gap);R2(g,1052,180,80,296,8,'thin');R2(g,80,440,180,30,13,'thin');R2(g,24,76,300,150,10,'thin');
  g=G(gap*2);R2(g,8,408,1264,204,10,'thin');R2(g,8,352,1264,60,10,'thin');
  g=G(gap*3);R2(g,1096,240,40,250,20,'thin');R2(g,704,56,312,316,10,'thin');
  g=G(gap*4);R2(g,8,8,1264,52,10,'thin');

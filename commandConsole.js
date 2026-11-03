@@ -230,6 +230,7 @@ export async function mountConsole(app) {
     const latlon = (p) => { const { lat, lon } = geo.toLatLon(p[0], p[1]); return geo.format(lat, lon); };
     window.engine = engine;
     app.insertAdjacentHTML('beforeend', SHELL);
+    ensureAvionics();
     // Degraded-comms cue: the console runs on local data, but say it if the link drops.
     addEventListener('offline', () => toast('Network link down · console on local data only'));
     addEventListener('online', () => toast('Network link restored'));
@@ -293,6 +294,8 @@ export async function mountConsole(app) {
         // The chat card is on demand — the edge rail is the only persistent TALON surface (One reference). ?talon=open starts it open.
         panel: params.get('talon') === 'open',
         tab: 'now',
+        // Counterfactual time lens: focused spread-model horizon in minutes (0 = NOW, view state only).
+        lens: 0,
         logAgent: 'all',
         pinned: store.get('pinned', ['weather', 'fleet']),
         review: false,
@@ -470,6 +473,10 @@ export async function mountConsole(app) {
         app.classList.toggle('chat-open', ui.panel);
         // the decision lane is occupied — the map tools step aside (review C3)
         app.classList.toggle('cards-open', $('#cards').children.length > 0);
+        // micro-fix M3: the transient inspector yields the top-left to the chat card on
+        // laptop widths — at ≤1360 both open would squeeze the map between two glass walls
+        if (ui.panel && innerWidth <= 1360 && ui.sel)
+            ui.sel = null;
         app.classList.toggle('calm', isCalm(ps));
         updateInsets();
     }
@@ -572,7 +579,7 @@ export async function mountConsole(app) {
       ${active.length ? `<button class="statuspill" data-act="pop" data-pop="agents" aria-haspopup="menu" aria-expanded="${ui.pop === 'agents'}" aria-label="TALON agents — ${mine ? `${mine} need${mine > 1 ? '' : 's'} you` : 'working'}">
         ${active.map((a) => `<span class="adot" data-tip="${esc(a.name)} · ${a.status === 'needs' ? 'needs you' : a.status}|${esc(a.line)}"><i class="dot ${a.status}"></i></span>`).join('')}
       </button>` : ''}
-      <button class="rbtn face" data-act="panel" aria-pressed="${ui.panel}" aria-label="TALON chat (T)" data-tip="TALON|thread · log · review (T)">${mascot(orbMood)}${mine ? `<span class="badge">${mine}</span>` : ''}</button>
+      <button class="rbtn face" data-act="panel" aria-pressed="${ui.panel}" aria-label="TALON chat (T)" data-tip="TALON|thread · log · review (T)">${mascot(orbMood)}${mine ? `<span class="badge">${mine}</span>` : ''}<span class="pips" aria-hidden="true">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</span></button>
       <button class="rbtn mic${ui.micMuted && !ui.listening ? ' muted' : ''}" data-act="mic" aria-pressed="${ui.listening}" aria-label="${ui.micMuted ? 'Mic muted — click to put TALON on the net' : ui.listening ? 'Transmitting — TALON ducked' : 'TALON on the net — click to mute, V to transmit'}" data-tip="${ui.listening ? 'Transmitting|TALON ducked' : ui.micMuted ? 'Mic muted|[M] or click to un-mute' : 'On the net|click to mute · V to transmit'}">${ic('mic')}</button>
       <button class="rbtn" data-act="pop" data-pop="authority" aria-pressed="${ui.pop === 'authority'}" aria-label="What TALON may do" data-tip="Authority|what TALON may do alone">${ic('shield')}</button>
       <button class="rbtn" data-act="pop" data-pop="settings" aria-pressed="${ui.pop === 'settings'}" aria-label="Settings" data-tip="Settings · live model">${ic('gear')}</button>`;
@@ -593,7 +600,7 @@ export async function mountConsole(app) {
             const orbMood = ui.listening ? 'listening' : ts.mood === 'calm' && working ? 'working' : ts.mood;
             const line = ui.review ? 'After-action review · read-only' : mine.length ? `${mine.length} need${mine.length > 1 ? '' : 's'} you · cards on the map` : working ? `${working} agent${working > 1 ? 's' : ''} working · nothing needs you` : 'Watching · nothing needs you';
             $('#phead').innerHTML = `${mascot(orbMood, 'talonFaceMain')}
-        <div><h1>TALON</h1><div class="line">${mine.length ? '<i class="dot needs"></i>' : working ? '<i class="dot working"></i>' : '<i class="dot done"></i>'}${esc(line)}</div></div>
+        <div><h1>TALON</h1><div class="line">${mine.length ? '<i class="dot needs"></i>' : working ? '<i class="dot working"></i>' : '<i class="dot done"></i>'}${esc(line)}${cadenceHtml(ts.mood, ui.listening)}</div></div>
         <div class="budget" title="Interrupt budget: at most ${ts.budget.max} per ${ts.budget.windowMin} min (ISA-18.2). Over budget, TALON holds an interrupt to an ask and logs it. Life-safety interrupts are exempt and always come through."><div class="pips">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</div><small>Interrupts ${ts.budget.used}/${ts.budget.max} · ${ts.budget.windowMin} min</small></div>`;
             $('#ptabs').innerHTML = ['now', 'log', 'review'].map((t) => `<button role="tab" aria-selected="${ui.tab === t}" data-act="tab" data-tab="${t}">${t === 'now' ? 'Thread' : t === 'log' ? 'Log' : 'Review'}</button>`).join('');
         }
@@ -690,7 +697,7 @@ export async function mountConsole(app) {
             const coaDefaultShut = innerHeight < 1000;
             coaShut = draftNow ? true : (ui.coaToggled.has(it.id) ? !coaDefaultShut : coaDefaultShut);
             const prim = ps.primary;
-            compare = `<button class="coa-tog" data-act="coatog" data-item="${it.id}" aria-expanded="${coaShut ? 'false' : 'true'}"><span>${coaShut ? 'Compare courses of action' : 'Hide COA comparison'}</span>${ic(coaShut ? 'down' : 'up', 'xs')}</button><div class="coa" role="group" aria-label="Courses of action"><div class="hd"></div>${it.compare.cols.map((c) => `<button class="hd" data-act="coa" data-route="${c.route ?? ''}" aria-pressed="${prim === c.route}" ${decide ? '' : 'disabled'}><b>${c.recommended ? '<i class="pick" title="TALON recommends"></i>' : ''}${esc(c.label)}</b><small>${esc(c.sub ?? '')}</small></button>`).join('')}
+            compare = `<button class="coa-tog" data-act="coatog" data-item="${it.id}" aria-expanded="${coaShut ? 'false' : 'true'}"><span>${coaShut ? 'Compare courses of action' : 'Hide COA comparison'}</span>${ic(coaShut ? 'down' : 'up', 'xs')}</button><div class="coa" role="group" aria-label="Courses of action">${timeLensHtml(ps)}<div class="hd"></div>${it.compare.cols.map((c) => `<button class="hd" data-act="coa" data-route="${c.route ?? ''}" aria-pressed="${prim === c.route}" ${decide ? '' : 'disabled'}><b>${c.recommended ? '<i class="pick" title="TALON recommends"></i>' : ''}${esc(c.label)}</b><small>${esc(c.sub ?? '')}</small></button>`).join('')}
         ${it.compare.rows.map((r) => `<div class="rl">${esc(r.label)}</div>${r.values.map((v, i) => `<div class="v${r.best === i ? ' best' : ''}">${esc(v)}</div>`).join('')}`).join('')}</div>`;
             // The route toggle lives in the COA header; keep the decisive options only.
             opts = opts.filter((x) => !x.toggle);
@@ -768,17 +775,289 @@ export async function mountConsole(app) {
         body.scrollTop = 0;
     }
     // ------------------------------------------------------------------ decision cards (the interrupt surface — appears only while an item is open)
+    // ─── Avionics craft & signature spatial interactions (2026-11-03) ─────────────
+    // The tether and the probe are event-driven — hover, engine 'view' and 'time' —
+    // with no rAF loop of their own: drawTether writes SVG attributes in place, the
+    // elements are built once. Every tag string comes from the live state (no mocks).
+    let tetherSrc = null;
+    let tetherTarget = null;
+    const fieldLayerId = () => player.getState().layers.find((l) => l.group === 'firePerimeter' && /^fire/.test(l.id))?.id ?? null;
+    function applyLens() {
+        engine.setHorizonFocus(ui.lens || null);
+        const fid = fieldLayerId();
+        if (ui.lens && fid) {
+            brushKey = `lens|${ui.lens}`;
+            engine.setLayerEmphasis([fid, 'labels'], 220);
+        }
+        else if (brushKey.startsWith('lens')) {
+            brushKey = '';
+            engine.setLayerEmphasis(null, 220);
+        }
+        keys.delete('cards');
+    }
+    /** The spread-model acreage series sampled at a scene time — same series the growth chart draws. */
+    function growthSeriesAt(g, atT) {
+        const known = g.switchAt !== null && atT >= g.switchAt;
+        const cur = known && g.b ? g.b : g.a;
+        const ts = g.t;
+        if (atT <= ts[0])
+            return cur[0];
+        const lastI = ts.length - 1;
+        if (atT >= ts[lastI])
+            return cur[lastI];
+        let i = 1;
+        while (i < lastI && ts[i] < atT)
+            i++;
+        const f = (atT - ts[i - 1]) / Math.max(1e-6, ts[i] - ts[i - 1]);
+        return cur[i - 1] + (cur[i] - cur[i - 1]) * f;
+    }
+    function lensReadoutHtml(ps) {
+        const parts = [];
+        const m2 = engine.reachedAreaAt(ui.lens);
+        const acres = m2 != null ? m2 / 4046.86 : growth ? growthSeriesAt(growth, ps.t + ui.lens) : null;
+        const risk = structureRisk(ps);
+        const homes = risk ? risk.filter((x) => x.t <= ps.t + ui.lens).length : null;
+        if (acres != null)
+            parts.push(`<span class="prov modeled"${provTitle('modeled')}>mod</span> <b>${acres.toFixed(1)} ac</b>${ui.lens ? ` at +${ui.lens}m` : ' burned'}`);
+        if (homes != null)
+            parts.push(`<b>${homes}</b> ${homes === 1 ? 'home' : 'homes'} in horizon`);
+        return parts.join('<i class="tl-sep"></i>') || '<span class="tl-empty">Spread model not sized yet</span>';
+    }
+    function timeLensHtml(ps) {
+        const stops = [0, 15, 30, 60];
+        return `<div class="time-lens" role="group" aria-label="Counterfactual spread horizons — spread model">
+      <div class="tl-stops">${stops.map((s) => `<button type="button" class="tl-stop" data-act="lens" data-min="${s}" aria-pressed="${ui.lens === s ? 'true' : 'false'}" title="${s === 0 ? 'Spread model, burned to date' : `Spread model +${s} min`}">${s === 0 ? 'NOW' : `+${s}M`}</button>`).join('')}</div>
+      <div class="tl-read">${lensReadoutHtml(ps)}</div>
+    </div>`;
+    }
+    /** Wind vector rose for the weather cell — bound to the live RAWS reading and gust text. */
+    function windRose(dir, gustKt) {
+        const rad = (a) => (a * Math.PI) / 180;
+        const P = (a, r) => `${(18 + r * Math.sin(rad(a))).toFixed(1)},${(18 - r * Math.cos(rad(a))).toFixed(1)}`;
+        const line = (a, r1, r2) => {
+            const [x1, y1] = P(a, r1).split(','), [x2, y2] = P(a, r2).split(',');
+            return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--text-3)" stroke-width="1"/>`;
+        };
+        const arc = gustKt > 0 ? `<path d="M ${P(dir - 26, 16.6)} A 16.6 16.6 0 0 1 ${P(dir + 26, 16.6)}" fill="none" stroke="var(--needs)" stroke-width="2" stroke-linecap="round" opacity=".85"/>` : '';
+        return `<svg class="windarrow" viewBox="0 0 36 36" role="img" aria-label="Wind rose, gust flagged">
+      <circle cx="18" cy="18" r="14.5" fill="none" stroke="var(--border-strong)"/>
+      ${line(0, 14.3, 12.4)}${line(90, 14.3, 13.3)}${line(180, 14.3, 13.3)}${line(270, 14.3, 13.3)}
+      ${arc}
+      <g transform="rotate(${dir} 18 18)"><path d="M18 11v16M18 11l-3.8 4.8M18 11l3.8 4.8" fill="none" stroke="var(--text-1)" stroke-width="1.7" stroke-linecap="round"/></g>
+      <circle cx="18" cy="18" r="1.6" fill="var(--text-2)"/>
+    </svg>`;
+    }
+    /** 4-segment endurance pips for fleet rows — thresholds match the .batt classes. */
+    function unitPips(batt) {
+        const filled = Math.max(0, Math.min(4, Math.ceil(batt / 25)));
+        const cls = batt < 55 ? 'warn' : 'on';
+        return `<span class="u-pips" aria-hidden="true" title="Battery ${batt}% — session trail (MEA)">${[0, 1, 2, 3].map((i) => `<i class="${i < filled ? cls : ''}"></i>`).join('')}</span>`;
+    }
+    /** 5-bar TALON cadence equalizer — panel header only, one instrument, not five. */
+    function cadenceHtml(mood, listening) {
+        const state = listening ? 'needs' : mood === 'calm' ? 'calm' : mood === 'working' ? 'working' : 'needs';
+        return `<span class="cadence" data-state="${state}" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>`;
+    }
+    /** Resolve a hover source to a real map target: evidence chip > COA column > option row > fleet row. */
+    function tetherResolve(t) {
+        if (!t || ui.pop)
+            return null;
+        const chip = t.closest('.evid .chip[data-ev]');
+        if (chip) {
+            const ev = evidenceFor(chip.dataset.ev)[0];
+            if (!ev)
+                return null;
+            if (ev.unit)
+                return { el: chip, target: { kind: 'unit', id: ev.unit, label: ev.label, basis: 'mea', tone: 'done' } };
+            if (ev.point)
+                return { el: chip, target: { kind: 'point', id: '', point: ev.point, label: ev.label, basis: null, tone: 'talon' } };
+            if (ev.layers?.length)
+                return { el: chip, target: { kind: 'layer', id: ev.layers[0], label: ev.label, basis: null, tone: 'talon' } };
+            return null;
+        }
+        const coa = t.closest('.coa button.hd[data-route]');
+        if (coa && coa.dataset.route) {
+            return { el: coa, target: { kind: 'layer', id: coa.dataset.route, label: (coa.querySelector('b')?.textContent ?? coa.dataset.route).trim(), basis: null, tone: 'needs' } };
+        }
+        const opt = t.closest('.opt[data-item]');
+        if (opt && opt.dataset.item) {
+            const ev = talon.item(opt.dataset.item)?.evidence?.find((e) => e.unit || e.point || e.layers?.length);
+            if (!ev)
+                return null;
+            if (ev.unit)
+                return { el: opt, target: { kind: 'unit', id: ev.unit, label: ev.label, basis: 'mea', tone: 'done' } };
+            if (ev.point)
+                return { el: opt, target: { kind: 'point', id: '', point: ev.point, label: ev.label, basis: null, tone: 'talon' } };
+            if (ev.layers?.length)
+                return { el: opt, target: { kind: 'layer', id: ev.layers[0], label: ev.label, basis: null, tone: 'talon' } };
+            return null;
+        }
+        const urow = t.closest('.urow[data-unit]');
+        if (urow) {
+            const uid = urow.dataset.unit;
+            return { el: urow, target: { kind: 'unit', id: uid, label: `${uid}${urow.dataset.batt ? ` · ${urow.dataset.batt}%` : ''}`, basis: 'mea', tone: 'talon' } };
+        }
+        return null;
+    }
+    /** Redraw the tether from live state — attribute writes only, no innerHTML. */
+    function drawTether() {
+        const svg = $('#tetherSvg');
+        const g = $('#tetherG');
+        if (!svg || !g)
+            return;
+        let el = tetherSrc;
+        let tgt = tetherTarget;
+        // A focused lens tethers the horizon strip to the fire model's own anchor.
+        if (!el && ui.lens) {
+            el = document.querySelector('.time-lens');
+            const fid = fieldLayerId();
+            if (el && fid)
+                tgt = { kind: 'layer', id: fid, label: `+${ui.lens}m isochrone`, basis: null, tone: 'talon' };
+        }
+        if (!el || !tgt || !document.contains(el)) {
+            g.style.display = 'none';
+            return;
+        }
+        const proj = tgt.kind === 'point' && tgt.point ? engine.projectWorld(tgt.point, 6) : engine.projectPoint(tgt.id);
+        if (!proj || !proj.visible) {
+            g.style.display = 'none';
+            return;
+        }
+        const r = el.getBoundingClientRect();
+        if (r.width === 0) {
+            g.style.display = 'none';
+            return;
+        }
+        const right = r.left > innerWidth / 2;
+        const sx = Math.round(right ? r.left - 6 : r.left + r.width / 2);
+        const sy = Math.round(right ? r.top + r.height / 2 : r.top - 6);
+        const tx = Math.round(proj.x), ty = Math.round(proj.y);
+        const knee = Math.round(sx + (right ? -1 : 1) * Math.min(64, Math.max(24, Math.abs(tx - sx) * 0.3)));
+        const d = `M ${sx} ${sy} L ${knee} ${sy} L ${tx} ${ty}`;
+        svg.setAttribute('data-tone', tgt.tone);
+        g.querySelector('.tether-bg').setAttribute('d', d);
+        g.querySelector('.tether-line').setAttribute('d', d);
+        const dot = g.querySelector('.tether-dot');
+        dot.setAttribute('cx', String(sx));
+        dot.setAttribute('cy', String(sy));
+        const kneeDot = g.querySelector('.tether-knee');
+        kneeDot.setAttribute('cx', String(knee));
+        kneeDot.setAttribute('cy', String(sy));
+        g.querySelector('#tetherRet').setAttribute('transform', `translate(${tx} ${ty})`);
+        const tag = g.querySelector('#tetherTag');
+        const text = `${tgt.basis ? `[${tgt.basis.toUpperCase()}] ` : ''}${tgt.label}`;
+        const tw = Math.max(120, text.length * 6.5 + 14);
+        const tX = Math.max(6, Math.min(innerWidth - tw - 6, tx - tw / 2));
+        tag.setAttribute('transform', `translate(${tX} ${Math.max(26, ty - 34)})`);
+        tag.querySelector('rect').setAttribute('width', String(tw));
+        const txt = tag.querySelector('text');
+        txt.setAttribute('x', String(tw / 2));
+        txt.textContent = text;
+        if (svg.getAttribute('width') !== String(innerWidth)) {
+            svg.setAttribute('width', String(innerWidth));
+            svg.setAttribute('height', String(innerHeight));
+        }
+        g.style.display = '';
+    }
+    function hudUpdate() {
+        const v = engine.getView();
+        const el = $('#hudBearing');
+        if (el)
+            el.textContent = `HDG ${String(Math.round(v.bearing) % 360).padStart(3, '0')}° · R ${(v.range / 1000).toFixed(1)} KM`;
+    }
+    function openProbe(p, cx, cy) {
+        const pr = $('#mapProbe');
+        pr.style.left = `${Math.max(12, Math.min(innerWidth - 264, cx + 14))}px`;
+        pr.style.top = `${Math.max(64, Math.min(innerHeight - 244, cy - 24))}px`;
+        pr.dataset.wx = String(p.x);
+        pr.dataset.wy = String(p.y);
+        pr.innerHTML = `
+      <div class="mpp-head"><span class="caps">Ground probe</span><button class="mpp-x" data-act="probe-close" aria-label="Close probe">×</button></div>
+      <div class="mpp-coords">${esc(p.latLonText)}</div>
+      <div class="mpp-facts">${Math.round(p.elevation)} m · slope ${Math.round(p.slopeDeg)}° · ${esc(p.aspect)} · ${esc(p.cover)}</div>
+      ${p.fire.state === 'burned' ? `<div class="mpp-fire"><i class="dot bad"></i><span>Burned${p.fire.agoText ? ` ${esc(p.fire.agoText)}` : ''} <span class="prov measured"${provTitle('measured')}>mea</span></span></div>` : ''}
+      <div class="mpp-acts">
+        <button class="mpp-btn" data-act="probe-ask"><span>Ask TALON about this point</span><span class="k-sub">LOG</span></button>
+        <button class="mpp-btn" data-act="probe-lens"><span>Preview +60m spread</span><span class="k-sub">MOD</span></button>
+        <button class="mpp-btn" data-act="probe-pin"><span>Drop focus marker</span><span class="k-sub">AUT</span></button>
+      </div>`;
+        pr.hidden = false;
+    }
+    function closeProbe() {
+        const pr = $('#mapProbe');
+        if (pr)
+            pr.hidden = true;
+    }
+    /** Build the three avionics layers once and bind their event sources. */
+    function ensureAvionics() {
+        if (!$('#tetherSvg')) {
+            app.insertAdjacentHTML('beforeend', `<svg id="tetherSvg" class="tether-svg" data-tone="talon" aria-hidden="true" focusable="false"><g id="tetherG" style="display:none">
+        <path class="tether-bg" fill="none"/>
+        <path class="tether-line" fill="none"/>
+        <circle class="tether-dot" r="3.2"/>
+        <circle class="tether-knee" r="2"/>
+        <g id="tetherRet"><circle class="tether-ring" r="14"/><path class="tether-ret" d="M -12 -5 L -12 -12 L -5 -12 M 5 -12 L 12 -12 L 12 -5 M 12 5 L 12 12 L 5 12 M -5 12 L -12 12 L -12 5"/><circle class="tether-pip" r="2.2"/></g>
+        <g id="tetherTag"><rect class="tether-tagbg" height="19" rx="4"/><text class="tether-tagtext" y="13"></text></g>
+      </g></svg>`);
+        }
+        if (!$('#hudFrame')) {
+            app.insertAdjacentHTML('beforeend', `<div id="hudFrame" aria-hidden="true"><i class="hud-reg tl"></i><i class="hud-reg tr"></i><i class="hud-reg bl"></i><i class="hud-reg br"></i><span id="hudBearing"></span></div>`);
+        }
+        if (!$('#mapProbe')) {
+            app.insertAdjacentHTML('beforeend', `<div id="mapProbe" class="glass" role="dialog" aria-label="Ground probe" hidden></div>`);
+        }
+        // Right-click ground probe — left-click interrogation (layerclick) is untouched.
+        app.addEventListener('contextmenu', (e) => {
+            if (!e.target.closest('canvas'))
+                return;
+            const p = engine.pick(e.clientX, e.clientY);
+            if (!p)
+                return;
+            e.preventDefault();
+            openProbe(p, e.clientX, e.clientY);
+        });
+        document.addEventListener('click', (e) => {
+            const pr = $('#mapProbe');
+            if (pr && !pr.hidden && !e.target.closest('#mapProbe'))
+                closeProbe();
+        }, true);
+        app.addEventListener('mouseover', (e) => {
+            const res = tetherResolve(e.target);
+            if (res) {
+                tetherSrc = res.el;
+                tetherTarget = res.target;
+                drawTether();
+            }
+        });
+        app.addEventListener('mouseout', (e) => {
+            const rel = e.relatedTarget;
+            if (tetherSrc && (!rel || !tetherResolve(rel))) {
+                tetherSrc = null;
+                tetherTarget = null;
+                drawTether();
+            }
+        });
+        // The tether stays glued to its target through camera moves and scrubs.
+        engine.on('view', () => { drawTether(); hudUpdate(); });
+        engine.on('time', () => drawTether());
+        hudUpdate();
+    }
     function renderCards(ps, ts) {
         const mine = ts.open.filter((o) => !o.item.reraise);
         const routed = ts.open.filter((o) => o.item.reraise);
         const focus = focusItem(mine);
         const issued = issuedCard(ps);
+        // The time lens is a compare-card instrument: no compare card → no focus, no map dim.
+        if (!mine.some((o) => o.item.compare) && ui.lens !== 0) {
+            ui.lens = 0;
+            applyLens();
+        }
         // P5 working-memory anchor: what the incident did since the operator last decided.
         const dSince = Number.isFinite(ui.lastDecisionT)
             ? ts.log.filter((e) => e.t > ui.lastDecisionT && (e.kind === 'action' || e.kind === 'correction' || e.kind === 'expired')).slice(-2)
             : [];
         const coaKey = [...ui.coaToggled].sort().join('|');
-        const k = [mine.map((o) => [o.item.id, o.expiresAt, o.closesAt]), routed.map((o) => o.item.id), ui.dissent, canDecide(), ps.primary, Math.floor(ps.t * 2), focus?.item.id ?? null, issued, coaKey, dSince.map((e) => e.id).join('|')];
+        const k = [mine.map((o) => [o.item.id, o.expiresAt, o.closesAt]), routed.map((o) => o.item.id), ui.dissent, canDecide(), ps.primary, Math.floor(ps.t * 2), focus?.item.id ?? null, issued, coaKey, dSince.map((e) => e.id).join('|'), ui.lens];
         const el = $('#cards');
         if (!changed('cards', k))
             return;
@@ -1173,6 +1452,8 @@ export async function mountConsole(app) {
             k = [T, l.reason];
             const cell = (label, v, cls = '') => (v ? `<div class="cell ${cls}"><small>${label}${v.basis ? `<span class="prov ${v.basis}"${provTitle(v.basis)}>${v.basis.slice(0, 3)}</span>` : ''}</small><b>${esc(v.value)}</b></div>` : '');
             const w = T.wind;
+            // Gust number for the rose's flag arc, parsed from the same reading the cell prints.
+            const gust = w ? Number((/G\s*(\d+)/i.exec(w.value) ?? [])[1] ?? 0) : 0;
             const num = (v) => { const m = v?.match(/(\d+(?:\.\d+)?)/); return m ? Number(m[1]) : null; };
             for (const [key, val] of [['wind', w ? num(w.value) : null], ['rh', T.rh ? num(T.rh.value) : null]]) {
                 if (val === null)
@@ -1186,7 +1467,7 @@ export async function mountConsole(app) {
                 const pts = (wxHist.get(key) ?? []).filter((q) => q[0] <= ps.t + 1e-6);
                 return pts.length >= 2 ? `<span class="wxt">${label} ${spark(pts)}<b class="num">${pts[pts.length - 1][1]}${unit}</b></span>` : '';
             };
-            html = `<div class="wx two">${w ? `<div class="cell wide"><svg class="windarrow" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="var(--border-strong)"/><g transform="rotate(${w.dir ?? 0} 16 16)"><path d="M16 6v20M16 6l-4 5M16 6l4 5" fill="none" stroke="var(--text-1)" stroke-width="1.8" stroke-linecap="round"/></g></svg><div style="min-width:0"><small style="font-size:var(--fs-micro);color:var(--text-3);display:flex;gap:6px">Wind<span class="prov measured"${provTitle('measured')}>mea</span></small><b style="font:var(--fw-semibold) var(--fs-title)/1.15 var(--font-mono)">${esc(w.value)}</b></div></div>` : ''}${cell('RH', T.rh)}${cell('Temp', T.temp)}${cell('Fuel', T.fuel, 'wide')}${cell('Spread', T.spread) || cell('Danger', T.status)}</div>
+            html = `<div class="wx two">${w ? `<div class="cell wide">${windRose(w.dir ?? 0, gust)}<div style="min-width:0"><small style="font-size:var(--fs-micro);color:var(--text-3);display:flex;gap:6px">Wind<span class="prov measured"${provTitle('measured')}>mea</span></small><b style="font:var(--fw-semibold) var(--fs-title)/1.15 var(--font-mono)">${esc(w.value)}</b></div></div>` : ''}${cell('RH', T.rh)}${cell('Temp', T.temp)}${cell('Fuel', T.fuel, 'wide')}${cell('Spread', T.spread) || cell('Danger', T.status)}</div>
         ${trend('wind', 'Wind', '') || trend('rh', 'RH', '%') ? `<div class="wxtrend" title="Observed this session (MEA) — the trail follows the clock/scrub">${trend('wind', 'Wind', '')}${trend('rh', 'RH', '%')}</div>` : ''}
         ${T.status ? `<div class="srow" style="margin-top:6px"><i class="dot ${T.status.level === 'bad' ? 'bad' : T.status.level === 'warn' ? 'warn' : 'ok'}"></i>${esc(T.status.value)} <span style="color:var(--text-4)">· ${esc(T.status.source ?? '')}</span></div>` : ''}`;
         }
@@ -1269,7 +1550,7 @@ export async function mountConsole(app) {
             ? `${spark(hist)}<span class="batt ${u.info.battery < 25 ? 'warn' : u.info.battery < 55 ? 'warn' : ''}" title="Battery ${u.info.battery}%${u.info.battery < 25 ? ' · below the 25% handover floor' : ''} · trail observed this session (MEA)">${u.info.battery}%</span>`
             : '';
         const eta = u.arrives && u.kind !== 'drone' ? `ETA ${fmtDur(u.arrives - t)}` : '';
-        return `<button class="urow" data-act="unit" data-unit="${u.id}" data-hl="${u.id}">${ic(u.kind === 'drone' ? 'drone' : u.kind === 'dozer' ? 'dozer' : u.kind === 'law' ? 'law' : u.kind === 'crew' ? 'crew' : 'engine', 'xs')}<b>${esc(u.id)}</b><span><i class="dot ${st}" style="display:inline-block;width:6px;height:6px;margin-right:6px;vertical-align:1px"></i>${esc(u.detail ?? u.status ?? '')}</span><span class="eta">${bat} ${eta}</span></button>`;
+        return `<button class="urow" data-act="unit" data-unit="${u.id}" data-batt="${typeof u.info.battery === 'number' ? u.info.battery : ''}" data-hl="${u.id}">${ic(u.kind === 'drone' ? 'drone' : u.kind === 'dozer' ? 'dozer' : u.kind === 'law' ? 'law' : u.kind === 'crew' ? 'crew' : 'engine', 'xs')}<b>${esc(u.id)}</b><span><i class="dot ${st}" style="display:inline-block;width:6px;height:6px;margin-right:6px;vertical-align:1px"></i>${esc(u.detail ?? u.status ?? '')}</span>${typeof u.info.battery === 'number' ? unitPips(u.info.battery) : ''}<span class="eta">${bat} ${eta}</span></button>`;
     }
     function renderFeed(el, head, body, l, ps, ts) {
         const drones = ps.units.filter((u) => u.kind === 'drone' && (u.altitudeFt ?? 0) > 0);
@@ -1909,6 +2190,44 @@ export async function mountConsole(app) {
                 ui.cardFocus = d.item;
                 keys.delete('cards');
                 return schedule();
+            case 'lens': {
+                // Counterfactual time lens: focus a spread-model horizon on the map (view state).
+                const min = Number(d.min);
+                ui.lens = ui.lens === min ? 0 : min;
+                applyLens();
+                drawTether();
+                return schedule();
+            }
+            case 'probe-close':
+                closeProbe();
+                return;
+            case 'probe-ask': {
+                closeProbe();
+                const where = $('#mapProbe')?.querySelector('.mpp-coords')?.textContent ?? 'the probe';
+                ui.panel = true;
+                keys.delete('now');
+                command(`What is the exposure at the probe (${where.trim()})?`);
+                return;
+            }
+            case 'probe-lens': {
+                closeProbe();
+                const hasCompare = talon.state().open.some((o) => !o.item.reraise && o.item.compare);
+                if (!hasCompare) {
+                    toast('The +60 min contour is always on the map (dotted) — open a plan card to scrub horizons.');
+                    return;
+                }
+                ui.lens = 60;
+                applyLens();
+                drawTether();
+                return schedule();
+            }
+            case 'probe-pin': {
+                closeProbe();
+                const src = $('#mapProbe');
+                engine.setOverlayLayer('talon:focus', { type: 'marker', position: [Number(src.dataset.wx), Number(src.dataset.wy)], icon: 'focus', tone: 'violet', title: '' }, { fadeMs: 200 });
+                toast('Focus marker dropped — operator pin [AUT]');
+                return;
+            }
             case 'theme': {
                 const mode = d.t === 'daylight' ? 'daylight' : 'dark';
                 applyTheme(mode);
@@ -1941,6 +2260,11 @@ export async function mountConsole(app) {
                     ui.coaToggled.delete(d.item);
                 else
                     ui.coaToggled.add(d.item);
+                // The lens lives inside the COA region — collapsing it resets the horizon focus.
+                if (ui.lens) {
+                    ui.lens = 0;
+                    applyLens();
+                }
                 keys.delete('cards');
                 schedule();
                 return;
@@ -2290,6 +2614,7 @@ export async function mountConsole(app) {
         const ev = e;
         const tgt = ev.target instanceof HTMLElement ? ev.target : document.body;
         if (ev.key === 'Escape') {
+            closeProbe();
             closePop();
             $('#overlay').innerHTML = '';
             if (ui.panel) {
