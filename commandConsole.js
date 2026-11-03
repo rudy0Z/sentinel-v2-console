@@ -530,6 +530,8 @@ export async function mountConsole(app) {
         const inc = ps.telemetry.incident;
         const wall = sit.meta.epoch ? player.wallClock(ps.t) : '';
         const mode = ui.recordMode ? 'record' : ui.review ? 'review' : isPast() ? 'past' : 'live';
+        // The gate bar's window starts when the gated plan was raised — same ends the card meta uses.
+        const gated = ts.open.find((o) => o.item.gate);
         const mine = ts.open.filter((o) => !o.item.reraise).length;
         const gateOpen = !!ps.gate?.open;
         // P5 plan drift: armed the moment the measured ground truth outran the model.
@@ -550,7 +552,7 @@ export async function mountConsole(app) {
       <div class="brand">${BRAND}<span>SENTINEL</span></div><div class="vsep"></div>
       <button class="sitbtn" data-act="pop" data-pop="sit" aria-haspopup="menu" aria-expanded="${ui.pop === 'sit'}" title="Incidents"><span><b>${esc(sit.meta.title)} · ${esc(s.name)}</b><small>${esc(s.sid)} · ${esc(sit.meta.coords ?? '')} · Training exercise</small></span>${ic('down', 'sm')}</button>
       <button class="posture ${inc?.level ?? 'ok'}" data-act="pop" data-pop="arc" aria-haspopup="dialog" aria-expanded="${ui.pop === 'arc'}" title="Incident journey — what happened, what is pending. The operator follows the incident, not the process.">
-        <i class="dot"></i><b>${esc(ps.phase.name)}</b>${gateOpen ? `<span class="gatechip">GATE <span class="countdown" data-until="${ps.gate.expires}"></span></span>` : ''}${drift ? '<span class="gatechip drift" title="Measured spread outran the model — the FT-02 IR pass found the cut early. The draft amendment addresses it.">PLAN DRIFT</span>' : ''}
+        <i class="dot"></i><b>${esc(ps.phase.name)}</b>${gateOpen ? `<span class="gatechip">GATE <span class="countdown" data-until="${ps.gate.expires}"${gated ? ` data-from="${gated.raisedAt}"` : ''}></span></span>` : ''}${drift ? '<span class="gatechip drift" title="Measured spread outran the model — the FT-02 IR pass found the cut early. The draft amendment addresses it.">PLAN DRIFT</span>' : ''}
       </button>
       ${tfrPill}
       ${ui.recordMode
@@ -579,7 +581,7 @@ export async function mountConsole(app) {
       ${active.length ? `<button class="statuspill" data-act="pop" data-pop="agents" aria-haspopup="menu" aria-expanded="${ui.pop === 'agents'}" aria-label="TALON agents — ${mine ? `${mine} need${mine > 1 ? '' : 's'} you` : 'working'}">
         ${active.map((a) => `<span class="adot" data-tip="${esc(a.name)} · ${a.status === 'needs' ? 'needs you' : a.status}|${esc(a.line)}"><i class="dot ${a.status}"></i></span>`).join('')}
       </button>` : ''}
-      <button class="rbtn face" data-act="panel" aria-pressed="${ui.panel}" aria-label="TALON chat (T)" data-tip="TALON|thread · log · review (T)">${mascot(orbMood)}${mine ? `<span class="badge">${mine}</span>` : ''}<span class="pips" aria-hidden="true">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</span></button>
+      <button class="rbtn face${mine ? ' attn' : ''}" data-act="panel" aria-pressed="${ui.panel}" aria-label="TALON chat (T)" data-tip="TALON|thread · log · review (T)">${mascot(orbMood)}${mine ? `<span class="badge">${mine}</span>` : ''}<span class="pips" aria-hidden="true">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</span></button>
       <button class="rbtn mic${ui.micMuted && !ui.listening ? ' muted' : ''}" data-act="mic" aria-pressed="${ui.listening}" aria-label="${ui.micMuted ? 'Mic muted — click to put TALON on the net' : ui.listening ? 'Transmitting — TALON ducked' : 'TALON on the net — click to mute, V to transmit'}" data-tip="${ui.listening ? 'Transmitting|TALON ducked' : ui.micMuted ? 'Mic muted|[M] or click to un-mute' : 'On the net|click to mute · V to transmit'}">${ic('mic')}</button>
       <button class="rbtn" data-act="pop" data-pop="authority" aria-pressed="${ui.pop === 'authority'}" aria-label="What TALON may do" data-tip="Authority|what TALON may do alone">${ic('shield')}</button>
       <button class="rbtn" data-act="pop" data-pop="settings" aria-pressed="${ui.pop === 'settings'}" aria-label="Settings" data-tip="Settings · live model">${ic('gear')}</button>`;
@@ -714,7 +716,7 @@ export async function mountConsole(app) {
                 ? `<div class="opts" role="group" aria-label="Your options">${opts.map((x, i) => `<button class="opt${x.recommended ? ' rec' : ''}" data-act="answer" data-item="${it.id}" data-opt="${x.id}" ${decide ? '' : 'disabled'}><span class="k">${i + 1}</span><b>${esc(x.label)}</b><span class="tag">${x.recommended ? 'Recommended' : ''}</span></button>`).join('')}</div>${decide ? '' : `<span class="caps" style="text-transform:none;letter-spacing:0">${ui.review ? 'Review is read-only.' : 'You are viewing the past. Go back to live to decide.'}</span>`}`
                 : `<span class="caps" style="text-transform:none;letter-spacing:0">Reported for awareness — no action requested. It is on the record.</span>`;
         return `<article class="card ${crit ? 'critical' : 'needs'}${coaShut ? ' coa-shut' : ''}"${crit ? ' role="alert" aria-live="assertive"' : ' aria-live="polite"'}>
-      <div class="meta"><i class="dot ${crit ? 'critical' : 'needs'}"></i><span class="caps">${esc(agent)} · ${it.kind === 'proposal' ? 'Proposal' : 'Needs you'}</span><span class="grow"></span>${o.expiresAt !== null || Number.isFinite(o.closesAt) ? `<span class="countdown${crit ? ' stakes' : ''}"${crit ? ` style="${STAKES_STYLE}"` : ''} data-until="${Number.isFinite(o.closesAt) ? o.closesAt : o.expiresAt}" title="Closes at ${fmtT(o.closesAt)} (scene time)"></span>` : ''}</div>
+      <div class="meta"><i class="dot ${crit ? 'critical' : 'needs'}"></i><span class="caps"><span class="mono" title="Entered the record at ${fmtT(o.raisedAt)} (scene time)">${fmtT(o.raisedAt)}</span> · ${esc(agent)} · ${it.kind === 'proposal' ? 'Proposal' : 'Needs you'}</span><span class="grow"></span>${o.expiresAt !== null || Number.isFinite(o.closesAt) ? `<span class="countdown${crit ? ' stakes' : ''}"${crit ? ` style="${STAKES_STYLE}"` : ''} data-until="${Number.isFinite(o.closesAt) ? o.closesAt : o.expiresAt}" data-from="${o.raisedAt}" title="Closes at ${fmtT(o.closesAt)} (scene time)"></span>` : ''}</div>
       <h2>${esc(talon.text(it.title, t))}</h2>
       ${dSince.length && Number(o.item.at) > ui.lastDecisionT + 0.01 ? `<div class="since" title="What changed on the incident since you last decided — working-memory anchor">Δ since your last decision (${fmtT(ui.lastDecisionT)}): ${dSince.map((e) => esc(e.title)).join(' · ')}</div>` : ''}
       ${it.body ? `<p>${esc(talon.text(it.body, t))}</p>` : ''}
@@ -745,12 +747,13 @@ export async function mountConsole(app) {
             return `<div class="entry operator"><time>${fmtT(e.t)}</time><div class="bubble">${esc(e.title)}</div></div>`;
         const auth = e.authority === 'standing' ? `<span class="auth standing" title="${esc(e.standing ?? '')}">${esc(e.standing ?? 'Standing order')}</span>` : '';
         const lvl = e.level === 'interrupt' ? ' interrupt' : '';
+        const tab = e.kind === 'answer' ? ' tab-done' : e.kind === 'correction' ? ' tab-talon' : e.level === 'interrupt' || e.kind === 'expired' ? ' tab-needs' : '';
         const decided = e.kind === 'answer' ? `<span class="chip ${e.who === 'operator' ? 'ok' : ''}" style="height:18px">${e.who === 'operator' ? 'Decision' : e.who === 'autopilot' ? 'Harness' : 'Ruling'}</span>` : e.kind === 'ack' ? `<span class="chip ok" style="height:18px" title="The receiving authority confirmed receipt — the escalation is not dangling">ack</span>` : '';
         // G4: the T+89 epistemic revision names its delta and both provenances explicitly.
         const corr = e.kind === 'correction' ? talon.item(e.itemId ?? '') : null;
         const delta = corr ? correctionDelta(corr) : null;
         const rev = delta ? `<div class="stakes" style="${STAKES_STYLE};margin:2px 0">${esc(delta)}</div><div class="body"><span class="prov modeled"${provTitle('modeled')}>mod</span> Superseded projection kept on the map (ghosted) — replaced by the FT-02 IR pass <span class="prov measured"${provTitle('measured')}>mea</span></div>` : '';
-        return `<div class="entry${lvl}"><time>${fmtT(e.t)}</time><div><div class="who"><b>${who}</b>${e.kind === 'expired' ? '<span class="chip needs" style="height:18px">lapsed</span>' : ''}${decided}</div>${e.kind === 'correction' ? `<div class="title">${esc(e.title)}</div><button class="chip modmea" data-act="modmea" aria-pressed="${ui.modMea}" title="Light both projections on the map: the superseded model (MOD) against the measured cut (MEA)">${ic('timeline', 'xs')}Compare on map · MOD vs MEA</button>` : e.evidence?.length ? `<button class="title linkish" data-act="evfocus" data-ev="e:${e.id}" title="Show on the map — the map is the reply">${esc(e.title)}</button>` : `<div class="title">${esc(e.title)}</div>`}${rev}${e.body && e.kind !== 'answer' ? `<div class="body">${esc(e.body)}</div>` : e.kind === 'answer' && e.body ? `<div class="body">${esc(e.body)}</div>` : ''}${e.bullets ? `<ul>${e.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}${auth || e.evidence?.length ? `<div class="foot">${auth}${evChips(e.evidence, `e:${e.id}`)}</div>` : ''}</div></div>`;
+        return `<div class="entry${lvl}${tab}"><time>${fmtT(e.t)}</time><div><div class="who"><b>${who}</b>${e.kind === 'expired' ? '<span class="chip needs" style="height:18px">lapsed</span>' : ''}${decided}</div>${e.kind === 'correction' ? `<div class="title">${esc(e.title)}</div><button class="chip modmea" data-act="modmea" aria-pressed="${ui.modMea}" title="Light both projections on the map: the superseded model (MOD) against the measured cut (MEA)">${ic('timeline', 'xs')}Compare on map · MOD vs MEA</button>` : e.evidence?.length ? `<button class="title linkish" data-act="evfocus" data-ev="e:${e.id}" title="Show on the map — the map is the reply">${esc(e.title)}</button>` : `<div class="title">${esc(e.title)}</div>`}${rev}${e.body && e.kind !== 'answer' ? `<div class="body">${esc(e.body)}</div>` : e.kind === 'answer' && e.body ? `<div class="body">${esc(e.body)}</div>` : ''}${e.bullets ? `<ul>${e.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}${auth || e.evidence?.length ? `<div class="foot">${auth}${evChips(e.evidence, `e:${e.id}`)}</div>` : ''}</div></div>`;
     }
     function renderNow(ps, ts) {
         const mine = ts.open.filter((o) => !o.item.reraise);
@@ -1172,6 +1175,10 @@ export async function mountConsole(app) {
             const left = u - ps.t;
             el.textContent = `${fmtDur(Math.max(0, left))} left`;
             el.classList.toggle('low', left < 2);
+            // The depleting bar: compositor-only scaleX from the window's own start (data-from).
+            const from = Number(el.dataset.from);
+            if (Number.isFinite(from) && u > from)
+                el.style.setProperty('--fill', String(Math.max(0, Math.min(1, left / (u - from)))));
         });
         // F1: the issued banner's acknowledgement countdown — scene time only, no wall clock.
         app.querySelectorAll('.ackcount[data-ack-at]').forEach((el) => {

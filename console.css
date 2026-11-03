@@ -558,6 +558,10 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .rail .rbtn.mic.muted svg { opacity: .38; }
 .rail .rbtn.mic.muted::before { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 1.5px; background: var(--needs); transform: translate(-50%, -50%) rotate(-45deg); border-radius: 1px; }
 .rail .rbtn .badge { position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--r-pill); background: var(--needs); color: var(--text-inverse); font: var(--fw-bold) var(--fs-badge)/16px var(--font-sans); text-align: center; }
+/* TALON presence (2026-11-04): the seat edge from exploration A, worn by the orb —
+   a breathing violet ring while items need the operator. Violet is TALON's own hue. */
+.rail .rbtn.face.attn::before { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 1.5px solid var(--talon-ink); opacity: .5; animation: attn-breathe 2.4s var(--ease-in-out) infinite; pointer-events: none; }
+@keyframes attn-breathe { 0%, 100% { opacity: .12; transform: scale(.92); } 50% { opacity: .55; transform: scale(1.05); } }
 .rail .rbtn .pips { position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; }
 .rail .rbtn .pips i { width: 6px; height: 2.5px; border-radius: 1px; background: var(--pip-off); }
 .rail .rbtn .pips i.on { background: var(--needs); } /* red discipline: interrupt budget pips are amber */
@@ -642,6 +646,11 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .card.needs::before, .card.critical::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 2px; border-radius: 1px; }
 .card.needs::before { background: var(--needs); }
 .card.critical::before { background: var(--critical); }
+/* decision-surface hierarchy (2026-11-04): the card that needs a hand wears its own edge —
+   an inset top stroke in its state colour and a tinted rim — while chrome stays subtle */
+.card.needs { border-color: color-mix(in srgb, var(--needs) 26%, var(--border)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--needs) 60%, transparent); }
+.card.critical { border-color: color-mix(in srgb, var(--critical) 32%, var(--border)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--critical) 65%, transparent); }
+.card.routed { border-color: var(--border); box-shadow: none; }
 .card::after { content: ""; position: absolute; inset: 2px; pointer-events: none; opacity: 0; transition: opacity var(--dur-fast); background:
   linear-gradient(var(--border-strong), var(--border-strong)) left top / 10px 1px no-repeat,
   linear-gradient(var(--border-strong), var(--border-strong)) left top / 1px 10px no-repeat,
@@ -660,6 +669,10 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .card p { margin: 0; color: var(--text-2); font-size: var(--fs-body); }
 .countdown { font: var(--fw-semibold) var(--fs-caption)/1 var(--font-mono); color: var(--needs); display: inline-flex; align-items: center; gap: var(--s-1); }
 .countdown.low { color: var(--critical); }
+/* depleting gate bar (2026-11-04): fills from the window's own start (data-from);
+   compositor-only scaleX per §6 — the countdown text still carries the words */
+.countdown[data-from] { position: relative; padding-bottom: 3px; }
+.countdown[data-from]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 1px; background: currentColor; opacity: .6; transform: scaleX(var(--fill, 1)); transform-origin: left center; }
 .evid { display: flex; flex-wrap: wrap; gap: var(--s-1); }
 .evid .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--talon-ink); }
 .opts { display: grid; gap: var(--s-1); }
@@ -729,6 +742,11 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .thread { display: grid; gap: var(--s-1); }
 .entry { display: grid; grid-template-columns: 44px 1fr; gap: var(--s-2); padding: 6px var(--s-1); border-radius: var(--r-sm); font-size: var(--fs-caption); color: var(--text-2); }
 .entry.hl { background: var(--surface-raised); }
+/* kind-coded margin tabs (2026-11-04): the wire's marks, carried into the thread —
+   decisions green, corrections violet, interrupts/expiry amber; inset, no layout shift */
+.entry.tab-done { box-shadow: inset 2px 0 0 var(--done); }
+.entry.tab-talon { box-shadow: inset 2px 0 0 var(--talon); }
+.entry.tab-needs { box-shadow: inset 2px 0 0 var(--needs); }
 .entry time { font: var(--fw-medium) var(--fs-micro)/18px var(--font-mono); color: var(--text-4); }
 .entry .who { display: flex; align-items: center; gap: var(--s-1); color: var(--text-3); font-size: var(--fs-micro); margin-bottom: 1px; }
 .entry .who b { color: var(--text-2); font-weight: var(--fw-semibold); }
@@ -1285,5 +1303,6 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .opt:active .k { box-shadow: var(--inset-well); }
 
 @media (prefers-reduced-motion: reduce) {
-  .tether-line, .tether-ring, .cadence i { animation: none !important; }
+  .tether-line, .tether-ring, .cadence i, .rail .rbtn.face.attn::before { animation: none !important; }
+  .rail .rbtn.face.attn::before { opacity: .45; }
 }
