@@ -793,6 +793,11 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
    Situation board — independent widgets, never one shared bar
    ========================================================================== */
 .dock { position: absolute; z-index: var(--z-dock); left: var(--gap); right: var(--gap); bottom: var(--gap); }
+/* TRIAL (2026-11-04, re-roll candidate): the dock docks to the frame — instruments attach
+   flush to the bottom bezel with rounded top corners only, instead of floating cards.
+   The calm column keeps its floating treatment; timeline spacing rides on --dock-h. */
+.app:not(.calm) .dock { bottom: 0; }
+.app:not(.calm) .slots .widget { border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom-color: transparent; }
 .slots { display: flex; align-items: flex-end; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; }
 .slots::-webkit-scrollbar { display: none; }
 /* "+N more widgets" affordance: rendered by the TS layer only when .slots
