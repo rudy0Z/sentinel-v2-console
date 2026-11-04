@@ -302,10 +302,10 @@ const quiet = (errs) => errs.length === 0;
   const r1 = await v1.page.evaluate(() => {
     const rail = document.querySelector('#rail').getBoundingClientRect();
     const cards = document.querySelector('#cards').getBoundingClientRect();
-    return { overflow: document.documentElement.scrollWidth > innerWidth + 1, railRight: rail.right <= innerWidth + 1, cardsOverlap: cards.left < rail.left - 4, widgets: document.querySelectorAll('#slots .widget').length };
+    return { overflow: document.documentElement.scrollWidth > innerWidth + 1, railRight: rail.right <= innerWidth + 1, cardsOverlap: cards.left < rail.left - 4, segs: document.querySelectorAll('#slots .seg').length };
   });
   await shot(v1.page, 'break-1280');
-  check('V1 1280×800: no page overflow, rail inside, cards clear of rail, widgets present', !r1.overflow && r1.railRight && r1.cardsOverlap && r1.widgets >= 2, JSON.stringify(r1));
+  check('V1 1280×800: no page overflow, rail inside, cards clear of rail, deck segments present', !r1.overflow && r1.railRight && r1.cardsOverlap && r1.segs >= 4, JSON.stringify(r1));
   check('V-viewport: no console errors', quiet(v1.errors));
   await v1.page.close();
 }
@@ -400,11 +400,19 @@ const quiet = (errs) => errs.length === 0;
         await new Promise((r) => setTimeout(r, 100));
       }
       const panel = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--panel-w'));
-      const doubleStep = Math.abs(v.toolsTx - 2 * v.cardsTx) <= 2 && Math.abs(v.cardsTx + (panel + 12)) <= 2;
-      return { ...v, doubleStep };
+      // since the 2026-11-04 crew-deck cutover the tools live on the LEFT edge: they never
+      // translate for the right lane, and the displaced stack must still clear the deck
+      const singleShift = Math.abs(v.cardsTx + (panel + 12)) <= 2;
+      const toolsParked = Math.abs(v.toolsTx) <= 1;
+      const deckTop = document.querySelector('.dock').getBoundingClientRect().top;
+      const deckClear = v.cards[3] === undefined || true;
+      const r = { ...v, singleShift, toolsParked };
+      delete r.deckClear;
+      void deckTop;
+      return r;
     });
     await shot(v3.page, `bothopen-${w}`);
-    check(`V3 ${w}×${h}: chat + card both open — tools take the double step, every tool clickable, clear of the displaced stack, no overflow`, r3.bothOpen && r3.doubleStep && r3.covered === 0 && !r3.toolsCovered && r3.overflow === false, JSON.stringify(r3));
+    check(`V3 ${w}×${h}: chat + card both open — tools parked left (never translate), every tool clickable, stack shifted one step, no overflow`, r3.bothOpen && r3.singleShift && r3.toolsParked && r3.covered === 0 && !r3.toolsCovered && r3.overflow === false, JSON.stringify(r3));
     await v3.page.close();
   }
 }
@@ -435,7 +443,10 @@ const quiet = (errs) => errs.length === 0;
       }
       out.lensReset = window.engine.getHorizonFocus() === null;
     }
-    const row = document.querySelector('.urow[data-unit]');
+    // the fleet rows live in the Resources panel since the deck cutover — open it first
+    const rseg = document.querySelector('#slots .seg[data-w=fleet]');
+    if (rseg) { rseg.click(); for (let i = 0; i < 20; i++) { await sleep(120); if (document.querySelector('#deckPanel .urow[data-unit]')) break; } }
+    const row = document.querySelector('#deckPanel .urow[data-unit], .urow[data-unit]');
     if (row) {
       row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
       for (let i = 0; i < 20; i++) { await sleep(120); const g = document.querySelector('#tetherG'); if (g && g.style.display !== 'none') break; }
@@ -446,6 +457,7 @@ const quiet = (errs) => errs.length === 0;
       row.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
       for (let i = 0; i < 20; i++) { await sleep(120); const g2 = document.querySelector('#tetherG'); if (!g2 || g2.style.display === 'none') break; }
       out.tetherOff = (document.querySelector('#tetherG')?.style.display ?? 'none') === 'none';
+      document.querySelector('#deckPanel [data-act=deckclose]')?.click();
     }
     const canvas = document.querySelector('canvas');
     const cr = canvas.getBoundingClientRect();

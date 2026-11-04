@@ -314,7 +314,7 @@
   --rail-w2: 44px;
   --panel-w: 372px;
   --timeline-h: 60px;
-  --slots-h: 204px;
+  --deck-h: 58px; /* the crew deck (2026-11-04): was --slots-h 204px, the widgets retired into panels */
   --tools-w: 40px;
 
   /* layers */
@@ -335,7 +335,7 @@
 @property --fade-start { syntax: "<length-percentage>"; inherits: false; initial-value: 0%; }
 @property --fade-end { syntax: "<length-percentage>"; inherits: false; initial-value: 100%; }
 
-@media (max-height: 780px) { :root { --slots-h: 172px; } }
+/* the deck is height-stable: no 780h variant (was --slots-h 172px) */
 @media (min-width: 1680px) { :root { --panel-w: 400px; } }
 /* Reduced motion keeps state legible: color/opacity fades survive at ~80-120ms,
    continuous loops stop, entrances collapse to opacity-only, presses don't travel. */
@@ -414,7 +414,7 @@ svg.ic.xs { width: 12px; height: 12px; }
 .seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: var(--inset-well); }
 .seg button { appearance: none; border: 0; background: transparent; color: var(--text-2); height: 24px; padding: 0 var(--s-2); border-radius: var(--r-xs); font-size: var(--fs-caption); font-weight: var(--fw-medium); }
 .seg button:hover { color: var(--text-1); }
-.seg button[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); box-shadow: var(--highlight-top); }
+.seg button[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); box-shadow: var(--inset-well); } /* tactile pass 2026-11-04: pressed sinks (no lit top edge in a dark room) */
 
 /* ---- chips, dots, badges */
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--idle); }
@@ -478,14 +478,8 @@ button.chip:hover { color: var(--text-1); border-color: var(--border-strong); ba
 @keyframes blink { 50% { opacity: .25; } }
 
 /* ---- map tools (bottom-right, above the board; the top-left stays clean) */
-.tools { position: absolute; z-index: var(--z-map-ui); right: calc(var(--gap) * 2 + var(--rail-w2)); bottom: calc(var(--dock-h, 0px) + var(--gap) * 2); display: grid; gap: var(--s-2); transition: transform var(--dur-base) var(--ease-out-expo); }
-/* the decision lane (cards + chat, z-talon) shares this anchor; when it is occupied the tools step
-   aside by the same displacement the card stack uses — the operator never loses map navigation
-   while a decision is open (review C3: tools were click-dead under open cards) */
-.app.chat-open .tools, .app.cards-open .tools { transform: translateX(calc(-1 * (var(--panel-w) + var(--gap)))); }
-/* both lanes open: the card stack travels with the chat (−1 step), so the tools take a SECOND
-   step and stay clear of the displaced stack at every contracted width (2026-11-02 audit, e2e V3) */
-.app.chat-open.cards-open .tools { transform: translateX(calc(-2 * (var(--panel-w) + var(--gap)))); }
+.tools { position: absolute; z-index: var(--z-map-ui); left: var(--gap); top: 50%; transform: translateY(-50%); display: grid; gap: var(--s-2); } /* moved to the freed left edge (2026-11-04, TrackWise/Aerion grammar) - the right lane never crosses it */
+/* tools live on the LEFT edge since the 2026-11-04 crew-deck cutover - the decision lane is on the right and the two can never collide; the old step-aside rules retired with the move */
 .toolgroup { display: grid; border-radius: var(--r-md); overflow: hidden; }
 .toolgroup .btn { width: var(--tools-w); height: var(--tools-w); border-radius: 0; border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; color: var(--icon); padding: 0; box-shadow: var(--highlight-top); }
 .toolgroup .btn:last-child { border-bottom: 0; }
@@ -567,7 +561,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .rail .rbtn .pips i.on { background: var(--needs); } /* red discipline: interrupt budget pips are amber */
 
 /* chat: a floating card over the map — never a docked panel, the map does not reflow */
-.chat { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h)); right: calc(var(--gap) * 2 + var(--rail-w2)); width: var(--panel-w); max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 96px); border-radius: var(--r-xl); display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-2); animation: chat-in var(--dur-base) var(--ease-out); }
+.chat { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h)); right: calc(var(--gap) * 2 + var(--rail-w2)); width: var(--panel-w); max-height: calc(100vh - var(--topbar-h) - var(--deck-h) - 96px); border-radius: var(--r-xl); display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-2); animation: chat-in var(--dur-base) var(--ease-out); }
 .chat[hidden] { display: none; }
 /* light catches the top edge of the glass: a 0.5px diagonal rim, masked so only the edge paints */
 .chat::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: .5px; pointer-events: none; background: var(--rim-gradient); -webkit-mask: linear-gradient(var(--mask-opaque) 0 0) content-box, linear-gradient(var(--mask-opaque) 0 0); -webkit-mask-composite: xor; mask: linear-gradient(var(--mask-opaque) 0 0) content-box, linear-gradient(var(--mask-opaque) 0 0); mask-composite: exclude; }
@@ -584,14 +578,14 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 
 /* decision cards: appear only while an item is open — tasks surface naturally,
    anchored to the left of the edge rail */
-.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: calc(var(--gap) * 2 + var(--rail-w2)); width: 372px; display: grid; gap: var(--s-3); max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 44px); overflow-y: auto; scrollbar-width: none; pointer-events: none; transition: transform var(--dur-base) var(--ease-out-expo); } /* 44px = gap + dock clearance (was 120px — 64px of dead card height; audit 2026-10-30); stack seam = 12px so between ≥ within-card gap */
+.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: calc(var(--gap) * 2 + var(--rail-w2)); width: 372px; display: grid; gap: var(--s-3); max-height: calc(100vh - var(--topbar-h) - var(--deck-h) - 44px); overflow-y: auto; scrollbar-width: none; pointer-events: none; transition: transform var(--dur-base) var(--ease-out-expo); } /* 44px = gap + dock clearance (was 120px — 64px of dead card height; audit 2026-10-30); stack seam = 12px so between ≥ within-card gap */
 .cards > * { pointer-events: auto; }
 .cards:empty { display: none; }
 .cards .card { box-shadow: var(--shadow-2), inset 0 0 0 .5px var(--p-alpha-w-08); }
 /* TALON drawer displacement is a transform, not a layout property: the TS layer
    toggles .chat-open on the app root (legacy alias) or .cards-shift on the stack. */
 .app.chat-open .cards, .cards.cards-shift { transform: translateX(calc(-1 * (var(--panel-w) + var(--gap)))); }
-.app.chat-open .cards { max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 44px); }
+.app.chat-open .cards { max-height: calc(100vh - var(--topbar-h) - var(--deck-h) - 44px); }
 .tip { position: fixed; z-index: var(--z-toast); pointer-events: none; padding: 6px var(--s-3); border-radius: var(--r-pill); background: var(--surface-glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow-1); font-size: var(--fs-caption); white-space: nowrap; display: flex; align-items: center; gap: var(--s-2); opacity: 0; transform: translateX(4px); transition: opacity 80ms var(--ease-out), transform 80ms var(--ease-out); }
 .tip.on { opacity: 1; transform: none; transition-duration: 120ms; } /* enter slower (120ms) than exit (80ms) */
 .tip small { color: var(--text-3); }
@@ -793,6 +787,44 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
    Situation board — independent widgets, never one shared bar
    ========================================================================== */
 .dock { position: absolute; z-index: var(--z-dock); left: var(--gap); right: var(--gap); bottom: var(--gap); }
+/* the crew deck (2026-11-04): independent segments, no container - L1 glance layer */
+.slots { display: flex; align-items: stretch; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; }
+.slots .seg { flex: 0 1 auto; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 10px;
+  background: var(--surface-glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border-subtle); border-radius: 11px; box-shadow: var(--glass-shadow);
+  position: relative; text-align: left; transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), transform 40ms linear; }
+.seg:hover { border-color: var(--border); background: var(--surface-hover); }
+.seg:active { transform: translateY(1px); }
+.slots .seg .ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-pressed); flex: none; }
+.slots .seg .ic svg { width: 14px; height: 14px; }
+.slots .seg .t { display: grid; gap: 3px; min-width: 0; }
+.slots .seg .t small { font: var(--fw-medium) var(--fs-badge)/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; color: var(--text-4); display: flex; align-items: center; gap: 5px; }
+.slots .seg .t b { font: var(--fw-medium) var(--fs-caption)/1 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text-1); }
+.slots .seg .t b em { font-style: normal; color: var(--text-4); font-size: var(--fs-badge); }
+.slots .seg .st { width: 7px; height: 7px; border-radius: 50%; background: var(--done); flex: none; }
+.slots .seg .st-working { background: var(--working); }
+.slots .seg .st-needs { background: var(--needs); }
+.slots .seg .caret { color: var(--text-4); font-size: 10px; flex: none; }
+.seg.attn { border-color: color-mix(in srgb, var(--needs) 50%, transparent); }
+.seg.attn .st { background: var(--needs); }
+.seg.attn::after { content: ""; position: absolute; inset: -1px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--needs) 45%, transparent); animation: segpulse 2s var(--ease-in-out) infinite; pointer-events: none; }
+.seg.open { border-color: color-mix(in srgb, var(--talon) 55%, transparent); }
+.seg.ask { border-color: color-mix(in srgb, var(--talon) 40%, transparent); }
+.seg.ask .ic { background: var(--talon-soft); }
+.seg.ask .asklab { color: var(--talon-ink); }
+.seg.ask .asksub { font: var(--fw-medium) var(--fs-micro)/1 var(--font-sans); color: var(--text-2); font-weight: var(--fw-medium); letter-spacing: 0; }
+@keyframes segpulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+/* the deck must fit the 1280 insurance floor without clipping: at narrow widths the
+   segments shed their secondary sub-value and prov chip, keep the headline glance */
+@media (max-width: 1560px) {
+  .slots .seg { gap: 8px; padding: 8px 10px 8px 9px; }
+  .slots .seg .t b em { display: none; }
+  .slots .seg .t small .prov { display: none; }
+}
+@media (max-width: 1360px) {
+  .slots .seg .t small { font-size: 9px; letter-spacing: .04em; }
+  .slots .seg .ic { width: 22px; height: 22px; }
+}
 /* TRIAL (2026-11-04, re-roll candidate): the dock docks to the frame — instruments attach
    flush to the bottom bezel with rounded top corners only, instead of floating cards.
    The calm column keeps its floating treatment; timeline spacing rides on --dock-h. */
@@ -800,21 +832,29 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .app:not(.calm) .slots .widget { border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom-color: transparent; }
 .slots { display: flex; align-items: flex-end; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; }
 .slots::-webkit-scrollbar { display: none; }
+/* L2 - the category panel, risen above its segment; hosts the old widget body unchanged */
+.deckpanel { position: fixed; z-index: calc(var(--z-dock) + 1); left: calc(var(--gap) + var(--tools-w) + var(--gap)); bottom: calc(var(--deck-h) + var(--gap) * 2); width: 348px; max-height: min(58vh, 560px); overflow-y: auto; scrollbar-width: none; }
+.deckpanel::-webkit-scrollbar { display: none; }
+.deckpanel .widget { height: auto; max-height: none; }
+/* the feed wing: the pip stays hosted when the feed panel is closed */
+.feedwing { position: fixed; z-index: calc(var(--z-dock) + 1); right: calc(var(--gap) * 2 + var(--rail-w2)); bottom: calc(var(--deck-h) + var(--gap) * 2); width: 240px; }
+.feedwing .widget { height: auto; }
+.feedwing .wbody { aspect-ratio: 16 / 9; }
 /* "+N more widgets" affordance: rendered by the TS layer only when .slots
    overflows horizontally (e.g. 2 of 5 widgets clip at 1280px). Click scrolls
    the hidden widgets into view. */
 .dock-more { position: absolute; z-index: calc(var(--z-dock) + 1); right: var(--s-1); top: 50%; bottom: auto; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid color-mix(in srgb, var(--needs) 45%, transparent); background: var(--surface-glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); color: var(--needs); font: var(--fw-semibold) var(--fs-micro)/1 var(--font-mono); letter-spacing: .04em; white-space: nowrap; box-shadow: var(--shadow-1); cursor: pointer; }
 .dock-more:hover { border-color: var(--needs); }
 /* calm mode: no incident anywhere — the widgets dock as a left column, the map owns the rest */
-.app.calm .slots { position: fixed; z-index: var(--z-dock); left: var(--gap); top: calc(var(--gap) * 2 + var(--topbar-h)); flex-direction: column; align-items: flex-start; width: 340px; max-height: calc(100vh - var(--topbar-h) - var(--slots-h) - 60px); overflow-y: auto; overflow-x: hidden; -webkit-mask-image: none; mask-image: none; animation: none; }
-.widget { flex: 0 0 auto; border-radius: var(--r-lg); display: flex; flex-direction: column; min-width: 0; overflow: hidden; animation: widget-in var(--dur-base) var(--ease-out); height: var(--slots-h); }
+/* the calm left column retired with the crew deck (2026-11-04): standby reads the same deck + panels */
+.widget { flex: 0 0 auto; border-radius: var(--r-lg); display: flex; flex-direction: column; min-width: 0; overflow: hidden; animation: widget-in var(--dur-base) var(--ease-out); }
 .widget[data-w='fleet'], .widget[data-w='evac'], .widget[data-w='events'] { width: 316px; }
 .widget[data-w='weather'] { width: 336px; }
 .widget[data-w='growth'] { width: 380px; }
 .widget[data-w='feed'] { width: 344px; }
 .widget[data-w='structures'] { width: 300px; }
-.app.calm .widget { width: 100%; height: auto; max-height: var(--slots-h); }
-.app.calm .widget[data-w='feed'] { height: var(--slots-h); }
+
+
 .widget.min { height: auto; }
 .widget.min .wbody { display: none; }
 @keyframes widget-in { from { opacity: 0; transform: translateY(6px); } }
@@ -1247,7 +1287,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .tl-stops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; padding: 2px; border-radius: var(--r-xs); background: var(--bg-canvas); border: 1px solid var(--border-subtle); }
 .tl-stop { height: 22px; border: 0; border-radius: 3px; background: transparent; color: var(--text-2); font: var(--fw-medium) var(--fs-badge)/1 var(--font-mono); letter-spacing: .04em; cursor: pointer; transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
 .tl-stop:hover { color: var(--text-1); background: var(--surface-hover); }
-.tl-stop[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); font-weight: var(--fw-bold); box-shadow: var(--highlight-top), 0 0 0 1px var(--border-strong); }
+.tl-stop[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); font-weight: var(--fw-bold); box-shadow: var(--inset-well), 0 0 0 1px var(--border-strong); } /* tactile pass: pressed sinks */
 .tl-read { display: flex; align-items: center; gap: 8px; min-width: 0; font: var(--fw-normal) var(--fs-caption)/1.3 var(--font-mono); color: var(--text-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .tl-read b { color: var(--text-1); font-weight: var(--fw-semibold); }
 .tl-sep { width: 1px; height: 12px; background: var(--border); flex: none; }

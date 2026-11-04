@@ -199,6 +199,14 @@ make a change pass — change the change.
     label carries a value or an authority state, never decoration.
   - *The 10.5px data-ink floor stays* (§2) — mono data badges and chart axes at 10.5px are the
     deliberate density choice for control-room viewing distances.
+  - *The glass rim light stays.* A 1px top specular on glass surfaces and the keycap's inset
+    specular are a physical-light metaphor by design (the tactile-design review flags lit top
+    edges as dark-theme lies); in EOC Darkroom the rim reads as an instrument bezel, not a light
+    source. Pressed states, by contrast, now sink (`--inset-well`) — the tactile pass of
+    2026-11-04 removed the lit top edge from pressed controls (`.seg button[aria-pressed]`,
+    `.tl-stop[aria-pressed]`).
+  - *Status halos stay.* The soft ring around `.dot.critical`/state dots is a scan target for
+    operator eyes at range, not decoration.
   - *The focus ring stays TALON violet.* Focus is an instrument state wearing the console's
     interaction hue; the 2px+4px ring geometry — not colour — carries the meaning.
 - **Concentric radius formula — the 4px Optical Floor (2026-11-02 ruling):**
@@ -211,6 +219,15 @@ make a change pass — change the change.
   predated the tools' bottom-right home and has no left-side meaning anymore. The transient
   **inspector yields to the chat card at ≤1360px** (`ui.panel && innerWidth ≤ 1360 → ui.sel
   dismissed`) so the map is never squeezed between two glass walls on laptop widths.
+- **The layered deck (2026-11-04 ruling).** Information lives in three layers: **L1** the bottom
+  crew deck — independent TALON-curated segments (no container box), one glance value each with
+  its provenance chip and state dot; **L2** category panels that rise from a clicked segment and
+  carry the former 204px dock widgets unchanged; **L3** the topbar, verbs and status only. The
+  dock's widget strip, `.min` collapse, pinning and the dock-more affordance retired with the
+  cutover; `--slots-h` became `--deck-h: 58px`; the map tools moved to the freed left edge and
+  the step-aside rules retired (left and right lanes can never collide). TALON curates L1 through
+  the existing composition + attention machinery: promoted segments wear the amber pulse and cite
+  their reason. The feed stays hosted at all times — in its panel when open, else in the feed wing.
 - **COA collapse is height-aware:** on a compare card the COA table defaults collapsed at
   `innerHeight < 1000` (stricter than the ≤900h breakpoint the drawings proposed), **stays
   collapsed whenever a dissent box is open on that card**, and the operator can always toggle —

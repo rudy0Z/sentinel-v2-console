@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Sentinel · Layered Deck — layout exploration D</title>
+<style>
+  /* D · LAYERED DECK — the owner's synthesis: three information layers.
+     L1 · the crew deck: independent bottom segments, one glance value each, TALON-curated.
+     L2 · category panels rising above their segment on click (one shown open).
+     L3 · the topbar: verbs and status only.
+     Left edge freed for the map-control stack (TrackWise/Aerion grammar). Independent
+     segments — no container box. Decision lane + rail unchanged (One.app-validated). */
+  @font-face { font-family: "Geist"; font-weight: 400; src: url("../assets/fonts/geist-400.woff2") format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 500; src: url("../assets/fonts/geist-500.woff2") format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 600; src: url("../assets/fonts/geist-600.woff2") format("woff2"); }
+  @font-face { font-family: "Geist Mono"; font-weight: 400; src: url("../assets/fonts/geist-mono-400.woff2") format("woff2"); }
+  @font-face { font-family: "Geist Mono"; font-weight: 500; src: url("../assets/fonts/geist-mono-500.woff2") format("woff2"); }
+  :root {
+    --s0:#07080B; --s1:#0C0E12; --s2:#101218; --s3:#161922;
+    --ink-1:#ECEEF2; --ink-2:#B6BDCB; --ink-3:#8E96A9; --ink-4:#7D86A0;
+    --line:rgba(236,238,242,.10); --line-strong:rgba(236,238,242,.20);
+    --talon:#9B8AFF; --talon-ink:#BBA9FF; --talon-soft:rgba(155,138,255,.14);
+    --needs:#FFB547; --critical:#E5533C; --done:#35C48D; --working:#3F8CFF;
+    --proposed:#8FB8FF; --committed:#00E5FF;
+    --sans:"Geist","Segoe UI",system-ui,sans-serif; --mono:"Geist Mono",ui-monospace,Menlo,monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
+  body { background:var(--s0); color:var(--ink-1); font:400 12.5px/1.45 var(--sans); overflow:hidden; }
+  b { font-weight:600; } button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; }
+  .mono { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+  .caps { font:500 10.5px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); }
+  .prov { font:500 9.5px/1 var(--mono); padding:1px 3px; border-radius:3px; letter-spacing:.04em; }
+  .prov.mea { color:var(--done); border:1px solid color-mix(in srgb, var(--done) 40%, transparent); }
+  .prov.mod { color:var(--talon-ink); border:1px solid color-mix(in srgb, var(--talon) 45%, transparent); }
+  .prov.aut { color:var(--ink-3); border:1px solid var(--line-strong); }
+
+  /* ── L3 · topbar: verbs and status only (unchanged) ─────────── */
+  .top { position:fixed; inset:0 0 auto 0; height:52px; z-index:8; display:flex; align-items:center; gap:14px;
+    padding:0 14px; background:var(--s1); border-bottom:1px solid var(--line); }
+  .wordmark { font:700 13px/1 var(--sans); letter-spacing:.22em; }
+  .sit { display:flex; flex-direction:column; gap:2px; padding:4px 10px; border:1px solid var(--line); border-radius:6px; }
+  .sit b { font-size:12.5px; } .sit small { font:400 10.5px/1 var(--mono); color:var(--ink-4); }
+  .gatechip { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:6px; position:relative;
+    border:1px solid color-mix(in srgb, var(--needs) 45%, transparent); background:color-mix(in srgb, var(--needs) 10%, transparent); }
+  .gatechip b { font:600 11px/1 var(--mono); color:var(--needs); letter-spacing:.06em; }
+  .gatechip::after { content:""; position:absolute; left:10px; right:10px; bottom:2px; height:2px; border-radius:1px;
+    background:var(--needs); opacity:.65; transform:scaleX(var(--fill,.72)); transform-origin:left; }
+  .tfr { font:500 10.5px/1 var(--mono); color:var(--ink-2); padding:6px 10px; border:1px dashed var(--line-strong);
+    border-radius:6px; letter-spacing:.04em; white-space:nowrap; }
+  .grow { flex:1; }
+  .clock { display:flex; align-items:center; gap:8px; font:500 11.5px/1 var(--mono); color:var(--ink-2); }
+  .clock .live-dot { width:7px; height:7px; border-radius:50%; background:var(--working);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--working) 22%, transparent); }
+  .who { display:flex; align-items:center; gap:8px; font:500 11.5px/1 var(--sans); color:var(--ink-2); }
+  .who i { width:7px; height:7px; border-radius:50%; background:var(--done); }
+
+  /* ── the face ───────────────────────────────────────────────── */
+  .face { position:fixed; inset:0; }
+  .face > img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:44% 42%; }
+  .face::after { content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(180deg, rgba(7,8,11,.5) 0, transparent 84px, transparent calc(100% - 220px), rgba(7,8,11,.55) calc(100% - 150px)); }
+
+  /* ── left: the map-control stack (freed side) ───────────────── */
+  .mapstack { position:fixed; left:12px; top:46%; transform:translateY(-50%); z-index:6;
+    display:grid; gap:8px; }
+  .mstack { display:grid; }
+  .mbtn { width:40px; height:40px; border-radius:10px; background:color-mix(in srgb, var(--s1) 94%, transparent);
+    border:1px solid var(--line-strong); color:var(--ink-2); display:grid; place-items:center; position:relative;
+    transition:background var(--dur,120ms) ease-out, transform 40ms linear; }
+  .mbtn:hover { background:var(--s3); color:var(--ink-1); }
+  .mbtn:active { transform:translateY(1px); }
+  .mstack .mbtn + .mbtn { border-top:0; border-radius:0; }
+  .mstack .mbtn:first-child { border-radius:10px 10px 0 0; }
+  .mstack .mbtn:last-child { border-radius:0 0 10px 10px; }
+  .mbtn svg { width:16px; height:16px; }
+
+  /* ── right: the decision lane + rail (unchanged grammar) ────── */
+  .rail { position:fixed; right:12px; top:50%; transform:translateY(-50%); z-index:7; display:grid; gap:8px; justify-items:center; }
+  .rbtn { width:40px; height:40px; border-radius:50%; border:1px solid var(--line-strong); background:color-mix(in srgb, var(--s1) 94%, transparent);
+    display:grid; place-items:center; color:var(--ink-2); position:relative; }
+  .rbtn.face { color:var(--talon-ink); border-color:color-mix(in srgb, var(--talon) 45%, transparent); }
+  .rbtn.face::before { content:""; position:absolute; inset:-3px; border-radius:50%; border:1.5px solid var(--talon-ink);
+    opacity:.5; animation:breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { opacity:.12; transform:scale(.92); } 50% { opacity:.55; transform:scale(1.05); } }
+  .badge { position:absolute; top:-3px; right:-3px; min-width:15px; height:15px; border-radius:8px; background:var(--needs);
+    color:#07080B; font:700 9.5px/15px var(--mono); text-align:center; padding:0 3px; }
+
+  .card { position:fixed; right:64px; top:64px; bottom:96px; width:372px; z-index:6; display:flex; flex-direction:column;
+    background:var(--s2); border:1px solid color-mix(in srgb, var(--needs) 26%, var(--line-strong)); border-radius:12px;
+    box-shadow:inset 0 2px 0 color-mix(in srgb, var(--needs) 60%, transparent), 0 18px 50px rgba(7,8,11,.5); padding:14px 16px; gap:10px; overflow:hidden; }
+  .card .meta { display:flex; align-items:center; gap:8px; }
+  .card .meta .grow { flex:1; }
+  .card h1 { font:600 14.5px/1.25 var(--sans); }
+  .card .why { font-size:11.5px; color:var(--ink-2); }
+  .coa { width:100%; border-collapse:collapse; font:400 10.5px/1.35 var(--mono); font-variant-numeric:tabular-nums; }
+  .coa th { text-align:left; font:500 9.5px/1 var(--mono); letter-spacing:.06em; color:var(--ink-4); padding:3px 8px 5px 0; }
+  .coa th.rec { color:var(--proposed); }
+  .coa td { color:var(--ink-2); padding:4px 8px 4px 0; border-top:1px solid var(--line); }
+  .coa td:first-child { color:var(--ink-3); }
+  .gblock { border:1px solid color-mix(in srgb, var(--critical) 40%, transparent); border-radius:6px;
+    background:color-mix(in srgb, var(--critical) 9%, transparent); padding:8px 10px; position:relative; overflow:hidden; }
+  .gblock::before { content:""; position:absolute; top:0; left:0; right:0; height:3px;
+    background:repeating-linear-gradient(-45deg, color-mix(in srgb, var(--critical) 30%, transparent) 0 4px, transparent 4px 8px); }
+  .gblock b { display:block; font:600 10.5px/1.4 var(--mono); letter-spacing:.03em; }
+  .gblock small { display:block; font-size:10px; color:var(--ink-3); margin-top:3px; }
+  .gblock small.frag { color:var(--needs); }
+  .opts { display:grid; gap:6px; margin-top:auto; }
+  .opt { display:flex; align-items:center; gap:9px; height:34px; padding:0 10px; border-radius:7px;
+    border:1px solid var(--line-strong); background:var(--s3); font-weight:500; font-size:11.5px; text-align:left;
+    transition:transform 40ms linear; }
+  .opt:active { transform:translateY(1px); }
+  .opt.rec { border-color:color-mix(in srgb, var(--proposed) 50%, transparent); }
+  .opt .kbd { width:20px; height:20px; border-radius:4px; background:var(--s0); border:1px solid var(--line-strong);
+    border-bottom-width:2px; display:grid; place-items:center; font:600 10.5px/1 var(--mono); color:var(--ink-2); }
+  .opt .tag { margin-left:auto; font:500 9.5px/1 var(--mono); color:var(--proposed); }
+
+  /* ── L2 · category panel, risen above its deck segment ──────── */
+  .cpanel { position:fixed; left:12px; bottom:76px; z-index:7; width:340px;
+    background:color-mix(in srgb, var(--s2) 97%, transparent); border:1px solid var(--line-strong); border-radius:12px;
+    box-shadow:0 24px 60px rgba(7,8,11,.6); overflow:hidden; animation:rise .45s cubic-bezier(.16,1,.3,1) both .25s; }
+  @keyframes rise { from { transform:translateY(16px); opacity:0; } }
+  .cp-head { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--line); }
+  .cp-head b { font:600 12px/1 var(--sans); letter-spacing:.04em; }
+  .cp-head small { font:400 10.5px/1 var(--mono); color:var(--ink-3); }
+  .cp-head .x { margin-left:auto; color:var(--ink-3); font-size:14px; }
+  .frow { display:grid; grid-template-columns:14px 52px 1fr auto; gap:10px; align-items:center; padding:8px 14px; }
+  .frow + .frow { border-top:1px solid var(--line); }
+  .frow i.st { width:7px; height:7px; border-radius:50%; background:var(--done); }
+  .frow i.st.idle { background:var(--ink-4); }
+  .frow b { font:600 11.5px/1 var(--mono); }
+  .frow span { font-size:11px; color:var(--ink-2); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .frow .pips { display:inline-flex; gap:2px; }
+  .frow .pips i { width:4px; height:7px; border-radius:1px; background:rgba(236,238,242,.14); }
+  .frow .pips i.on { background:var(--done); }
+  .cp-foot { padding:8px 14px 10px; font:400 10.5px/1.4 var(--mono); color:var(--ink-4); border-top:1px solid var(--line); }
+
+  /* ── L1 · the crew deck: independent segments, no container ─── */
+  .deck { position:fixed; left:12px; right:12px; bottom:12px; z-index:6; display:flex; align-items:stretch; gap:10px; }
+  .seg { flex:0 1 auto; display:flex; align-items:center; gap:10px; padding:9px 14px 9px 11px;
+    background:color-mix(in srgb, var(--s1) 96%, transparent); border:1px solid var(--line-strong);
+    border-radius:11px; box-shadow:0 10px 30px rgba(7,8,11,.45); position:relative; cursor:pointer;
+    transition:border-color var(--dur,120ms) ease-out, background var(--dur,120ms) ease-out; }
+  .seg:hover { border-color:var(--ink-4); }
+  .seg .ic { width:26px; height:26px; border-radius:8px; display:grid; place-items:center; background:var(--s3); flex:none; }
+  .seg .ic svg { width:14px; height:14px; }
+  .seg .t { display:grid; gap:2px; min-width:0; }
+  .seg .t small { font:500 9.5px/1 var(--mono); letter-spacing:.07em; text-transform:uppercase; color:var(--ink-4);
+    display:flex; align-items:center; gap:5px; }
+  .seg .t b { font:500 12px/1 var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--ink-1); }
+  .seg .t b em { font-style:normal; color:var(--ink-4); font-size:10.5px; }
+  .seg .st { width:7px; height:7px; border-radius:50%; background:var(--done); flex:none; }
+  .seg.attn { border-color:color-mix(in srgb, var(--needs) 50%, transparent); }
+  .seg.attn .st { background:var(--needs); animation:segpulse 2s ease-in-out infinite; }
+  .seg.attn::after { content:""; position:absolute; inset:-1px; border-radius:12px; border:1px solid color-mix(in srgb, var(--needs) 45%, transparent);
+    animation:segpulse 2s ease-in-out infinite; pointer-events:none; }
+  @keyframes segpulse { 0%,100% { opacity:.25; } 50% { opacity:1; } }
+  .seg.open { border-color:var(--talon); }
+  .seg .caret { color:var(--ink-4); font-size:10px; flex:none; }
+  .seg.spacer { flex:1; background:none; border:0; box-shadow:none; cursor:default; min-width:8px; padding:0; }
+  @media (prefers-reduced-motion: reduce) {
+    .rbtn.face::before, .seg.attn .st, .seg.attn::after, .cpanel { animation:none !important; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="wordmark">SENTINEL</span>
+  <div class="sit"><b>Encinal Canyon · WUI breakout</b><small class="mono">S-05 · 34°04.7′N 118°52.2″W · Training exercise</small></div>
+  <div class="gatechip" style="--fill:.72"><span class="caps" style="color:var(--needs)">Plan</span><b>GATE 10:00 LEFT</b></div>
+  <div class="tfr">TFR · AIR ATTACK OPS · UAS FLOOR &lt; 150′</div>
+  <div class="grow"></div>
+  <div class="clock"><span class="live-dot" aria-hidden="true"></span>LIVE <b>T+0:06</b> · Jan 14 · 03:53 PST</div>
+  <div class="who"><i aria-hidden="true"></i>A. Rao · Operator on authority</div>
+  <button class="caps" style="padding:6px 12px;border:1px solid var(--line);border-radius:6px" type="button">Review</button>
+</header>
+
+<div class="face">
+  <img src="../assets/map-1920.png" alt="Live terrain of the Encinal Canyon incident — panels and deck layer over it">
+</div>
+
+<div class="mapstack" role="group" aria-label="Map controls">
+  <div class="mstack">
+    <button class="mbtn" type="button" aria-label="Camera: perspective or top-down"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5 L14.5 12 H1.5 Z"/><circle cx="8" cy="9.4" r="1.3"/></svg></button>
+    <button class="mbtn" type="button" aria-label="Home view"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8 L8 2 L14 8 M4 7 V14 H12 V7"/></svg></button>
+  </div>
+  <div class="mstack">
+    <button class="mbtn" type="button" aria-label="Zoom in"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5"><path d="M8 3 V13 M3 8 H13"/></svg></button>
+    <button class="mbtn" type="button" aria-label="Zoom out"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5"><path d="M3 8 H13"/></svg></button>
+  </div>
+  <div class="mstack">
+    <button class="mbtn" type="button" aria-label="Layers"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 2 L14 5.5 L8 9 L2 5.5 Z"/><path d="M2 9.5 L8 13 L14 9.5"/></svg></button>
+    <button class="mbtn" type="button" aria-label="Measure"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 14 L14 2 M11 2 H14 V5"/></svg></button>
+  </div>
+</div>
+
+<aside class="card" aria-label="Decision — Plan P-1">
+  <div class="meta"><i style="width:7px;height:7px;border-radius:50%;background:var(--needs)" aria-hidden="true"></i>
+    <span class="caps"><span class="mono">T+0:06</span> · Egress · Proposal</span><span class="grow"></span>
+    <span class="caps mono" style="color:var(--needs)">10:00 left</span></div>
+  <h1>Plan P-1: evacuate Zone 1, warn Zone 2</h1>
+  <p class="why">Adapted from playbook ENC-3 (pre-computed at T−0:42). Two changes: the wind is 8° more easterly, and Zone 2 is wider by 6 homes.</p>
+  <table class="coa">
+    <tr><th></th><th class="rec">COA A · to PCH</th><th>COA B · upper north</th></tr>
+    <tr><td>Clear Zone 1</td><td><b style="color:var(--ink-1)">16 min</b></td><td>17 min</td></tr>
+    <tr><td>Through the hairpin</td><td>37 homes</td><td>16 homes</td></tr>
+    <tr><td>Drive to safety</td><td>5.5 km</td><td>0.9 km north</td></tr>
+    <tr><td>Smoke exposure</td><td>Low — away from the head</td><td>Upper canyon drives the flank</td></tr>
+  </table>
+  <div class="gblock">
+    <b>ORDER MANDATORY EVACUATION · ZONE 1 + WARNING ZONE 2</b>
+    <small>37 + 345 households · WEA ≈ 917 devices · reverse-911 ≈ 172 lines</small>
+    <small class="frag">Fragile if: holds while SH-12 keeps the hairpin open — a gust over 42 mph can spot fire across the north gorge</small>
+    <small>If it lapses: nothing is sent · escalates to the Regional Duty Supervisor</small>
+  </div>
+  <div class="opts">
+    <button class="opt rec" type="button"><span class="kbd">1</span>Authorize P-1<span class="tag">Recommended</span></button>
+    <button class="opt" type="button"><span class="kbd">2</span>Reject plan</button>
+  </div>
+</aside>
+
+<div class="rail" role="group" aria-label="TALON presence">
+  <button class="rbtn face" type="button" aria-label="TALON — 3 need you">
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L20 19 H4 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="14.4" r="2" fill="currentColor"/></svg>
+    <span class="badge">3</span>
+  </button>
+  <button class="rbtn" type="button" aria-label="Mic — on the net"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="6" y="1.5" width="4" height="8" rx="2"/><path d="M3.5 7.5 a4.5 4.5 0 0 0 9 0 M8 12 V14.5"/></svg></button>
+  <button class="rbtn" type="button" aria-label="Authority"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5 L13.5 3.5 V8 C13.5 11.5 11 13.5 8 14.5 C5 13.5 2.5 11.5 2.5 8 V3.5 Z"/></svg></button>
+  <button class="rbtn" type="button" aria-label="Settings"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8 V3.6 M8 12.4 V14.2 M1.8 8 H3.6 M12.4 8 H14.2 M3.6 3.6 L4.9 4.9 M11.1 11.1 L12.4 12.4 M12.4 3.6 L11.1 4.9 M4.9 11.1 L3.6 12.4"/></svg></button>
+</div>
+
+<aside class="cpanel" aria-label="Resources panel — risen from its deck segment">
+  <div class="cp-head"><b>Resources</b><small>air + ground · 6 assets</small><span class="grow"></span><button class="x" type="button" aria-label="Close panel">×</button></div>
+  <div class="frow"><i class="st" aria-hidden="true"></i><b>FT-01</b><span>Orbit · detection — holds the head</span><span class="pips" aria-label="Battery 81%"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div>
+  <div class="frow"><i class="st" aria-hidden="true"></i><b>FT-02</b><span>Launched · perimeter mapping — 280 m orbit</span><span class="pips" aria-label="Battery 100%"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></div>
+  <div class="frow"><i class="st idle" aria-hidden="true"></i><b>FT-03</b><span>Docked · D-1</span><span class="pips" aria-label="Battery 100%"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></div>
+  <div class="frow"><i class="st idle" aria-hidden="true"></i><b>E-31</b><span>Available · PCH east</span><span class="caps" style="color:var(--ink-4)">crew</span></div>
+  <div class="frow"><i class="st" aria-hidden="true"></i><b>E-32</b><span>Initial attack · Triunfas Cyn · ETA 3 min</span><span class="caps" style="color:var(--ink-4)">crew</span></div>
+  <div class="frow"><i class="st idle" aria-hidden="true"></i><b>SH-12</b><span>Patrol · PCH — holds the hairpin</span><span class="caps" style="color:var(--ink-4)">law</span></div>
+  <div class="cp-foot">Battery trails are session-observed (MEA) · assignments cite run cards (AUT)</div>
+</aside>
+
+<footer class="deck" role="group" aria-label="Crew deck — TALON-curated glance layer">
+  <button class="seg attn" type="button" aria-label="Situation — fire growth, needs attention">
+    <span class="ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="var(--needs)" stroke-width="1.4"><path d="M8 1.5 C10 4 12.5 6 12.5 9.5 A4.5 4.5 0 0 1 3.5 9.5 C3.5 7.5 4.5 6 5.5 5 C5.8 6.2 6.6 6.8 7 6.8 C7 4.8 7.4 3 8 1.5 Z"/></svg></span>
+    <span class="t"><small>Situation <span class="prov mod">mod</span></small><b>5.3 ac <em>· WSW 14 m/min</em></b></span>
+    <span class="st" aria-hidden="true"></span><span class="caret">▴</span>
+  </button>
+  <button class="seg open" type="button" aria-label="Resources — open panel" aria-expanded="true">
+    <span class="ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="var(--talon-ink)" stroke-width="1.4"><path d="M8 2 V6 M5 4.5 C5 6.5 4 7 4 8.5 A4 4 0 0 0 12 8.5 C12 7 11 6.5 11 4.5 M3 13.5 H13" stroke-linecap="round"/></svg></span>
+    <span class="t"><small>Resources</small><b>FT-01 81% <em>· 6 assets</em></b></span>
+    <span class="st" aria-hidden="true"></span><span class="caret">▾</span>
+  </button>
+  <button class="seg" type="button" aria-label="Egress — plan state">
+    <span class="ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="var(--proposed)" stroke-width="1.4" stroke-dasharray="2.5 2"><path d="M2 12 C5 12 5 4 8 4 S11 12 14 12"/></svg></span>
+    <span class="t"><small>Egress <span class="prov aut">aut</span></small><b>Z1 order <em>· gate 10:00</em></b></span>
+    <span class="st" style="background:var(--needs)" aria-hidden="true"></span><span class="caret">▴</span>
+  </button>
+  <button class="seg" type="button" aria-label="Comms and verification">
+    <span class="ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="var(--ink-2)" stroke-width="1.4"><path d="M2 9 C4 5 12 5 14 9 M4.5 11 C5.8 8.8 10.2 8.8 11.5 11 M8 13.2 V13.3" stroke-linecap="round"/></svg></span>
+    <span class="t"><small>Comms <span class="prov mea">mea</span></small><b>2 calls to verify <em>· E-32 ETA 3m</em></b></span>
+    <span class="st" style="background:var(--working)" aria-hidden="true"></span><span class="caret">▴</span>
+  </button>
+  <button class="seg" type="button" aria-label="Authority">
+    <span class="ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="var(--ink-2)" stroke-width="1.4"><path d="M8 1.5 L13.5 3.5 V8 C13.5 11.5 11 13.5 8 14.5 C5 13.5 2.5 11.5 2.5 8 V3.5 Z"/><path d="M5.8 8 L7.3 9.5 L10.2 6.4"/></svg></span>
+    <span class="t"><small>Authority</small><b>budget 1/2 <em>· 2 standing</em></b></span>
+    <span class="st" aria-hidden="true"></span><span class="caret">▴</span>
+  </button>
+  <span class="seg spacer" aria-hidden="true"></span>
+  <button class="seg" type="button" aria-label="Ask TALON">
+    <span class="ic" style="background:var(--talon-soft)" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="var(--talon-ink)" stroke-width="1.5"><path d="M8 2.5 L9.6 6.4 L13.5 8 L9.6 9.6 L8 13.5 L6.4 9.6 L2.5 8 L6.4 6.4 Z" stroke-linejoin="round"/></svg></span>
+    <span class="t"><small style="color:var(--talon-ink)">Ask TALON</small><b style="color:var(--ink-2);font-family:var(--sans);font-weight:500;font-size:11.5px">or press <span class="kbd mono" style="display:inline-grid;place-items:center;width:18px;height:18px;border-radius:4px;border:1px solid var(--line-strong);border-bottom-width:2px;background:var(--s0);color:var(--ink-2);font-size:9.5px;vertical-align:-4px">V</span> to talk</b></span>
+  </button>
+</footer>
+</body>
+</html>

@@ -1,0 +1,42 @@
+[
+  {
+    "w": 1920,
+    "fails": [
+      "Text under 11px: 10.5px \"S-05 · 34°04.7′N 118°52.2″W · \"; 10.5px \"Plan\"; 10.5px \"TFR · AIR ATTACK OPS · UAS FLO\"; 10.5px \"Review\""
+    ],
+    "warns": [
+      "Default-reach font: Geist. If DIRECTION.md does not say why this face and not another, it is the default talking.",
+      "23 text elements at 11px: 11px \"GATE 10:00 LEFT\"; 11.5px \"LIVE · Jan 14 · 03:53 PST\"; 11.5px \"T+0:06\"",
+      "14 small letter-spaced uppercase labels. An eyebrow over every section stops meaning anything.",
+      "5 em dashes in visible copy. A period or colon usually reads cleaner.",
+      "3 icons sitting in tinted rounded squares. When every item has one, none of them mean anything."
+    ],
+    "facts": {
+      "fonts": {
+        "Geist Mono": "51%",
+        "Geist": "49%"
+      },
+      "sizes": [
+        14.5,
+        14,
+        13,
+        12.5,
+        12,
+        11.5,
+        11,
+        10.5,
+        10,
+        9.5
+      ],
+      "body": 11.5,
+      "hues": [
+        30,
+        210
+      ],
+      "boxes": 3,
+      "cardGrids": 0,
+      "defaultIcons": 0,
+      "focusStops": 20
+    }
+  }
+]

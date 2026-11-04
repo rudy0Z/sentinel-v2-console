@@ -37,7 +37,7 @@ async function open(q, w = 1600, h = 960, pinned) {
       const step = () => { const v = fn(); if (v) resolve(true); else if (Date.now() - t0 > ms) resolve(false); else setTimeout(step, 100); };
       step();
     });
-    const live = { rail: !!document.querySelector('#rail .rbtn.face'), boardhead: !!document.querySelector('#boardhead'), exhandle: !!document.querySelector('#exhandle'), tlHidden: document.querySelector('#timeline')?.hidden, widgets: [...document.querySelectorAll('#slots .widget')].map((w) => w.dataset.w), chatHidden: document.querySelector('#panel')?.hidden, calm: document.getElementById('app').classList.contains('calm') };
+    const live = { rail: !!document.querySelector('#rail .rbtn.face'), boardhead: !!document.querySelector('#boardhead'), exhandle: !!document.querySelector('#exhandle'), tlHidden: document.querySelector('#timeline')?.hidden, segs: [...document.querySelectorAll('#slots .seg')].map((w) => w.dataset.w), chatHidden: document.querySelector('#panel')?.hidden, calm: document.getElementById('app').classList.contains('calm') };
     document.dispatchEvent(new KeyboardEvent('keydown', { key: '`', bubbles: true }));
     await new Promise((r) => setTimeout(r, 400));
     const dev = !!document.getElementById('pop') && document.getElementById('pop').textContent.includes('Dev · exercise harness');
@@ -57,7 +57,7 @@ async function open(q, w = 1600, h = 960, pinned) {
     document.querySelector('[data-act=review]')?.click();
     return { ...live, dev, askCards, chat, taskpop, reviewTl };
   });
-  check('surfaces v2.2: mascot rail, no board bar, no exercise on live surface, dev menu, calm widget column, cards only when open, floating chat', surf.rail && !surf.boardhead && !surf.exhandle && surf.tlHidden && surf.calm && surf.widgets.length >= 2 && surf.chatHidden && surf.dev && surf.askCards && surf.chat && surf.taskpop && surf.reviewTl, JSON.stringify(surf));
+  check('surfaces v2.2: mascot rail, no board bar, no exercise on live surface, dev menu, calm crew deck, cards only when open, floating chat', surf.rail && !surf.boardhead && !surf.exhandle && surf.tlHidden && surf.calm && surf.segs.length >= 4 && surf.chatHidden && surf.dev && surf.askCards && surf.chat && surf.taskpop && surf.reviewTl, JSON.stringify(surf));
 
   // Governance: TALON never acts without a citation; no interrupt over budget anywhere in the run.
   const gov = await page.evaluate(() => {
@@ -167,8 +167,22 @@ async function open(q, w = 1600, h = 960, pinned) {
   check('after-action review: measures, decisions, rendered', rv.m.length >= 4 && rv.d >= 4 && rv.ui, rv.m.join(' · '));
   const st = await page.evaluate(() => { player.setTime(6.5); return true; });
   await sleep(700);
-  const sw = await page.evaluate(() => ({ w: !!document.querySelector('.widget[data-w=structures]'), rows: document.querySelectorAll('.widget[data-w=structures] .srow').length, chip: document.querySelector('.widget[data-w=structures] .chip.num')?.textContent ?? '' }));
-  check('structures at risk: widget renders arrival-ordered homes from the live field (MOD)', sw.w && sw.rows >= 2 && /in \+60/.test(sw.chip), JSON.stringify(sw));
+  // The structures widget lives in its crew-deck panel since the 2026-11-04 cutover:
+  // click the deck segment, let the panel rise, then read the same body.
+  const sw = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const seg = document.querySelector('#slots .seg[data-w=structures]');
+    if (!seg) return { w: false, rows: 0, chip: 'no segment' };
+    seg.click();
+    let panel = null;
+    for (let i = 0; i < 20; i++) { await sleep(120); panel = document.querySelector('#deckPanel .widget[data-w=structures]'); if (panel) break; }
+    if (!panel) return { w: false, rows: 0, chip: 'panel did not rise' };
+    const rows = panel.querySelectorAll('.srow').length;
+    const chip = panel.querySelector('.chip.num')?.textContent ?? '';
+    document.querySelector('#deckPanel [data-act=deckclose]')?.click();
+    return { w: true, rows, chip };
+  });
+  check('structures at risk: panel renders arrival-ordered homes from the live field (MOD)', sw.w && sw.rows >= 2 && /in \+60/.test(sw.chip), JSON.stringify(sw));
   const ex = await page.evaluate(() => ({ btn: !!document.querySelector('[data-act=export]') }));
   check('evidence export: button present in review (JSON+MD, SHA-256 integrity digest)', ex.btn);
   const hs = await page.evaluate(() => { player.hindsight = true; player.setTime(30); const a = engine.getOverlayLayerIds().includes('fire-rev'); player.hindsight = false; return a; });
@@ -326,13 +340,16 @@ async function open(q, w = 1600, h = 960, pinned) {
     const poll = (ms = 10000) => new Promise((resolve) => {
       const t0 = Date.now();
       const step = () => {
-        const el = [...document.querySelectorAll('.batt')].find((b) => /below the 25% handover floor/.test(b.title || ''));
+        const el = [...document.querySelectorAll('#deckPanel .batt, .feedwing .batt')].find((b) => /below the 25% handover floor/.test(b.title || ''));
         if (el) resolve(el);
         else if (Date.now() - t0 > ms) resolve(null);
         else setTimeout(step, 100);
       };
       step();
     });
+    // the battery lives in the fleet panel since the 2026-11-04 deck cutover
+    document.querySelector('#slots .seg[data-w=fleet]')?.click();
+    await new Promise((r) => setTimeout(r, 700));
     const low = await poll();
     const probe = document.createElement('i');
     probe.style.color = 'var(--needs)';
@@ -387,7 +404,7 @@ async function open(q, w = 1600, h = 960, pinned) {
     const probe = (prop) => { const i = document.createElement('i'); i.style.color = prop; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return parse(c); };
     const text4 = probe('var(--text-4)');
     const canvas = probe('var(--bg-canvas)');
-    const w = document.querySelector('.widget:not(.feed)');
+    const w = document.querySelector('.deckpanel .widget:not(.feed)');
     const widgetBg = w ? mix(parse(getComputedStyle(w).backgroundColor), canvas) : parse('#101218');
     return {
       text4: getComputedStyle(document.documentElement).getPropertyValue('--text-4').trim(),
@@ -402,34 +419,38 @@ async function open(q, w = 1600, h = 960, pinned) {
   );
   await page.close();
 
-  // Dock overflow affordance (D3): when .slots clips horizontally at 1280x800 the TS
-  // renders a floating .dock-more pill (counts the clipped widgets) that scrolls them
-  // into view on click; with no overflow (1920px) it must not exist.
+  // The crew deck (2026-11-04) replaces the D3 dock-overflow affordance: the bottom
+  // layer is TALON-curated segments that must fit without horizontal clipping at the
+  // 1280 insurance floor, and a clicked segment must rise its category panel.
   const dock1280 = await open('situation=wui-breakout&phase=D', 1280, 800);
   const ovf = await dock1280.page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const s = document.querySelector('#slots');
+    const segs = [...s.querySelectorAll('.seg')];
     const overflow = s.scrollWidth > s.clientWidth + 1;
-    const pill = document.getElementById('dockMore');
-    const visible = !!pill && pill.offsetParent !== null && pill.getBoundingClientRect().height > 0;
-    const label = pill?.textContent ?? '';
-    const hidden = [...s.querySelectorAll('.widget')].filter((w) => w.offsetLeft + w.offsetWidth > s.clientWidth + 1).length;
-    const before = s.scrollLeft;
-    pill?.click();
-    const t0 = Date.now();
-    while (s.scrollLeft <= before && Date.now() - t0 < 3000) await new Promise((r) => setTimeout(r, 50));
-    return { overflow, visible, label, hidden, scrolled: s.scrollLeft > before };
+    const noPill = !document.getElementById('dockMore');
+    const seg = segs.find((x) => x.dataset.w === 'growth') ?? segs[0];
+    seg?.click();
+    let panelOpen = false, bodyOk = false;
+    for (let i = 0; i < 20; i++) { await sleep(120); const p = document.getElementById('deckPanel'); if (p && !p.hidden && p.querySelector('.widget')) { panelOpen = true; bodyOk = p.querySelector('.wbody').children.length > 0; break; } }
+    const rect = document.getElementById('deckPanel')?.getBoundingClientRect();
+    const onscreen = !!rect && rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
+    document.querySelector('#deckPanel [data-act=deckclose]')?.click();
+    let closed = false;
+    for (let i = 0; i < 20; i++) { await sleep(120); if (document.getElementById('deckPanel')?.hidden) { closed = true; break; } }
+    return { segs: segs.length, overflow, noPill, panelOpen, bodyOk, onscreen, closed };
   });
   await dock1280.page.close();
   const dock1920 = await open('situation=wui-breakout&phase=D', 1920, 960);
   const wide = await dock1920.page.evaluate(() => {
     const s = document.querySelector('#slots');
-    return { overflow: s.scrollWidth > s.clientWidth + 1, pill: !!document.getElementById('dockMore') };
+    return { overflow: s.scrollWidth > s.clientWidth + 1, segs: s.querySelectorAll('.seg').length };
   });
   await dock1920.page.close();
   check(
-    'dock affordance: at 1280x800 .slots overflow renders a visible .dock-more that scrolls the clipped widgets; at 1920 no overflow and no pill',
-    ovf.overflow && ovf.visible && /^\+\d+ widgets?/.test(ovf.label) && ovf.scrolled && !wide.overflow && !wide.pill,
-    `1280 hidden=${ovf.hidden} label="${ovf.label}" scrolled=${ovf.scrolled} · 1920 overflow=${wide.overflow} pill=${wide.pill}`
+    'crew deck: segments fit without clipping at 1280 and 1920, no dock-more, a clicked segment rises its category panel and closes',
+    ovf.segs >= 4 && !ovf.overflow && ovf.noPill && ovf.panelOpen && ovf.bodyOk && ovf.onscreen && ovf.closed && !wide.overflow && wide.segs >= 4,
+    `1280 segs=${ovf.segs} overflow=${ovf.overflow} panel=${ovf.panelOpen}/${ovf.bodyOk}/${ovf.onscreen} closed=${ovf.closed} · 1920 segs=${wide.segs} overflow=${wide.overflow}`
   );
 }
 

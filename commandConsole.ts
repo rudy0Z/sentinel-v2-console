@@ -314,6 +314,8 @@ export async function mountConsole(app: HTMLElement) {
     tab: 'now' as 'now' | 'log' | 'review',
     // Counterfactual time lens: focused spread-model horizon in minutes (0 = NOW, view state only).
     lens: 0 as 0 | 15 | 30 | 60,
+    // The crew deck's open category panel (L2) - one at a time, risen above its segment.
+    deckPanel: null as string | null,
     logAgent: 'all',
     pinned: store.get<string[]>('pinned', ['weather', 'fleet']),
     review: false,
@@ -478,7 +480,7 @@ export async function mountConsole(app: HTMLElement) {
     renderCards(ps, ts);
     renderChat(ps, ts);
     renderTimeline(ps);
-    renderSlots(ps, ts);
+    renderDeck(ps, ts);
     renderInspector(ps);
     renderAttention(ts);
     updateCountdowns(ps);
@@ -1302,7 +1304,6 @@ export async function mountConsole(app: HTMLElement) {
   }
   const feedHost = document.createElement('div');
   feedHost.className = 'feedhost';
-  let dockRO: ResizeObserver | null = null;
   let cardsRO: ResizeObserver | null = null;
   const batHist = new Map<string, [number, number][]>();
   const wxHist = new Map<string, [number, number][]>();
@@ -1341,51 +1342,128 @@ export async function mountConsole(app: HTMLElement) {
     const x = (i: number) => (i / (pts.length - 1)) * w;
     return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts.map((p, i) => `${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ')}"/></svg>`;
   }
-  function renderSlots(ps: PlayerState, ts: TalonState) {
+  // -- the crew deck (2026-11-04): three information layers --------------------
+  // L1 - bottom segments, one TALON-curated glance each, independent, no container.
+  // L2 - one category panel at a time (ui.deckPanel), risen above its segment; the
+  //      dock's 204px widgets moved inside it unchanged (renderWidget is reused).
+  // L3 - the topbar above carries verbs and status only. composition() still curates:
+  //      TALON-promoted segments wear the attention pulse and cite their reason.
+  const DECK_GLYPH: Record<string, string> = {
+    feed: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8 H6 M10 8 H14 M4 5.5 H12 M4 10.5 H12"/><circle cx="4" cy="5.5" r="1.2"/><circle cx="12" cy="5.5" r="1.2"/><circle cx="4" cy="10.5" r="1.2"/><circle cx="12" cy="10.5" r="1.2"/><rect x="6.4" y="6.6" width="3.2" height="2.8" rx="1"/></svg>',
+    weather: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 10.5 C4 6.5 12 6.5 14 10.5 M4.5 12.5 C5.8 10.3 10.2 10.3 11.5 12.5 M8 14.2 V14.3" stroke-linecap="round"/><path d="M10.5 2 L13 4.5 M13 2 L10.5 4.5" stroke-linecap="round"/></svg>',
+    fleet: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><path d="M5.6 5.6 L10.4 10.4 M10.4 5.6 L5.6 10.4"/></svg>',
+    evac: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.4 2"><path d="M2 12 C5 12 5 4 8 4 S11 12 14 12"/></svg>',
+    growth: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5 C10 4 12.5 6 12.5 9.5 A4.5 4.5 0 0 1 3.5 9.5 C3.5 7.5 4.5 6 5.5 5 C5.8 6.2 6.6 6.8 7 6.8 C7 4.8 7.4 3 8 1.5 Z"/></svg>',
+    structures: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>',
+    events: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 3 H14 M2 8 H11 M2 13 H13"/><circle cx="12.5" cy="8" r="1.4" fill="currentColor" stroke="none"/></svg>',
+  };
+  const SPARK_GLYPH = '<svg viewBox="0 0 16 16" fill="none" stroke="var(--talon-ink)" stroke-width="1.5"><path d="M8 2.5 L9.6 6.4 L13.5 8 L9.6 9.6 L8 13.5 L6.4 9.6 L2.5 8 L6.4 6.4 Z" stroke-linejoin="round"/></svg>';
+
+  /** The deck's one glance per category - the same live state the panel body renders,
+   * cheaply re-derived. Provenance travels with it: the deck never shows bare numbers. */
+  function deckGlance(w: string, ps: PlayerState, ts: TalonState): { v: string; sub: string; st: 'done' | 'working' | 'needs'; prov: string | null } {
+    switch (w) {
+      case 'weather': {
+        const T = ps.telemetry;
+        const wv = T.wind?.value ?? '\u2013';
+        const gust = /G\s*(\d+)/i.exec(wv)?.[1];
+        return { v: wv.split(' ').slice(0, 2).join(' ') || '\u2013', sub: gust ? 'G' + gust : T.rh?.value ?? '', st: Number(gust ?? 0) >= 42 ? 'needs' : 'done', prov: 'mea' };
+      }
+      case 'fleet': {
+        const bats = ps.units.filter((u) => u.kind === 'drone' && typeof u.info.battery === 'number').map((u) => u.info.battery as number);
+        const worst = bats.length ? Math.min(...bats) : null;
+        return { v: worst != null ? worst + '%' : String(ps.units.length), sub: ps.units.length + ' assets', st: worst != null && worst < 25 ? 'needs' : 'done', prov: worst != null ? 'mea' : null };
+      }
+      case 'evac': {
+        const plan = ts.open.find((o) => o.item.kind === 'proposal');
+        return { v: ps.gate ? 'gate open' : plan ? 'plan proposed' : 'clear', sub: ps.gate ? fmtDur(Math.max(0, ps.gate.expires - ps.t)) : plan ? 'on the table' : 'no active plan', st: ps.gate ? 'needs' : plan ? 'working' : 'done', prov: 'aut' };
+      }
+      case 'growth': {
+        const now = engine.reachedAreaAt(0);
+        const h60 = engine.reachedAreaAt(60);
+        return { v: now != null ? (now / 4046.86).toFixed(1) + ' ac' : 'not sized', sub: h60 != null ? (h60 / 4046.86).toFixed(0) + ' ac +60m' : 'no projection', st: 'working', prov: 'mod' };
+      }
+      case 'structures': {
+        const risk = structureRisk(ps);
+        const now = ps.t;
+        const reached = risk ? risk.filter((x) => x.t <= now).length : 0;
+        const in60 = risk ? risk.filter((x) => x.t > now && x.t <= now + 60).length : 0;
+        return { v: in60 + ' in +60', sub: reached + ' reached', st: in60 > 0 ? 'working' : 'done', prov: 'mod' };
+      }
+      case 'events':
+        return { v: talon.markers(ps.t, Math.max(ui.liveT, ps.t)).length + ' marks', sub: 'timeline', st: 'done', prov: null };
+      case 'feed': {
+        const drones = ps.units.filter((u) => u.kind === 'drone' && (u.altitudeFt ?? 0) > 0);
+        return { v: drones[0] ? drones[0].id : '\u2013', sub: drones.length ? (ui.feedSensor === 'ir' ? 'IR' : 'EO') + ' \u00b7 live' : 'no drone up', st: drones.length ? 'working' : 'done', prov: 'mea' };
+      }
+      default:
+        return { v: WIDGETS[w] ? WIDGETS[w].title : w, sub: '', st: 'done', prov: null };
+    }
+  }
+
+  function segHtml(l: { w: string; by: string; reason: string }, g: { v: string; sub: string; st: string; prov: string | null }): string {
+    const title = l.by === 'talon' ? 'TALON put this here: ' + esc(l.reason) : esc(WIDGETS[l.w] ? WIDGETS[l.w].title : l.w);
+    return '<button class="seg' + (l.by === 'talon' ? ' attn' : '') + (ui.deckPanel === l.w ? ' open' : '') + '" data-act="deck" data-w="' + l.w + '" aria-expanded="' + (ui.deckPanel === l.w) + '" title="' + title + '">'
+      + '<span class="ic" aria-hidden="true">' + (DECK_GLYPH[l.w] ?? '') + '</span>'
+      + '<span class="t"><small>' + esc(WIDGETS[l.w] ? WIDGETS[l.w].title : l.w) + (g.prov ? ' <span class="prov ' + g.prov + '">' + g.prov + '</span>' : '') + '</small><b>' + esc(g.v) + (g.sub ? ' <em>\u00b7 ' + esc(g.sub) + '</em>' : '') + '</b></span>'
+      + '<span class="st st-' + g.st + '" aria-hidden="true"></span><span class="caret" aria-hidden="true">' + (ui.deckPanel === l.w ? '\u25be' : '\u25b4') + '</span>'
+      + '</button>';
+  }
+
+  function renderDeck(ps: PlayerState, ts: TalonState) {
     const c = composition(ps, ts);
-    const slots = $('#slots');
     const layout = [...c.op.map((w) => ({ w, by: 'op', reason: '' })), ...c.talonSlots.map((s) => ({ w: s.w, by: 'talon', reason: s.reason }))];
-    // Collapse state is a class toggle, not a rebuild: rebuilding the strip on any
-    // collapse replayed the 200ms widget-in entrance on every widget (review 07 §P2-5).
-    if (changed('layout', layout.map((l) => l.w + l.by).join('|'))) {
-      slots.innerHTML = layout.map((l, i) => `<article class="widget glass ${l.w === 'feed' ? 'feed' : ''} ${l.by === 'talon' ? 'by-talon' : ''}" data-w="${l.w}" data-slot="${i}"><header></header><div class="wbody" tabindex="0"></div></article>`).join('');
-      for (const k of [...keys.keys()]) if (k.startsWith('w:')) keys.delete(k);
-    }
-    slots.querySelectorAll<HTMLElement>('.widget').forEach((el, i) => {
-      el.classList.toggle('min', ui.min.has(layout[i].w));
-      renderWidget(el, layout[i], ps, ts);
-    });
-    if (!layout.some((l) => l.w === 'feed') && engine.getPip()) engine.closeDronePip();
-    // D3 reactive: viewport changes clip/declip the strip without a layout-tuple change —
-    // observe the strip so the +N pill tracks the real geometry at every width. Same for
-    // the cards stack: its max-h moves when the chat opens.
-    dockRO ??= (() => { const ro = new ResizeObserver(() => updateDockMore()); ro.observe($('#slots')); return ro; })();
-    cardsRO ??= (() => { const el = $('#cards'); const ro = new ResizeObserver(() => el.classList.toggle('overflows', el.scrollHeight > el.clientHeight + 4)); ro.observe(el); return ro; })();
-    updateDockMore();
-  }
-  // D3: the silent dock overflow gets a voice. When the widget strip clips (2 of 5 at
-  // 1280×800), a compact pill counts the clipped widgets and scrolls them into view.
-  function updateDockMore() {
     const slots = $('#slots');
-    const hidden = app.classList.contains('calm') ? 0 : [...slots.querySelectorAll<HTMLElement>('.widget')].filter((w) => w.offsetLeft + w.offsetWidth > slots.clientWidth + 1).length;
-    const pill = document.getElementById('dockMore') as HTMLButtonElement | null;
-    if (!hidden) return void pill?.remove();
-    if (!pill) {
-      const p = document.createElement('button');
-      p.id = 'dockMore';
-      p.className = 'dock-more';
-      p.setAttribute('aria-label', 'Scroll the dock to the clipped widgets');
-      p.addEventListener('click', () => $('#slots').scrollBy({ left: $('#slots').clientWidth, behavior: 'smooth' }));
-      $('#dock').appendChild(p);
+    const glances = layout.map((l) => deckGlance(l.w, ps, ts));
+    const key = layout.map((l) => l.w + l.by).join('|') + '#' + String(ui.deckPanel) + '#' + glances.map((g) => g.v + g.sub + g.st).join('|');
+    if (changed('deck', key)) {
+      slots.innerHTML = layout.map((l, i) => segHtml(l, glances[i])).join('')
+        + '<button class="seg ask" data-act="deckask" aria-label="Open the TALON thread"><span class="ic ask" aria-hidden="true">' + SPARK_GLYPH + '</span><span class="t"><small class="asklab">Ask TALON</small><b class="asksub">thread \u00b7 log \u00b7 review</b></span></button>';
     }
-    const label = `+${hidden} widget${hidden > 1 ? 's' : ''} ▸`;
-    if (document.getElementById('dockMore')!.textContent !== label) document.getElementById('dockMore')!.textContent = label;
+    // L2 - the open category panel renders the SAME widget body the dock used.
+    const panel = $('#deckPanel') as HTMLElement;
+    const open = layout.find((l) => l.w === ui.deckPanel);
+    if (!open) {
+      if (!panel.hidden) {
+        panel.hidden = true; panel.innerHTML = ''; panel.dataset.w = '';
+        for (const k of [...keys.keys()]) if (k.startsWith('w:panel:')) keys.delete(k);
+      }
+    } else {
+      if (panel.hidden || panel.dataset.w !== open.w) {
+        panel.hidden = false;
+        panel.dataset.w = open.w;
+        panel.innerHTML = '<article class="widget glass" data-slot="panel:' + open.w + '" data-w="' + open.w + '"><header></header><div class="wbody" tabindex="0"></div></article>';
+        keys.delete('w:panel:' + open.w);
+      }
+      widgetChrome = 'panel';
+      renderWidget(panel.querySelector('.widget') as HTMLElement, open, ps, ts);
+      widgetChrome = 'dock';
+    }
+    // The feed wing: the pip stays hosted even when the feed panel is closed.
+    const wing = $('#feedWing') as HTMLElement;
+    const droneUp = ps.units.some((u) => u.kind === 'drone' && (u.altitudeFt ?? 0) > 0);
+    if (droneUp && ui.deckPanel !== 'feed') {
+      if (wing.hidden || wing.dataset.on !== '1') {
+        wing.hidden = false; wing.dataset.on = '1';
+        wing.innerHTML = '<article class="widget glass" data-slot="wing:feed"><header></header><div class="wbody" tabindex="0"></div></article>';
+        keys.delete('w:wing:feed');
+      }
+      widgetChrome = 'wing';
+      renderWidget(wing.querySelector('.widget') as HTMLElement, { w: 'feed', by: 'op', reason: '' }, ps, ts);
+      widgetChrome = 'dock';
+    } else if (!wing.hidden) {
+      wing.hidden = true; wing.dataset.on = ''; wing.innerHTML = '';
+      if (engine.getPip() && !droneUp) engine.closeDronePip();
+    }
+    cardsRO ??= (() => { const el = $('#cards'); const ro = new ResizeObserver(() => el.classList.toggle('overflows', el.scrollHeight > el.clientHeight + 4)); ro.observe(el); return ro; })();
   }
+
+  let widgetChrome: 'dock' | 'panel' | 'wing' = 'panel';
   function widgetHeader(w: string, by: string, reason: string, extra = '') {
     const title = WIDGETS[w]?.title ?? w;
-    const collapse = `<button class="btn icon sm ghost" data-act="wmin" data-w="${w}" aria-label="${ui.min.has(w) ? 'Expand' : 'Collapse'} ${title}" title="${ui.min.has(w) ? 'Expand' : 'Collapse'}">${ic(ui.min.has(w) ? 'up' : 'down', 'sm')}</button>`;
+    const collapse = widgetChrome === 'panel' ? `<button class="btn icon sm ghost" data-act="deckclose" data-w="${w}" aria-label="Close the ${title} panel" title="Close">${ic('up', 'sm')}</button>` : '';
     return by === 'talon'
-      ? `<h3 title="TALON put this here${reason ? `: ${esc(reason)}` : ''}">${title}</h3><span class="grow" title="TALON put this here${reason ? `: ${esc(reason)}` : ''}">${reason ? `TALON · ${esc(reason)}` : ''}</span>${extra}${collapse}<button class="btn icon sm ghost" data-act="pin" data-w="${w}" aria-label="Pin ${title} to your side" title="Pin to your side">${ic('pin', 'sm')}</button>`
+      ? `<h3 title="TALON put this here${reason ? `: ${esc(reason)}` : ''}">${title}</h3><span class="grow" title="TALON put this here${reason ? `: ${esc(reason)}` : ''}">${reason ? `TALON · ${esc(reason)}` : ''}</span>${extra}${collapse}`
       : `<button class="btn ghost sm" data-act="pop" data-pop="slot:${w}" style="padding:0 4px;margin-left:-4px" aria-haspopup="menu"><h3>${title}</h3>${ic('down', 'xs')}</button><span class="grow"></span>${extra}${collapse}`;
   }
   function renderWidget(el: HTMLElement, l: { w: string; by: string; reason: string }, ps: PlayerState, ts: TalonState) {
@@ -2093,6 +2171,21 @@ export async function mountConsole(app: HTMLElement) {
         drawTether();
         return schedule();
       }
+      case 'deck': {
+        ui.deckPanel = ui.deckPanel === d.w ? null : d.w!;
+        keys.delete('deck');
+        drawTether();
+        return schedule();
+      }
+      case 'deckclose':
+        ui.deckPanel = null;
+        keys.delete('deck');
+        return schedule();
+      case 'deckask': {
+        ui.panel = true;
+        keys.delete('now');
+        return schedule();
+      }
       case 'probe-close':
         closeProbe();
         return;
@@ -2646,9 +2739,11 @@ const SHELL = `
   </div>
   <div class="tl-right"><span class="holdmsg" id="holdmsg"></span></div>
 </div>
-<section class="dock" id="dock" aria-label="Situation board">
+<section class="dock" id="dock" aria-label="Crew deck">
   <div class="slots" id="slots"></div>
 </section>
+<div class="deckpanel" id="deckPanel" role="complementary" aria-label="Category panel" hidden></div>
+<div class="feedwing" id="feedWing" role="complementary" aria-label="Drone feed" hidden></div>
 <nav class="rail" id="rail" aria-label="TALON"></nav>
 <div class="cards" id="cards" role="region" aria-label="TALON decision cards" aria-live="polite"></div>
 <aside class="chat glass" id="panel" aria-label="TALON chat" hidden>
