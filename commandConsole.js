@@ -298,6 +298,8 @@ export async function mountConsole(app) {
         lens: 0,
         // The crew deck's open category panel (L2) - one CATEGORY at a time, risen above its segment.
         deckPanel: null,
+        // F1: the road-cut awareness card is acknowledged for this session (never on timeout)
+        cutAcked: false,
         logAgent: 'all',
         pinned: store.get('pinned', ['weather', 'fleet']),
         review: false,
@@ -1069,16 +1071,29 @@ export async function mountConsole(app) {
         // an overflowing unscrolled stack fades its last card instead of slicing it (review 04 §P1-3);
         // layout reads only on content change + resize — never per frame
         el.classList.toggle('overflows', el.scrollHeight > el.clientHeight + 4);
+        // F1 (2026-11-05): the road cut must reach a heads-down operator. Derived card from
+        // the live cut layers - it exists while the threat exists and closes on ACK ONLY,
+        // never on timeout (the 2026-10-27 operator diary's first condition).
+        const cutLive = engine.getOverlayLayerIds().some((id) => id === 'route-a-cut' || id === 'cut-marker');
+        const cutCard = cutLive && !ui.cutAcked
+            ? `<article class="card needs" role="alert" aria-live="assertive">
+        <div class="meta"><i class="dot critical"></i><span class="caps"><span class="mono">${fmtT(ps.t)}</span> · Route · Threat</span></div>
+        <h1>Encinal Canyon Rd is cut</h1>
+        <p>The primary egress is gone. ${esc(talon.text('Anyone still south of the hairpin cannot use Route A.', ps.t))} The draft route (upper canyon north) is the live alternate - its order was already approved.</p>
+        <div class="basis"><span class="prov measured"${provTitle('measured')}>mea</span> <span>FT-02 IR pass · the cut marker is on the map</span></div>
+        <div class="row"><button class="btn sm" data-act="cutack" aria-label="Acknowledge the route loss">Acknowledge</button></div>
+      </article>`
+            : '';
         if (!mine.length && !routed.length) {
-            // the statutory receipt must survive an emptied stack: after [1] Authorize the
-            // banner IS the feedback (walker finding - it was unreachable exactly when designed)
-            if (issued) {
-                el.innerHTML = issued;
+            // an emptied stack still carries the state that matters: the statutory receipt
+            // after [1], and the road-cut awareness card (walker + audit findings)
+            if (issued || cutCard) {
+                el.innerHTML = issued + cutCard;
                 return;
             }
             return void (el.innerHTML = '');
         }
-        let html = issued;
+        let html = issued + cutCard;
         if (mine.length && focus) {
             html += focusCard(focus, ps, dSince);
             // F2: "Also waiting" rows are real buttons — click or Alt+N promotes the item into
@@ -1100,7 +1115,7 @@ export async function mountConsole(app) {
         if (!changed('now', k))
             return;
         const list = ts.log.filter((e) => ui.logAgent === 'all' || e.agent === ui.logAgent);
-        $('#pbody').innerHTML = `<div class="seg" role="group" aria-label="Filter by agent"><button data-act="logagent" data-agent="all" aria-pressed="${ui.logAgent === 'all'}">All</button>${talon.script.agents.map((a) => `<button data-act="logagent" data-agent="${a.id}" aria-pressed="${ui.logAgent === a.id}">${esc(a.name)}</button>`).join('')}</div>
+        $('#pbody').innerHTML = `<div class="toolseg" role="group" aria-label="Filter by agent"><button data-act="logagent" data-agent="all" aria-pressed="${ui.logAgent === 'all'}">All</button>${talon.script.agents.map((a) => `<button data-act="logagent" data-agent="${a.id}" aria-pressed="${ui.logAgent === a.id}">${esc(a.name)}</button>`).join('')}</div>
       ${ts.dissents.length ? `<div><span class="caps">Dissent records</span>${ts.dissents.map((d) => `<div style="margin-top:8px"><div style="font-weight:var(--fw-medium);margin-bottom:6px">${esc(d.question)}</div>${dissentRecord(d)}</div>`).join('')}</div>` : ''}
       <div><span class="caps">Everything on the record, including what TALON kept quiet</span><div class="thread">${list.map(entryHtml).join('')}</div></div>`;
     }
@@ -1427,6 +1442,11 @@ export async function mountConsole(app) {
                 return { v: worst != null ? worst + '%' : String(ps.units.length), sub: ps.units.length + ' assets', st: worst != null && worst < 25 ? 'needs' : 'done', prov: worst != null ? 'mea' : null };
             }
             case 'evac': {
+                // F1 (2026-11-05): the glance is threat-aware - a cut primary route is never
+                // 'clear', whatever the plan state says
+                const cut = engine.getOverlayLayerIds().some((id) => id === 'route-a-cut' || id === 'cut-marker');
+                if (cut)
+                    return { v: 'Route A cut', sub: 'primary egress gone', st: 'needs', prov: 'mea' };
                 const plan = ts.open.find((o) => o.item.kind === 'proposal');
                 return { v: ps.gate?.open ? 'gate open' : plan ? 'plan proposed' : 'clear', sub: ps.gate?.open ? fmtDur(Math.max(0, ps.gate.expires - ps.t)) : plan ? 'on the table' : 'no active plan', st: ps.gate?.open ? 'needs' : plan ? 'working' : 'done', prov: 'aut' };
             }
@@ -1502,7 +1522,8 @@ export async function mountConsole(app) {
             gs.sort((x, y) => rank[x.st] - rank[y.st]);
             return gs[0];
         });
-        const attn = cats.map((c2, i2) => c2.attn && glances[i2].st === 'needs');
+        const cutLive = engine.getOverlayLayerIds().some((id) => id === 'route-a-cut' || id === 'cut-marker');
+        const attn = cats.map((c2, i2) => (c2.attn && glances[i2].st === 'needs') || (c2.cat === 'egress' && cutLive));
         const key = cats.map((c2) => c2.cat + ':' + c2.members.map((m) => m.w + m.by).join('+')).join('|') + '#' + String(ui.deckPanel) + '#' + glances.map((g) => g.v + g.sub + g.st).join('|');
         if (changed('deck', key)) {
             slots.innerHTML = cats.map((c2, i) => segHtml(c2, glances[i], attn[i])).join('')
@@ -1696,7 +1717,7 @@ export async function mountConsole(app) {
         const want = drones.find((d) => d.id === ui.feedDrone)?.id ?? drones.find((d) => d.id === ts.feedSuggestion?.drone)?.id ?? drones[0]?.id ?? null;
         const sensor = ui.feedSensor ?? (ts.feedSuggestion?.drone === want ? ts.feedSuggestion?.sensor : null) ?? 'eo';
         if (changed(`w:${el.dataset.slot}`, [l, drones.map((d) => d.id), want, sensor])) {
-            head.innerHTML = widgetHeader('feed', l.by, l.by === 'talon' ? '' : '', `${drones.length > 1 ? `<div class="seg" role="group" aria-label="Drone">${drones.map((d) => `<button data-act="feeddrone" data-unit="${d.id}" aria-pressed="${d.id === want}">${esc(d.id.replace('FT-', ''))}</button>`).join('')}</div>` : `<span class="chip">${esc(want ?? '–')}</span>`}<div class="seg" role="group" aria-label="Sensor"><button data-act="sensor" data-s="eo" aria-pressed="${sensor === 'eo'}">EO</button><button data-act="sensor" data-s="ir" aria-pressed="${sensor === 'ir'}">IR</button></div>`);
+            head.innerHTML = widgetHeader('feed', l.by, l.by === 'talon' ? '' : '', `${drones.length > 1 ? `<div class="toolseg" role="group" aria-label="Drone">${drones.map((d) => `<button data-act="feeddrone" data-unit="${d.id}" aria-pressed="${d.id === want}">${esc(d.id.replace('FT-', ''))}</button>`).join('')}</div>` : `<span class="chip">${esc(want ?? '–')}</span>`}<div class="toolseg" role="group" aria-label="Sensor"><button data-act="sensor" data-s="eo" aria-pressed="${sensor === 'eo'}">EO</button><button data-act="sensor" data-s="ir" aria-pressed="${sensor === 'ir'}">IR</button></div>`);
             if (feedHost.parentElement !== body) {
                 body.innerHTML = '';
                 body.appendChild(feedHost);
@@ -1957,11 +1978,11 @@ export async function mountConsole(app) {
                 ['follow', 'Camera follows the exercise', ui.follow],
                 ['sound', 'Sound for asks and interrupts', ui.sound],
             ].map(([k, n, v]) => `<div class="lrow" role="switch" tabindex="0" aria-checked="${v}" data-act="setting" data-k="${k}" style="grid-template-columns:1fr auto"><span class="nm">${n}</span><span class="switch"></span></div>`).join('')}
-        <div class="airow"><span class="caps">Theme</span><div class="seg" role="group" aria-label="Theme posture"><button data-act="theme" data-t="dark" aria-pressed="${themeMode() !== 'daylight'}">EOC Darkroom</button><button data-act="theme" data-t="daylight" aria-pressed="${themeMode() === 'daylight'}">Field High-Lux</button></div></div>
+        <div class="airow"><span class="caps">Theme</span><div class="toolseg" role="group" aria-label="Theme posture"><button data-act="theme" data-t="dark" aria-pressed="${themeMode() !== 'daylight'}">EOC Darkroom</button><button data-act="theme" data-t="daylight" aria-pressed="${themeMode() === 'daylight'}">Field High-Lux</button></div></div>
         <div class="lrow" role="switch" tabindex="0" aria-checked="${engine.getLighting() === 'day'}" data-act="lighting" style="grid-template-columns:1fr auto"><span class="nm">Day lighting<small>Exercise variant</small></span><span class="switch"></span></div>
         <div class="caps ghead">Live model · optional</div>
         <p style="margin:0 0 10px;color:var(--text-2);font-size:var(--fs-caption);max-width:320px">Plug in an API key and TALON's replies come from the model — grounded in the live situation, held by the truth guard, never executing anything. The key stays in this browser (localStorage). No key: scripted replies, unchanged.</p>
-        <div class="airow"><span class="caps">Provider</span><div class="seg" role="group" aria-label="Provider"><button data-act="aiprovider" data-p="openai" aria-pressed="${prov === 'openai'}">OpenAI-compatible</button><button data-act="aiprovider" data-p="anthropic" aria-pressed="${prov === 'anthropic'}">Anthropic</button></div></div>
+        <div class="airow"><span class="caps">Provider</span><div class="toolseg" role="group" aria-label="Provider"><button data-act="aiprovider" data-p="openai" aria-pressed="${prov === 'openai'}">OpenAI-compatible</button><button data-act="aiprovider" data-p="anthropic" aria-pressed="${prov === 'anthropic'}">Anthropic</button></div></div>
         <div class="airow"><span class="caps">Model</span><input class="in" id="aiModel" placeholder="e.g. gpt-4o-mini, claude-sonnet-4, gemini-2.0-flash" value="${esc(ai?.model ?? '')}" aria-label="Model"></div>
         <div class="airow"><span class="caps">API key</span><input class="in" id="aiKey" type="password" placeholder="stored in this browser only" value="${esc(ai?.key ?? '')}" aria-label="API key"></div>
         <div class="airow"><span class="caps">Base URL</span><input class="in" id="aiBase" placeholder="optional · e.g. a local server" value="${esc(ai?.baseUrl ?? '')}" aria-label="Base URL"></div>
@@ -2019,7 +2040,12 @@ export async function mountConsole(app) {
         const opt = it?.options?.find((o) => o.id === optId);
         if (!it || !opt || !canDecide() || latching)
             return;
-        if (!opt.recommended && !opt.toggle && it.options?.some((o) => o.recommended) && note === undefined) {
+        // F4 (2026-11-05): the verbatim dissent ritual is for items where TALON has a
+        // position worth naming (authored flag, a statutory gate, or a P0 interrupt).
+        // Logistics alternates (pre-position, release, monitor) record and move on -
+        // a seasoned operator should not sign a dissent for routing a resource.
+        const dissentable = it.dissent === true || !!it.gate || it.level === 'interrupt';
+        if (!opt.recommended && !opt.toggle && it.options?.some((o) => o.recommended) && dissentable && note === undefined) {
             ui.dissent = { item: itemId, option: optId };
             keys.delete('now');
             schedule();
@@ -2343,6 +2369,10 @@ export async function mountConsole(app) {
                 drawTether();
                 return schedule();
             }
+            case 'cutack':
+                ui.cutAcked = true;
+                keys.delete('cards');
+                return schedule();
             case 'deckclose':
                 ui.deckPanel = null;
                 keys.delete('deck');

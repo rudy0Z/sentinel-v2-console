@@ -128,6 +128,10 @@ export class Talon {
                     open.push({ item: { ...it, level }, raisedAt: L.at, closesAt: L.until, expiresAt: L.expires });
                 else if (!ans && L.expires !== null && L.until >= L.expires - 1e-6 && t >= L.expires - 1e-6)
                     log.push({ id: `exp:${it.id}`, t: L.expires, seq: 2, agent: it.agent, who: 'system', level: 'feed', kind: 'expired', title: `Lapsed: ${this.text(it.title, t)}`, body: it.gate?.onExpire ?? 'Nothing was sent.', itemId: it.id });
+                else if (!ans && L.expires === null && t >= L.until - 1e-6)
+                    // F2 (2026-11-05): an ungated ask that closes its window was vanishing with no
+                    // receipt - the operator could not tell "handled" from "dropped". One log line.
+                    log.push({ id: `exp:${it.id}`, t: L.until, seq: 2, agent: it.agent, who: 'system', level: 'feed', kind: 'expired', title: `Closed without a decision: ${this.text(it.title, t)}`, body: 'The ask reached the end of its window. Nothing was sent; nothing is pending.', itemId: it.id });
             }
         }
         for (const e of this.thread)

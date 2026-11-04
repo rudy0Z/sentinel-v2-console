@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel · Design artifact — the other end of the radio (ATAK companion, 2 frames)</title>
+<style>
+  :root { --paper:#F4F1EA; --ink:#11141C; --ink2:#4A4F5C; --line:rgba(17,20,28,.14); --critical:#B3372A; --safe:#1F6E4E; --amber:#9A6A0B;
+    --panel:#14161C; --panel2:#1C1F27; --pline:rgba(236,238,242,.1); --pink1:#ECEEF2; --pink2:#B6BDCB; --pink3:#8E96A9;
+    --talon:#9B8AFF; --needs:#FFB547; --done:#35C48D; --committed:#00E5FF;
+    --sans:"Segoe UI",system-ui,sans-serif; --mono:"Consolas",ui-monospace,monospace; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#DDD9CF; color:var(--ink); font:400 14px/1.5 var(--sans); padding:34px clamp(16px,4vw,56px) 60px; }
+  header h1 { font:600 19px/1.3 var(--sans); }
+  header p { color:var(--ink2); max-width:74ch; margin-top:6px; }
+  header .ruling { margin-top:10px; font:500 12px/1.5 var(--mono,monospace); color:var(--ink2); border-left:3px solid var(--ink); padding:4px 0 4px 12px; max-width:80ch; }
+  .row { display:flex; gap:34px; flex-wrap:wrap; margin-top:26px; justify-content:center; }
+  .pad { width:640px; aspect-ratio:4/3; border-radius:22px; border:12px solid #101012; background:var(--panel); position:relative; overflow:hidden; box-shadow:0 26px 56px rgba(0,0,0,.35); flex:none; }
+  .pad .cam { position:absolute; top:8px; left:50%; transform:translateX(-50%); width:8px; height:8px; border-radius:50%; background:#2A2E38; }
+  .phead { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--pline); background:var(--panel2); }
+  .phead .caps { font:600 11px/1 var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--pink3); }
+  .phead .live { margin-left:auto; font:600 11px/1 var(--mono); color:var(--done); display:flex; align-items:center; gap:5px; }
+  .phead .live::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--done); }
+  .frame { position:relative; height:calc(100% - 42px); background:radial-gradient(120% 90% at 30% 20%, #20242e 0%, #12141a 62%); }
+  .terrain { position:absolute; inset:0; opacity:.5;
+    background:
+      radial-gradient(2px 2px at 18% 62%, rgba(0,229,255,.8) 0 40%, transparent 60%),
+      radial-gradient(2px 2px at 30% 48%, rgba(0,229,255,.8) 0 40%, transparent 60%),
+      radial-gradient(2px 2px at 42% 40%, rgba(0,229,255,.8) 0 40%, transparent 60%),
+      radial-gradient(2px 2px at 55% 34%, rgba(0,229,255,.8) 0 40%, transparent 60%),
+      radial-gradient(3px 3px at 22% 70%, #E5533C 0 40%, transparent 60%),
+      repeating-linear-gradient(115deg, transparent 0 26px, rgba(236,238,242,.05) 26px 27px); }
+  .block { position:absolute; z-index:3; background:rgba(16,18,24,.94); border:1px solid var(--pline); border-radius:10px; overflow:hidden; }
+  .block .bh { padding:8px 12px; border-bottom:1px solid var(--pline); }
+  .block .bh .caps { font:600 11px/1 var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--pink3); }
+  .block .bh b { font:600 12.5px/1.2 var(--sans); color:var(--pink1); display:block; margin-top:3px; }
+  .block .bb { padding:9px 12px; display:grid; gap:7px; }
+  .kv { display:flex; justify-content:space-between; gap:10px; font:400 12px/1.4 var(--sans); color:var(--pink2); }
+  .kv b { color:var(--pink1); font:500 11.5px/1.4 var(--mono); }
+  .prov { font:600 11px/1 var(--mono); padding:1px 3px; border-radius:3px; letter-spacing:.04em; }
+  .prov.mea { color:var(--done); border:1px solid rgba(53,196,141,.4); }
+  .prov.aut { color:var(--pink3); border:1px solid var(--pline); }
+  .btnrow { display:flex; gap:7px; padding:0 12px 11px; }
+  .abtn { flex:1; height:34px; border-radius:7px; border:1px solid var(--pline); background:var(--panel2); color:var(--pink1); font:500 11.5px/1 var(--sans); display:grid; place-items:center; }
+  .abtn.primary { border-color:rgba(53,196,141,.5); background:rgba(53,196,141,.12); }
+  .abtn.danger { border-color:rgba(229,83,60,.5); background:rgba(229,83,60,.1); color:#F2B4AA; }
+  .caption { max-width:1360px; margin:22px auto 0; background:var(--paper); color:var(--ink); }
+  .caption h2 { font:600 15px/1.3 var(--sans); }
+  .caption ul { margin:8px 0 0 18px; color:var(--ink); font-size:13px; line-height:1.6; }
+  .caption b { color:var(--ink); }
+  .flow { display:flex; align-items:center; gap:10px; margin-top:10px; font:500 12px/1.4 var(--mono,monospace); color:var(--ink); flex-wrap:wrap; }
+  .flow span { padding:4px 9px; border:1px solid var(--line); border-radius:5px; background:#fff; }
+  .flow i { font-style:normal; color:var(--ink); }
+</style>
+</head>
+<body>
+<header>
+  <h1>The other end of the radio — ATAK companion, two frames</h1>
+  <p>Design artifact, not a product. The brief's ground teams exist; the console's TAK push today is one-way. These two frames close the loop on an 8-inch ruggedized tablet — the field surface, deliberately not a phone.</p>
+  <div class="ruling">RULINGS THIS ARTIFACT CARRIES: phones stay out of scope — the field surface is the 8" ruggedized tablet crews already mount. What the field receives is SENT (assignment, route, hazard pins, geofence). What the field can SEND BACK is bounded: route-blocked / objective-reached / position — three marks, each landing in the console as MEA with the unit's name on it. The field never gates, never authorizes, never edits the plan. Free text rides the radio, where it already lives.</div>
+</header>
+
+<div class="row">
+  <div class="pad">
+    <div class="cam" aria-hidden="true"></div>
+    <div class="phead"><span class="caps">Sentinel → field · received assignment</span><span class="live">TAK SYNCED</span></div>
+    <div class="frame">
+      <div class="terrain" aria-hidden="true"></div>
+      <div class="block" style="left:14px; top:12px; right:14px;">
+        <div class="bh"><span class="caps">Assignment · from Sentinel · 03:51</span><b>SH-12 — hold the hairpin, keep Route A open</b></div>
+        <div class="bb">
+          <div class="kv"><span>Route to keep open</span><b>ROUTE A · ENCINAL → PCH <span class="prov mea">mea</span></b></div>
+          <div class="kv"><span>Fragile while</span><b>gust &lt; 42 mph <span class="prov mea">mea</span></b></div>
+          <div class="kv"><span>Geofence</span><b>Alert zone · spill check ✓</b></div>
+          <div class="kv"><span>Hazard pins pushed</span><b>2 · hairpin choke, north gorge</b></div>
+        </div>
+        <div class="btnrow"><span class="abtn">Navigate</span><span class="abtn">Hazard pins</span><span class="abtn primary">Mark status</span></div>
+      </div>
+      <div class="block" style="left:14px; bottom:12px; width:250px;">
+        <div class="bh"><span class="caps">If the route closes</span></div>
+        <div class="bb"><div class="kv" style="color:var(--pink2)">Mark ROUTE BLOCKED — Sentinel re-plans and the WEA update requisition carries it. Your mark is on the record with your unit's name.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <h2>Frame 1 · what the field receives</h2>
+      <ul>
+        <li><b>The assignment, in the field's own terms:</b> which route to keep open, the condition it stays open under, and the geofence — the same fragility line the operator's gate carried, translated to a task.</li>
+        <li><b>Hazard pins arrive pushed,</b> not searched for: the hairpin choke and the north gorge spot-fire risk, the same two pins the operator's card named.</li>
+        <li><b>Provenance survives the hop.</b> The mea chip tells the crew the route condition is sensor-measured, not TALON's opinion.</li>
+      </ul>
+  </div>
+
+  <div class="pad">
+    <div class="cam" aria-hidden="true"></div>
+    <div class="phead"><span class="caps">Field → Sentinel · mark &amp; return</span><span class="live">2 MARKS PENDING</span></div>
+    <div class="frame">
+      <div class="terrain" aria-hidden="true"></div>
+      <div class="block" style="left:14px; top:12px; width:270px;">
+        <div class="bh"><span class="caps">Mark the route</span><b>Encinal Canyon Rd</b></div>
+        <div class="bb">
+          <div class="kv"><span style="color:#F2B4AA">■ ROUTE BLOCKED</span><b>spot fire across the road</b></div>
+          <div class="kv"><span style="color:var(--done)">■ OBJECTIVE REACHED</span><b>hairpin held · traffic flowing</b></div>
+          <div class="kv"><span style="color:var(--pink3)">■ POSITION</span><b>auto · 30 s beacon</b></div>
+        </div>
+        <div class="btnrow"><span class="abtn danger">Send ROUTE BLOCKED</span></div>
+      </div>
+      <div class="block" style="right:14px; bottom:12px; width:264px;">
+        <div class="bh"><span class="caps">Delivery receipt · back to the field</span></div>
+        <div class="bb">
+          <div class="kv"><span>11:32 mark</span><b style="color:var(--done)">IN Sentinel · on the record</b></div>
+          <div class="kv"><span>Consequence</span><b>Route A cut · alternate drafted</b></div>
+          <div class="kv"><span>WEA update</span><b>requisitioned · Sheriff / County OES</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <h2>Frame 2 · how the field talks back</h2>
+      <ul>
+        <li><b>Three marks, not a keyboard.</b> Route blocked / objective reached / position — the only field inputs. Bounded input is why the return path can be trusted as MEA: a mark is an observation with a name on it, not a message to interpret.</li>
+        <li><b>The mark lands with its consequence.</b> The receipt back to the crew shows what their mark caused in the console — route cut, alternate drafted, WEA update requisitioned. The field sees that reporting matters, which is what keeps reporting honest.</li>
+        <li><b>Free text stays on the radio.</b> The field IC's words enter the record as quotes through dispatch — as they already do in the scenario — not as a second chat surface.</li>
+      </ul>
+    <div class="flow"><span>SH-12 marks ROUTE BLOCKED</span>→<i>Sentinel: MEA · unit named</i>→<span>PLAN DRIFT + route layers</span>→<i>operator decides</i>→<span>WEA update requisitioned</span>→<i>receipt back to the field</i></div>
+  </div>
+</div>
+</body>
+</html>

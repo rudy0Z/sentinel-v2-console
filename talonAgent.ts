@@ -12,7 +12,8 @@
  *                    interrupt is demoted to an ask, standing claims without a
  *                    citation are dropped. Effects still run only through
  *                    talon.answer() when the operator picks an option.
- *   message_unit     sends radio-to-text to a field unit (simulated ack)
+ *   (message_unit was removed 2026-11-05: the constitution gives the model no send
+ *    button - radio-to-text is an operator relay, not a model action)
  *   focus            map attention only — never state
  *
  * The truth guard rejects any reply that claims a gated action happened,
@@ -116,7 +117,6 @@ const TOOL_DECLARATIONS = [
     optionLabels: { type: 'array', items: { type: 'string' }, description: '1–3 option labels, first is your recommendation' },
     evidenceLabel: { type: 'string', description: 'Optional: what on the map this is about (unit id or place name)' },
   }, required: ['title', 'body', 'optionLabels'] } } },
-  { type: 'function', function: { name: 'message_unit', description: 'Sends radio-to-text to a field unit. The unit acknowledges by radio.', parameters: { type: 'object', properties: { unit: { type: 'string', description: 'Unit id, e.g. E-31' }, text: { type: 'string' } }, required: ['unit', 'text'] } } },
   { type: 'function', function: { name: 'focus', description: 'Point the map at something. Attention only — never changes any state.', parameters: { type: 'object', properties: { label: { type: 'string', description: 'What to point at (unit id or place name)' } }, required: ['label'] } } },
 ];
 
@@ -184,13 +184,6 @@ export class TalonAgent {
       const label = String(args.label ?? '');
       this.hooks.onFocus([{ label }]);
       return { ok: true, note: 'attention only' };
-    }
-    if (name === 'message_unit') {
-      const unit = String(args.unit ?? '');
-      const ids = (sheet.units as Array<{ id: string }>).map((u) => u.id);
-      if (!ids.includes(unit)) return { ok: false, reason: `no unit called ${unit}. Units: ${ids.join(', ')}` };
-      this.hooks.onMessage(unit, String(args.text ?? ''));
-      return { ok: true };
     }
     if (name === 'post_item') {
       const labels = (args.optionLabels as string[] | undefined) ?? [];

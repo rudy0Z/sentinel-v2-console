@@ -411,10 +411,10 @@ svg.ic.xs { width: 12px; height: 12px; }
 .kbd { font: var(--fw-medium) var(--fs-micro)/1 var(--font-mono); color: var(--text-3); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; min-width: 18px; text-align: center; display: inline-block; }
 
 /* ---- segmented control */
-.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: var(--inset-well); }
-.seg button { appearance: none; border: 0; background: transparent; color: var(--text-2); height: 24px; padding: 0 var(--s-2); border-radius: var(--r-xs); font-size: var(--fs-caption); font-weight: var(--fw-medium); }
-.seg button:hover { color: var(--text-1); }
-.seg button[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); box-shadow: var(--inset-well); } /* tactile pass 2026-11-04: pressed sinks (no lit top edge in a dark room) */
+.toolseg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: var(--inset-well); } /* renamed from .seg 2026-11-05 - the deck owns .seg now */
+.toolseg button { appearance: none; border: 0; background: transparent; color: var(--text-2); height: 24px; padding: 0 var(--s-2); border-radius: var(--r-xs); font-size: var(--fs-caption); font-weight: var(--fw-medium); }
+.toolseg button:hover { color: var(--text-1); }
+.toolseg button[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); box-shadow: var(--inset-well); } /* tactile pass 2026-11-04: pressed sinks (no lit top edge in a dark room) */
 
 /* ---- chips, dots, badges */
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--idle); }
@@ -1021,7 +1021,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .modal .row .btn { flex: 1; height: 40px; }
 .keys { display: grid; grid-template-columns: auto 1fr; gap: var(--s-2) var(--s-4); text-align: left; width: 100%; font-size: var(--fs-body); color: var(--text-2); align-items: center; }
 .boot { position: absolute; inset: 0; z-index: var(--z-boot); display: grid; place-items: center; background: var(--bg); transition: opacity var(--dur-slow); }
-.boot.gone { opacity: 0; pointer-events: none; }
+.boot.gone { opacity: 0; pointer-events: none; visibility: hidden; } /* F9: out of the a11y tree, not just invisible */
 .boot div { display: grid; gap: var(--s-3); justify-items: center; color: var(--text-3); font: var(--fw-medium) var(--fs-caption) var(--font-mono); letter-spacing: .06em; }
 .boot .mascot { width: 56px; height: 56px; }
 

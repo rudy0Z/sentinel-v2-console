@@ -240,3 +240,20 @@ make a change pass — change the change.
   the product's own truth guard. The time lens lives INSIDE the `.coa` region so the coa-shut
   height guard hides it exactly when the collapse tier needs the space; a focused horizon keeps
   its own tether up until the lens returns to NOW or the card closes.
+## 9 · Coverage rulings (2026-11-05 · the last-mile page)
+
+One sentence each. A ruling is coverage; silence is not.
+
+- **Issuer vocabulary.** The console **recommends and requisitions; it never issues**. Gate blocks quote the requisition text in issuer vocabulary ("ORDER MANDATORY EVACUATION") because that is what will be handed to the authority - the console's own acts always read "requisition" (REQ →). WEA is never originated here. California says Evacuation Order vs Warning; PC 409.5 closure belongs to law enforcement.
+- **RPIC / airspace.** No sortie without a named RPIC and an authorization id. TFR is a received hard layer. Loudspeaker-over-people is never a standing order.
+- **03:47 dual control.** Life-safety authorization inside the circadian trough (02:00-05:00 local) requires a second authenticated human or an explicitly logged solo-watch override. Spec'd, not built - the 03:47 in the brief is a human-factors condition, not wallpaper.
+- **Phones stay out; the tablet is the field surface.** No resident or crew phone app. The field artifact is the 8-inch ruggedized tablet (docs/artifacts/atak-companion.html) and the public artifact is the WEA lock screen (docs/artifacts/resident-wea.html) - refusals that are drawn, not silence.
+- **Multi-incident is a designed refusal.** One operator follows one incident. The registry plus the duty-officer surface (a different product, one frame, "not this console") covers "what about three fires" - a tab here would break the thesis.
+- **Unit systems.** US customary on operational surfaces; metric appears only inside model outputs (m/min spread, °C core) because that is the model's native language. Mixed by origin, never by accident.
+- **The 90-second NSM vs the shipped measure.** Sheet 10's 48m-to-90s is a design star; the shipped measure is detection-to-order in scene minutes (7:12 in the canonical run). We do not average them, and neither should you.
+- **The live model has never been smoke-tested with a real key.** The adapter, truth guard and fallback are built and tested against fixtures; a real-provider run is an explicitly open item, not an implied one.
+- **message_unit is dead.** Removed from the model's tool surface (2026-11-05): the constitution gives the model no send button. Radio-to-text is an operator relay. This was the one live-model leak; it is closed.
+- **Dissent is narrow by design (F4).** The verbatim ritual applies where TALON has a position worth naming - authored `dissent: true`, a statutory gate, or a P0 interrupt. Logistics alternates (pre-position, release, monitor) record and move on: a seasoned operator should not sign a dissent for routing a resource.
+- **Expiry has a receipt (F2).** An ungated ask that closes its window logs "Closed without a decision" - "handled" and "dropped" are never the same silence.
+- **The road cut is a first-class event (F1).** A cut primary route overrides the Egress glance ("Route A cut · primary egress gone", needs, pulsing) and raises an awareness card that closes on ACK ONLY, never on timeout. The map layer is the truth; the deck is its peripheral voice.
+

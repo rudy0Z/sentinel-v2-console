@@ -4,7 +4,7 @@
 ```sh
 npm install
 npm run serve      # http://127.0.0.1:8130/  (console) · /harness.html (engine bench) · /tokens.html (design system)
-npm run verify     # 44 headless checks (console, copilot rules, engine, journey arcs, live-model adapter, a11y, record loop, command bridge, presence, epistemic layer)
+npm run verify     # 45 headless checks (console, copilot rules, engine, journey arcs, live-model adapter, a11y, record loop, command bridge, presence, epistemic layer, crew deck)
 node tools/cshot.mjs <name> "<query>" "<js>" [waitMs] [w] [h]   # screenshot into qa/
 ```
 URL flags: `?situation=standby|small-incident|contain|falsepos|wui-breakout`, `?phase=D`, `?lighting=day`, `?autopilot=1`, `?autoplay=1`, `?intro=0`, `?talon=open` (drawer starts open).

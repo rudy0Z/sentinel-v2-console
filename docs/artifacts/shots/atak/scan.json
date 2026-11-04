@@ -1,0 +1,40 @@
+[
+  {
+    "w": 1360,
+    "fails": [],
+    "warns": [
+      "Largest text is 19px against 13.2px body (1.4x). Nothing owns the first screen.",
+      "24 text elements at 11px: 11px \"Sentinel → field · received as\"; 11px \"TAK SYNCED\"; 11px \"Assignment · from Sentinel · 0\"",
+      "Running text under 15px: 14px \"Design artifact, not a product\"; 13px \"which route to keep open, the \"; 13px \"not searched for: the hairpin \"",
+      "Lines too long to read comfortably (aim for 45 to 75): ~115 chars/line \"Route blocked / objectiv\"; ~122 chars/line \"The receipt back to the \"",
+      "No action in the first 1360×900 screen (outside the nav). The one action should be visible without scrolling.",
+      "11 em dashes in visible copy. A period or colon usually reads cleaner.",
+      "Boxes nested inside boxes x4. Group with space and alignment before containers."
+    ],
+    "facts": {
+      "fonts": {
+        "Segoe UI": "62%",
+        "Consolas": "38%"
+      },
+      "sizes": [
+        19,
+        15,
+        14,
+        13,
+        12.5,
+        12,
+        11.5,
+        11
+      ],
+      "body": 13.2,
+      "hues": [
+        150,
+        0
+      ],
+      "boxes": 8,
+      "cardGrids": 0,
+      "defaultIcons": 0,
+      "focusStops": 0
+    }
+  }
+]

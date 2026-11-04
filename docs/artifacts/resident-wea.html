@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel · Design artifact — what the resident sees (WEA lock screen, EN/ES)</title>
+<style>
+  :root { --paper:#F4F1EA; --ink:#11141C; --ink2:#4A4F5C; --line:rgba(17,20,28,.14); --critical:#B3372A; --safe:#1F6E4E;
+    --sans:"Segoe UI",system-ui,-apple-system,sans-serif; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#DDD9CF; color:var(--ink); font:400 14px/1.5 var(--sans); padding:34px clamp(16px,4vw,56px) 60px; }
+  header h1 { font:600 19px/1.3 var(--sans); }
+  header p { color:var(--ink2); max-width:72ch; margin-top:6px; }
+  header .ruling { margin-top:10px; font:500 12px/1.5 var(--mono,monospace); color:var(--ink2);
+    border-left:3px solid var(--ink); padding:4px 0 4px 12px; max-width:78ch; }
+  .row { display:flex; gap:34px; flex-wrap:wrap; margin-top:26px; justify-content:center; }
+  .phone { width:330px; border-radius:44px; border:10px solid #101012; background:linear-gradient(180deg,#5E6B7A 0%,#8A97A5 46%,#3E4A56 100%);
+    aspect-ratio:9/19; position:relative; overflow:hidden; box-shadow:0 30px 60px rgba(0,0,0,.35); flex:none; }
+  .notch { position:absolute; top:14px; left:50%; transform:translateX(-50%); width:110px; height:26px; border-radius:14px; background:#101012; z-index:4; }
+  .locktime { position:absolute; top:64px; width:100%; text-align:center; color:#fff; z-index:2; }
+  .locktime .t { font:600 62px/1 var(--sans); letter-spacing:-.01em; }
+  .locktime .d { display:inline-block; font:500 15px/1 var(--sans); margin-top:6px; color:#fff; background:rgba(0,0,0,.38); border-radius:6px; padding:3px 10px; }
+  .wea { position:absolute; top:172px; left:10px; right:10px; z-index:3; background:rgba(252,250,246,.96);
+    border-radius:18px; padding:13px 14px 12px; box-shadow:0 12px 34px rgba(0,0,0,.4); }
+  .wea .src { display:flex; align-items:center; gap:7px; font:600 11px/1 var(--sans); letter-spacing:.09em;
+    text-transform:uppercase; color:var(--critical); }
+  .wea .src::before { content:"⚠"; font-size:12px; }
+  .wea .src span:last-child { margin-left:auto; color:var(--ink2); letter-spacing:.04em; }
+  .wea h2 { font:600 15.5px/1.25 var(--sans); margin-top:7px; }
+  .wea p { font-size:12.5px; line-height:1.45; color:var(--ink); margin-top:6px; }
+  .wea .geo { display:flex; gap:7px; align-items:flex-start; margin-top:9px; padding-top:8px; border-top:1px solid var(--line);
+    font-size:11.5px; line-height:1.45; color:var(--ink); }
+  .wea .geo::before { content:"✓"; color:var(--safe); font-weight:700; flex:none; }
+  .wea .es { margin-top:8px; padding-top:8px; border-top:1px solid var(--line); font-size:12px; line-height:1.4; color:var(--ink); }
+  .wea p { font-size:13px; }
+  .wea .es b { font:600 11px/1 var(--sans); letter-spacing:.09em; text-transform:uppercase; color:var(--ink2); display:block; margin-bottom:4px; }
+  .bottom { position:absolute; bottom:16px; width:100%; text-align:center; color:rgba(255,255,255,.92); font:500 11px/1 var(--sans); z-index:2; text-shadow:0 1px 5px rgba(0,0,0,.5); }
+  .noteweas { max-width:860px; margin:26px auto 0; }
+  .noteweas h2 { font:600 15px/1.3 var(--sans); }
+  .noteweas ul { margin:8px 0 0 18px; color:var(--ink2); font-size:12.5px; line-height:1.6; }
+  .noteweas b { color:var(--ink); }
+</style>
+</head>
+<body>
+<header>
+  <h1>What the resident sees — WEA lock screen, English + Spanish</h1>
+  <p>Design artifact, not a product. The console's evacuation requisition ends here: on the phone of everyone inside the alert geofence — and, per the geofence check, nobody outside it.</p>
+  <div class="ruling">SENTINEL never originates a WEA. It requisitions one, addressed to a named authority, with the polygon and the copy attached. What this artifact proves is the last inch: the message a resident reads at 03:53, in their language, with the reason it reached them and not their neighbor.</div>
+</header>
+
+<div class="row">
+  <div class="phone" lang="en">
+    <div class="notch" aria-hidden="true"></div>
+    <div class="locktime"><div class="t">3:54</div><div class="d">Tuesday, January 14</div></div>
+    <div class="wea" role="alert">
+      <div class="src"><span>Wireless Emergency Alert</span><span>3:53 AM</span></div>
+      <h2>Evacuation Order — Upper Encinal</h2>
+      <p>Leave now via Encinal Canyon Rd north to Mulholland Hwy. Do not drive south — the road is closing. If you need help evacuating, call 911.</p>
+      <div class="geo">You are receiving this because your device is inside the alert zone. Your neighbor outside the zone did not.</div>
+      <div class="es"><b>En español</b>Orden de evacuación: salga ahora hacia el norte por Encinal Canyon Rd hasta Mulholland Hwy. No conduzca hacia el sur.</div>
+    </div>
+    <div class="bottom">swipe to acknowledge · emergency alerts cannot be silenced</div>
+  </div>
+
+  <div class="phone" lang="es">
+    <div class="notch" aria-hidden="true"></div>
+    <div class="locktime"><div class="t">3:54</div><div class="d">martes, 14 de enero</div></div>
+    <div class="wea" role="alert" lang="es">
+      <div class="src"><span>Alerta de emergencia inalámbrica</span><span>3:53 a. m.</span></div>
+      <h2>Orden de evacuación — Alto Encinal</h2>
+      <p>Salga ahora por Encinal Canyon Rd hacia el norte hasta Mulholland Hwy. No conduzca hacia el sur — la carretera se está cerrando. Si necesita ayuda para evacuar, llame al 911.</p>
+      <div class="geo">Recibe esto porque su dispositivo está dentro de la zona de alerta. Su vecino fuera de la zona no la recibió.</div>
+      <div class="es" lang="en"><b>In English</b>Evacuation Order: leave now north on Encinal Canyon Rd to Mulholland Hwy. Do not drive south.</div>
+    </div>
+    <div class="bottom">desliza para confirmar · las alertas de emergencia no se pueden silenciar</div>
+  </div>
+</div>
+
+<div class="noteweas">
+  <h2>Why it looks like this</h2>
+  <ul>
+    <li><b>Both languages on one alert.</b> The resident does not change a setting at 03:53. The requisition carries EN+ES copy because the geofence cannot know the SIM language.</li>
+    <li><b>The geofence check travels with the message.</b> "Your neighbor outside the zone did not [receive this]" is the console's spill check, made legible to the public — the same polygon check the operator saw on the gate.</li>
+    <li><b>Issuer vocabulary belongs to the issuer.</b> The console requisitioned; the alert says <b>Evacuation Order</b> because the Sheriff / County OES issued it. Sentinel's own surfaces say "requisition" — this artifact is the one place the word "order" is correct.</li>
+    <li><b>It cannot be silenced.</b> The same statutory weight the operator's gate carried — mirrored at the last inch.</li>
+  </ul>
+</div>
+</body>
+</html>

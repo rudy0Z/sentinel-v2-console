@@ -76,7 +76,6 @@ const TOOL_DECLARATIONS = [
                     optionLabels: { type: 'array', items: { type: 'string' }, description: '1–3 option labels, first is your recommendation' },
                     evidenceLabel: { type: 'string', description: 'Optional: what on the map this is about (unit id or place name)' },
                 }, required: ['title', 'body', 'optionLabels'] } } },
-    { type: 'function', function: { name: 'message_unit', description: 'Sends radio-to-text to a field unit. The unit acknowledges by radio.', parameters: { type: 'object', properties: { unit: { type: 'string', description: 'Unit id, e.g. E-31' }, text: { type: 'string' } }, required: ['unit', 'text'] } } },
     { type: 'function', function: { name: 'focus', description: 'Point the map at something. Attention only — never changes any state.', parameters: { type: 'object', properties: { label: { type: 'string', description: 'What to point at (unit id or place name)' } }, required: ['label'] } } },
 ];
 export class TalonAgent {
@@ -143,14 +142,6 @@ export class TalonAgent {
             const label = String(args.label ?? '');
             this.hooks.onFocus([{ label }]);
             return { ok: true, note: 'attention only' };
-        }
-        if (name === 'message_unit') {
-            const unit = String(args.unit ?? '');
-            const ids = sheet.units.map((u) => u.id);
-            if (!ids.includes(unit))
-                return { ok: false, reason: `no unit called ${unit}. Units: ${ids.join(', ')}` };
-            this.hooks.onMessage(unit, String(args.text ?? ''));
-            return { ok: true };
         }
         if (name === 'post_item') {
             const labels = args.optionLabels ?? [];

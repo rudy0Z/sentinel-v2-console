@@ -252,8 +252,9 @@ async function open(q, w = 1600, h = 960, pinned) {
     player.setTime(3.2);
     const ask = talon.state().open.find((o) => o.item.id === 'dismiss');
     const rec = ask?.item.options.find((o) => o.recommended)?.id ?? null;
-    await new Promise((r) => setTimeout(r, 700));
-    const card = document.querySelectorAll('#cards .card').length; // the close-out renders as a decision card
+    // poll for the card render — software GL flush can outlive a fixed sleep
+    let card = 0;
+    for (let i = 0; i < 20; i++) { await new Promise((r) => setTimeout(r, 130)); card = document.querySelectorAll('#cards .card').length; if (card >= 1) break; }
     const close = talon.answer('dismiss', 'close');
     player.setTime(8);
     const closed = talon.state().log.some((e) => /closed as permitted/i.test(e.title));
