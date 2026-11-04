@@ -1069,8 +1069,15 @@ export async function mountConsole(app) {
         // an overflowing unscrolled stack fades its last card instead of slicing it (review 04 §P1-3);
         // layout reads only on content change + resize — never per frame
         el.classList.toggle('overflows', el.scrollHeight > el.clientHeight + 4);
-        if (!mine.length && !routed.length)
+        if (!mine.length && !routed.length) {
+            // the statutory receipt must survive an emptied stack: after [1] Authorize the
+            // banner IS the feedback (walker finding - it was unreachable exactly when designed)
+            if (issued) {
+                el.innerHTML = issued;
+                return;
+            }
             return void (el.innerHTML = '');
+        }
         let html = issued;
         if (mine.length && focus) {
             html += focusCard(focus, ps, dSince);
@@ -1421,7 +1428,7 @@ export async function mountConsole(app) {
             }
             case 'evac': {
                 const plan = ts.open.find((o) => o.item.kind === 'proposal');
-                return { v: ps.gate ? 'gate open' : plan ? 'plan proposed' : 'clear', sub: ps.gate ? fmtDur(Math.max(0, ps.gate.expires - ps.t)) : plan ? 'on the table' : 'no active plan', st: ps.gate ? 'needs' : plan ? 'working' : 'done', prov: 'aut' };
+                return { v: ps.gate?.open ? 'gate open' : plan ? 'plan proposed' : 'clear', sub: ps.gate?.open ? fmtDur(Math.max(0, ps.gate.expires - ps.t)) : plan ? 'on the table' : 'no active plan', st: ps.gate?.open ? 'needs' : plan ? 'working' : 'done', prov: 'aut' };
             }
             case 'growth': {
                 const now = engine.reachedAreaAt(0);
@@ -1439,16 +1446,18 @@ export async function mountConsole(app) {
                 return { v: talon.markers(ps.t, Math.max(ui.liveT, ps.t)).length + ' marks', sub: 'timeline', st: 'done', prov: null };
             case 'feed': {
                 const drones = ps.units.filter((u) => u.kind === 'drone' && (u.altitudeFt ?? 0) > 0);
-                return { v: drones[0] ? drones[0].id : '\u2013', sub: drones.length ? (ui.feedSensor === 'ir' ? 'IR' : 'EO') + ' \u00b7 live' : 'no drone up', st: drones.length ? 'working' : 'done', prov: 'mea' };
+                // same selection renderFeed uses, so the glance never contradicts the pip
+                const want = drones.find((d) => d.id === ui.feedDrone)?.id ?? drones.find((d) => d.id === ts.feedSuggestion?.drone)?.id ?? drones[0]?.id ?? '–';
+                return { v: want, sub: drones.length ? (ui.feedSensor === 'ir' ? 'IR' : 'EO') + ' · live' : 'no drone up', st: drones.length ? 'working' : 'done', prov: 'mea' };
             }
             default:
                 return { v: WIDGETS[w] ? WIDGETS[w].title : w, sub: '', st: 'done', prov: null };
         }
     }
-    function segHtml(c2, g) {
+    function segHtml(c2, g, pulse = false) {
         const promoted = c2.members.find((m) => m.by === 'talon');
         const title = promoted ? 'TALON put this here: ' + esc(promoted.reason) : esc(CAT_META[c2.cat].label) + ' - ' + c2.members.map((m) => WIDGETS[m.w] ? WIDGETS[m.w].title : m.w).join(', ');
-        return '<button class="seg' + (c2.attn ? ' attn' : '') + (ui.deckPanel === c2.cat ? ' open' : '') + '" data-act="deck" data-cat="' + c2.cat + '" aria-expanded="' + (ui.deckPanel === c2.cat) + '" title="' + title + '">'
+        return '<button class="seg' + (c2.attn && pulse ? ' attn' : '') + (ui.deckPanel === c2.cat ? ' open' : '') + '" data-act="deck" data-cat="' + c2.cat + '" aria-expanded="' + (ui.deckPanel === c2.cat) + '" title="' + title + '">'
             + '<span class="ic" aria-hidden="true">' + CAT_META[c2.cat].glyph + '</span>'
             + '<span class="t"><small>' + esc(CAT_META[c2.cat].label) + (g.prov ? ' <span class="prov ' + g.prov + '">' + g.prov + '</span>' : '') + '</small><b>' + esc(g.v) + (g.sub ? ' <em>\u00b7 ' + esc(g.sub) + '</em>' : '') + '</b></span>'
             + '<span class="st st-' + g.st + '" aria-hidden="true"></span><span class="caret" aria-hidden="true">' + (ui.deckPanel === c2.cat ? '\u25be' : '\u25b4') + '</span>'
@@ -1475,15 +1484,28 @@ export async function mountConsole(app) {
                 slot.attn = true;
         }
         cats.sort((a, b2) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b2.cat));
+        // the record never leaves the deck: without an events slot the operator has no
+        // deck-level timeline during the very incident it documents (walker finding)
+        if (!cats.some((c2) => c2.cat === 'comms'))
+            cats.push({ cat: 'comms', members: [{ w: 'events', by: 'op', reason: '' }], attn: false });
+        // ties break by meaning, not member order: in Situation, lives-at-risk outranks
+        // the feed id (walker finding - "10 in +60" was buried under the feed glance)
+        const MEANING = {
+            situation: ['structures', 'growth', 'weather', 'feed'],
+            resources: ['fleet'], egress: ['evac'], comms: ['events'],
+        };
+        const rank = { needs: 0, working: 1, done: 2 };
         const glances = cats.map((c2) => {
-            const gs = c2.members.map((m) => deckGlance(m.w, ps, ts));
-            const rank = { needs: 0, working: 1, done: 2 };
+            const order = MEANING[c2.cat];
+            const ms = [...c2.members].sort((x, y) => order.indexOf(x.w) - order.indexOf(y.w));
+            const gs = ms.map((m) => deckGlance(m.w, ps, ts));
             gs.sort((x, y) => rank[x.st] - rank[y.st]);
             return gs[0];
         });
+        const attn = cats.map((c2, i2) => c2.attn && glances[i2].st !== 'done');
         const key = cats.map((c2) => c2.cat + ':' + c2.members.map((m) => m.w + m.by).join('+')).join('|') + '#' + String(ui.deckPanel) + '#' + glances.map((g) => g.v + g.sub + g.st).join('|');
         if (changed('deck', key)) {
-            slots.innerHTML = cats.map((c2, i) => segHtml(c2, glances[i])).join('')
+            slots.innerHTML = cats.map((c2, i) => segHtml(c2, glances[i], attn[i])).join('')
                 + '<button class="seg seg-auth" data-act="pop" data-pop="authority" aria-haspopup="dialog" title="What TALON may do alone - standing orders, budget"><span class="ic" aria-hidden="true">' + SHIELD_GLYPH + '</span><span class="t"><small>Authority</small><b>' + ts.budget.used + '/' + ts.budget.max + ' <em>\u00b7 ' + ts.log.filter((e) => e.authority === 'standing').length + ' standing</em></b></span></button>'
                 + '<button class="seg ask" data-act="deckask" aria-label="Open the TALON thread"><span class="ic ask" aria-hidden="true">' + SPARK_GLYPH + '</span><span class="t"><small class="asklab">Ask TALON</small><b class="asksub">thread \u00b7 log \u00b7 review</b></span></button>';
         }
@@ -1524,10 +1546,13 @@ export async function mountConsole(app) {
         const wing = $('#feedWing');
         const droneUp = ps.units.some((u) => u.kind === 'drone' && (u.altitudeFt ?? 0) > 0);
         if (droneUp && ui.deckPanel !== 'feed') {
-            if (wing.hidden || wing.dataset.on !== '1') {
+            const wingBody = wing.querySelector('.wbody');
+            const hostMisplaced = feedHost.parentElement !== wingBody;
+            if (wing.hidden || wing.dataset.on !== '1' || hostMisplaced) {
                 wing.hidden = false;
                 wing.dataset.on = '1';
                 wing.innerHTML = '<article class="widget glass" data-slot="wing:feed"><header></header><div class="wbody" tabindex="0"></div></article>';
+                // force renderFeed's gate so the live video returns after a panel took the host
                 keys.delete('w:wing:feed');
             }
             widgetChrome = 'wing';
