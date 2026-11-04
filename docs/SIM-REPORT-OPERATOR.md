@@ -48,6 +48,10 @@ You are A. Rao, operator on authority. It is 03:53 PST. The console boots into S
 | 12 | **Attention conflation** (small-incident sim): a routine orbiting drone pulsed amber for the whole incident — "working" was pulsing like "needs you" | **Fixed** — the pulse now requires state needs; a live sensor reads as a live sensor |
 | 13 | Contain doctrine arc verified end-to-end: send report → authorize P-2 → hold the line → contained, with **zero evacuation signals in UI or log across 23 beats** — and the deck visibly stands down at t=69.5 (all attention clears) | Confirmed working |
 | 14 | Report-gate countdown keeps counting after the report is sent | Open — scenarioPlayer phase-gate semantics; noted, intentionally untouched this pass |
+| 15 | **Calm deck verified** (standby sim): no fake fire data anywhere — no field stats, no acreage glances, 0 fire layers; 3 category segments + Authority + Ask, all calm-state; the feed wing shows FT-01's patrol feed (readiness, not decoration); panels rise with real bodies; scrub across the whole clock keeps the deck coherent | Confirmed working |
+| 16 | **Falsepos verified**: zero fire surfaces before detection; the deck reads honestly through the arc (`FT-01 · EO · live` while looking, weather restored after the close); the save lands on the record; 0 errors | Confirmed working |
+| 17 | **Adversarial sweep passed**: rapid six-segment toggling keeps exactly one panel with the last-clicked content; scrub races leave the panel values time-coherent (51/206/8 ac at 40/90/10); a decision under an open panel re-curates without breaking it; panel and chat never overlap; 200% zoom stays on-screen; a 3-second idle at T+120 keeps glances live ("21 in +60 · 9 reached"); **0 console errors** | Confirmed working |
+| 18 | Synthetic-Tab probe could not traverse focus (browser-native limitation of the probe, not the product) — the segments are native buttons and the axe keyboard walk passes in verify | Probe artifact, noted |
 
 ## 4 · The feeling, stated plainly
 
