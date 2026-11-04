@@ -44,6 +44,10 @@ You are A. Rao, operator on authority. It is 03:53 PST. The console boots into S
 | 8 | Authority segment → popover unconfirmed in the walker's probe | Open — needs one verification pass |
 | 9 | Card T+ stamp is the raise time (defensible, easy to misread) | Open — wording candidate for the case study |
 | 10 | The [1]-press latch holds ~660-880ms under software GL (180ms by design) | Environment artifact, not a product defect |
+| 11 | **Feed host musical chairs** (contain/small sims): the wing's gate compared a widget id against a category name, so opening the Situation panel left its feed widget an empty husk while the wing re-parented the shared host | **Fixed** — the wing yields whenever the open panel hosts a feed member; the pip closes with the panel |
+| 12 | **Attention conflation** (small-incident sim): a routine orbiting drone pulsed amber for the whole incident — "working" was pulsing like "needs you" | **Fixed** — the pulse now requires state needs; a live sensor reads as a live sensor |
+| 13 | Contain doctrine arc verified end-to-end: send report → authorize P-2 → hold the line → contained, with **zero evacuation signals in UI or log across 23 beats** — and the deck visibly stands down at t=69.5 (all attention clears) | Confirmed working |
+| 14 | Report-gate countdown keeps counting after the report is sent | Open — scenarioPlayer phase-gate semantics; noted, intentionally untouched this pass |
 
 ## 4 · The feeling, stated plainly
 
