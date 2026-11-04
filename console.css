@@ -835,6 +835,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 /* L2 - the category panel, risen above its segment; hosts the old widget body unchanged */
 .deckpanel { position: fixed; z-index: calc(var(--z-dock) + 1); left: calc(var(--gap) + var(--tools-w) + var(--gap)); bottom: calc(var(--deck-h) + var(--gap)); width: 348px; /* left is anchored to its segment by renderDeck */ max-height: min(58vh, 560px); overflow-y: auto; scrollbar-width: none; }
 .deckpanel::-webkit-scrollbar { display: none; }
+.deckpanel { scrollbar-width: thin; scrollbar-color: var(--border) transparent; } /* the stacked Situation panel folds - give the fold an affordance */
 .deckpanel .widget { height: auto; max-height: none; }
 /* the feed wing: the pip stays hosted when the feed panel is closed */
 .feedwing { position: fixed; z-index: calc(var(--z-dock) + 1); right: calc(var(--gap) * 2 + var(--rail-w2)); bottom: calc(var(--deck-h) + var(--gap) * 2); width: 240px; }

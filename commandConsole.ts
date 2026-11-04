@@ -1456,7 +1456,7 @@ export async function mountConsole(app: HTMLElement) {
       gs.sort((x, y) => rank[x.st] - rank[y.st]);
       return gs[0];
     });
-    const attn = cats.map((c2, i2) => c2.attn && glances[i2].st !== 'done');
+    const attn = cats.map((c2, i2) => c2.attn && glances[i2].st === 'needs');
     const key = cats.map((c2) => c2.cat + ':' + c2.members.map((m) => m.w + m.by).join('+')).join('|') + '#' + String(ui.deckPanel) + '#' + glances.map((g) => g.v + g.sub + g.st).join('|');
     if (changed('deck', key)) {
       slots.innerHTML = cats.map((c2, i) => segHtml(c2, glances[i], attn[i])).join('')
@@ -1493,7 +1493,8 @@ export async function mountConsole(app: HTMLElement) {
     // The feed wing: the pip stays hosted even when the feed panel is closed.
     const wing = $('#feedWing') as HTMLElement;
     const droneUp = ps.units.some((u) => u.kind === 'drone' && (u.altitudeFt ?? 0) > 0);
-    if (droneUp && ui.deckPanel !== 'feed') {
+    const panelHostsFeed = !!open && open.members.some((m) => m.w === 'feed');
+    if (droneUp && !panelHostsFeed) {
       const wingBody = wing.querySelector('.wbody');
       const hostMisplaced = feedHost.parentElement !== wingBody;
       if (wing.hidden || wing.dataset.on !== '1' || hostMisplaced) {
@@ -1507,7 +1508,7 @@ export async function mountConsole(app: HTMLElement) {
       widgetChrome = 'dock';
     } else if (!wing.hidden) {
       wing.hidden = true; wing.dataset.on = ''; wing.innerHTML = '';
-      if (engine.getPip() && !droneUp) engine.closeDronePip();
+      if (engine.getPip() && (!droneUp || panelHostsFeed)) engine.closeDronePip();
     }
     cardsRO ??= (() => { const el = $('#cards'); const ro = new ResizeObserver(() => el.classList.toggle('overflows', el.scrollHeight > el.clientHeight + 4)); ro.observe(el); return ro; })();
   }
