@@ -296,7 +296,7 @@ export async function mountConsole(app) {
         tab: 'now',
         // Counterfactual time lens: focused spread-model horizon in minutes (0 = NOW, view state only).
         lens: 0,
-        // The crew deck's open category panel (L2) - one at a time, risen above its segment.
+        // The crew deck's open category panel (L2) - one CATEGORY at a time, risen above its segment.
         deckPanel: null,
         logAgent: 'all',
         pinned: store.get('pinned', ['weather', 'fleet']),
@@ -825,7 +825,7 @@ export async function mountConsole(app) {
         if (acres != null)
             parts.push(`<span class="prov modeled"${provTitle('modeled')}>mod</span> <b>${acres.toFixed(1)} ac</b>${ui.lens ? ` at +${ui.lens}m` : ' burned'}`);
         if (homes != null)
-            parts.push(`<b>${homes}</b> ${homes === 1 ? 'home' : 'homes'} in horizon`);
+            parts.push(`<b>${homes}</b> ${homes === 1 ? 'home' : 'homes'} in view`);
         return parts.join('<i class="tl-sep"></i>') || '<span class="tl-empty">Spread model not sized yet</span>';
     }
     function timeLensHtml(ps) {
@@ -1394,21 +1394,15 @@ export async function mountConsole(app) {
         const x = (i) => (i / (pts.length - 1)) * w;
         return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts.map((p, i) => `${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ')}"/></svg>`;
     }
-    // -- the crew deck (2026-11-04): three information layers --------------------
-    // L1 - bottom segments, one TALON-curated glance each, independent, no container.
-    // L2 - one category panel at a time (ui.deckPanel), risen above its segment; the
-    //      dock's 204px widgets moved inside it unchanged (renderWidget is reused).
-    // L3 - the topbar above carries verbs and status only. composition() still curates:
-    //      TALON-promoted segments wear the attention pulse and cite their reason.
-    const DECK_GLYPH = {
-        feed: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8 H6 M10 8 H14 M4 5.5 H12 M4 10.5 H12"/><circle cx="4" cy="5.5" r="1.2"/><circle cx="12" cy="5.5" r="1.2"/><circle cx="4" cy="10.5" r="1.2"/><circle cx="12" cy="10.5" r="1.2"/><rect x="6.4" y="6.6" width="3.2" height="2.8" rx="1"/></svg>',
-        weather: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 10.5 C4 6.5 12 6.5 14 10.5 M4.5 12.5 C5.8 10.3 10.2 10.3 11.5 12.5 M8 14.2 V14.3" stroke-linecap="round"/><path d="M10.5 2 L13 4.5 M13 2 L10.5 4.5" stroke-linecap="round"/></svg>',
-        fleet: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><path d="M5.6 5.6 L10.4 10.4 M10.4 5.6 L5.6 10.4"/></svg>',
-        evac: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.4 2"><path d="M2 12 C5 12 5 4 8 4 S11 12 14 12"/></svg>',
-        growth: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5 C10 4 12.5 6 12.5 9.5 A4.5 4.5 0 0 1 3.5 9.5 C3.5 7.5 4.5 6 5.5 5 C5.8 6.2 6.6 6.8 7 6.8 C7 4.8 7.4 3 8 1.5 Z"/></svg>',
-        structures: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>',
-        events: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 3 H14 M2 8 H11 M2 13 H13"/><circle cx="12.5" cy="8" r="1.4" fill="currentColor" stroke="none"/></svg>',
+    const CAT_OF = { feed: 'situation', weather: 'situation', growth: 'situation', structures: 'situation', fleet: 'resources', evac: 'egress', events: 'comms' };
+    const CAT_ORDER = ['situation', 'resources', 'egress', 'comms'];
+    const CAT_META = {
+        situation: { label: 'Situation', glyph: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5 C10 4 12.5 6 12.5 9.5 A4.5 4.5 0 0 1 3.5 9.5 C3.5 7.5 4.5 6 5.5 5 C5.8 6.2 6.6 6.8 7 6.8 C7 4.8 7.4 3 8 1.5 Z"/></svg>' },
+        resources: { label: 'Resources', glyph: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><path d="M5.6 5.6 L10.4 10.4 M10.4 5.6 L5.6 10.4"/></svg>' },
+        egress: { label: 'Egress', glyph: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.4 2"><path d="M2 12 C5 12 5 4 8 4 S11 12 14 12"/></svg>' },
+        comms: { label: 'Comms', glyph: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 9 C4 5 12 5 14 9 M4.5 11 C5.8 8.8 10.2 8.8 11.5 11 M8 13.2 V13.3" stroke-linecap="round"/></svg>' },
     };
+    const SHIELD_GLYPH = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5 L13.5 3.5 V8 C13.5 11.5 11 13.5 8 14.5 C5 13.5 2.5 11.5 2.5 8 V3.5 Z"/><path d="M5.8 8 L7.3 9.5 L10.2 6.4"/></svg>';
     const SPARK_GLYPH = '<svg viewBox="0 0 16 16" fill="none" stroke="var(--talon-ink)" stroke-width="1.5"><path d="M8 2.5 L9.6 6.4 L13.5 8 L9.6 9.6 L8 13.5 L6.4 9.6 L2.5 8 L6.4 6.4 Z" stroke-linejoin="round"/></svg>';
     /** The deck's one glance per category - the same live state the panel body renders,
      * cheaply re-derived. Provenance travels with it: the deck never shows bare numbers. */
@@ -1451,27 +1445,51 @@ export async function mountConsole(app) {
                 return { v: WIDGETS[w] ? WIDGETS[w].title : w, sub: '', st: 'done', prov: null };
         }
     }
-    function segHtml(l, g) {
-        const title = l.by === 'talon' ? 'TALON put this here: ' + esc(l.reason) : esc(WIDGETS[l.w] ? WIDGETS[l.w].title : l.w);
-        return '<button class="seg' + (l.by === 'talon' ? ' attn' : '') + (ui.deckPanel === l.w ? ' open' : '') + '" data-act="deck" data-w="' + l.w + '" aria-expanded="' + (ui.deckPanel === l.w) + '" title="' + title + '">'
-            + '<span class="ic" aria-hidden="true">' + (DECK_GLYPH[l.w] ?? '') + '</span>'
-            + '<span class="t"><small>' + esc(WIDGETS[l.w] ? WIDGETS[l.w].title : l.w) + (g.prov ? ' <span class="prov ' + g.prov + '">' + g.prov + '</span>' : '') + '</small><b>' + esc(g.v) + (g.sub ? ' <em>\u00b7 ' + esc(g.sub) + '</em>' : '') + '</b></span>'
-            + '<span class="st st-' + g.st + '" aria-hidden="true"></span><span class="caret" aria-hidden="true">' + (ui.deckPanel === l.w ? '\u25be' : '\u25b4') + '</span>'
+    function segHtml(c2, g) {
+        const promoted = c2.members.find((m) => m.by === 'talon');
+        const title = promoted ? 'TALON put this here: ' + esc(promoted.reason) : esc(CAT_META[c2.cat].label) + ' - ' + c2.members.map((m) => WIDGETS[m.w] ? WIDGETS[m.w].title : m.w).join(', ');
+        return '<button class="seg' + (c2.attn ? ' attn' : '') + (ui.deckPanel === c2.cat ? ' open' : '') + '" data-act="deck" data-cat="' + c2.cat + '" aria-expanded="' + (ui.deckPanel === c2.cat) + '" title="' + title + '">'
+            + '<span class="ic" aria-hidden="true">' + CAT_META[c2.cat].glyph + '</span>'
+            + '<span class="t"><small>' + esc(CAT_META[c2.cat].label) + (g.prov ? ' <span class="prov ' + g.prov + '">' + g.prov + '</span>' : '') + '</small><b>' + esc(g.v) + (g.sub ? ' <em>\u00b7 ' + esc(g.sub) + '</em>' : '') + '</b></span>'
+            + '<span class="st st-' + g.st + '" aria-hidden="true"></span><span class="caret" aria-hidden="true">' + (ui.deckPanel === c2.cat ? '\u25be' : '\u25b4') + '</span>'
             + '</button>';
     }
     function renderDeck(ps, ts) {
         const c = composition(ps, ts);
         const layout = [...c.op.map((w) => ({ w, by: 'op', reason: '' })), ...c.talonSlots.map((s) => ({ w: s.w, by: 'talon', reason: s.reason }))];
         const slots = $('#slots');
-        const glances = layout.map((l) => deckGlance(l.w, ps, ts));
-        const key = layout.map((l) => l.w + l.by).join('|') + '#' + String(ui.deckPanel) + '#' + glances.map((g) => g.v + g.sub + g.st).join('|');
+        // fold the composed widgets into mission categories; a TALON promotion anywhere in
+        // a category marks the whole segment at-need
+        const cats = [];
+        for (const l of layout) {
+            const cat = CAT_OF[l.w];
+            if (!cat)
+                continue;
+            let slot = cats.find((x) => x.cat === cat);
+            if (!slot) {
+                slot = { cat, members: [], attn: false };
+                cats.push(slot);
+            }
+            slot.members.push(l);
+            if (l.by === 'talon')
+                slot.attn = true;
+        }
+        cats.sort((a, b2) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b2.cat));
+        const glances = cats.map((c2) => {
+            const gs = c2.members.map((m) => deckGlance(m.w, ps, ts));
+            const rank = { needs: 0, working: 1, done: 2 };
+            gs.sort((x, y) => rank[x.st] - rank[y.st]);
+            return gs[0];
+        });
+        const key = cats.map((c2) => c2.cat + ':' + c2.members.map((m) => m.w + m.by).join('+')).join('|') + '#' + String(ui.deckPanel) + '#' + glances.map((g) => g.v + g.sub + g.st).join('|');
         if (changed('deck', key)) {
-            slots.innerHTML = layout.map((l, i) => segHtml(l, glances[i])).join('')
+            slots.innerHTML = cats.map((c2, i) => segHtml(c2, glances[i])).join('')
+                + '<button class="seg seg-auth" data-act="pop" data-pop="authority" aria-haspopup="dialog" title="What TALON may do alone - standing orders, budget"><span class="ic" aria-hidden="true">' + SHIELD_GLYPH + '</span><span class="t"><small>Authority</small><b>' + ts.budget.used + '/' + ts.budget.max + ' <em>\u00b7 ' + ts.log.filter((e) => e.authority === 'standing').length + ' standing</em></b></span></button>'
                 + '<button class="seg ask" data-act="deckask" aria-label="Open the TALON thread"><span class="ic ask" aria-hidden="true">' + SPARK_GLYPH + '</span><span class="t"><small class="asklab">Ask TALON</small><b class="asksub">thread \u00b7 log \u00b7 review</b></span></button>';
         }
-        // L2 - the open category panel renders the SAME widget body the dock used.
+        // L2 - the open category panel stacks the SAME widget bodies the dock used.
         const panel = $('#deckPanel');
-        const open = layout.find((l) => l.w === ui.deckPanel);
+        const open = cats.find((c2) => c2.cat === ui.deckPanel);
         if (!open) {
             if (!panel.hidden) {
                 panel.hidden = true;
@@ -1483,15 +1501,24 @@ export async function mountConsole(app) {
             }
         }
         else {
-            if (panel.hidden || panel.dataset.w !== open.w) {
+            const membersKey = open.members.map((m) => m.w + m.by).join('+');
+            if (panel.hidden || panel.dataset.w !== open.cat + '|' + membersKey) {
                 panel.hidden = false;
-                panel.dataset.w = open.w;
-                panel.innerHTML = '<article class="widget glass" data-slot="panel:' + open.w + '" data-w="' + open.w + '"><header></header><div class="wbody" tabindex="0"></div></article>';
-                keys.delete('w:panel:' + open.w);
+                panel.dataset.w = open.cat + '|' + membersKey;
+                panel.innerHTML = open.members.map((m) => '<article class="widget glass" data-slot="panel:' + m.w + '" data-w="' + m.w + '"><header></header><div class="wbody" tabindex="0"></div></article>').join('');
+                for (const m of open.members)
+                    keys.delete('w:panel:' + m.w);
             }
             widgetChrome = 'panel';
-            renderWidget(panel.querySelector('.widget'), open, ps, ts);
+            const arts = [...panel.querySelectorAll('.widget')];
+            open.members.forEach((m, i2) => renderWidget(arts[i2], m, ps, ts));
             widgetChrome = 'dock';
+            // the panel rises from its own segment: anchor to it, clamped to the viewport
+            const segEl = slots.querySelector('.seg[data-cat="' + open.cat + '"]');
+            if (segEl) {
+                const r = segEl.getBoundingClientRect();
+                panel.style.left = Math.max(12, Math.min(innerWidth - 372, r.left)) + 'px';
+            }
         }
         // The feed wing: the pip stays hosted even when the feed panel is closed.
         const wing = $('#feedWing');
@@ -2285,7 +2312,7 @@ export async function mountConsole(app) {
                 return schedule();
             }
             case 'deck': {
-                ui.deckPanel = ui.deckPanel === d.w ? null : d.w;
+                ui.deckPanel = ui.deckPanel === d.cat ? null : d.cat;
                 keys.delete('deck');
                 drawTether();
                 return schedule();

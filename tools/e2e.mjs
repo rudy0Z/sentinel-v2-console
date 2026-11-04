@@ -302,10 +302,10 @@ const quiet = (errs) => errs.length === 0;
   const r1 = await v1.page.evaluate(() => {
     const rail = document.querySelector('#rail').getBoundingClientRect();
     const cards = document.querySelector('#cards').getBoundingClientRect();
-    return { overflow: document.documentElement.scrollWidth > innerWidth + 1, railRight: rail.right <= innerWidth + 1, cardsOverlap: cards.left < rail.left - 4, segs: document.querySelectorAll('#slots .seg').length };
+    return { overflow: document.documentElement.scrollWidth > innerWidth + 1, railRight: rail.right <= innerWidth + 1, cardsOverlap: cards.left < rail.left - 4, segs: document.querySelectorAll('#slots .seg[data-cat]').length };
   });
   await shot(v1.page, 'break-1280');
-  check('V1 1280×800: no page overflow, rail inside, cards clear of rail, deck segments present', !r1.overflow && r1.railRight && r1.cardsOverlap && r1.segs >= 4, JSON.stringify(r1));
+  check('V1 1280×800: no page overflow, rail inside, cards clear of rail, deck segments present', !r1.overflow && r1.railRight && r1.cardsOverlap && r1.segs >= 3, JSON.stringify(r1));
   check('V-viewport: no console errors', quiet(v1.errors));
   await v1.page.close();
 }
@@ -444,7 +444,7 @@ const quiet = (errs) => errs.length === 0;
       out.lensReset = window.engine.getHorizonFocus() === null;
     }
     // the fleet rows live in the Resources panel since the deck cutover — open it first
-    const rseg = document.querySelector('#slots .seg[data-w=fleet]');
+    const rseg = document.querySelector('#slots .seg[data-cat=resources]');
     if (rseg) { rseg.click(); for (let i = 0; i < 20; i++) { await sleep(120); if (document.querySelector('#deckPanel .urow[data-unit]')) break; } }
     const row = document.querySelector('#deckPanel .urow[data-unit], .urow[data-unit]');
     if (row) {

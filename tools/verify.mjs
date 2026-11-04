@@ -171,7 +171,7 @@ async function open(q, w = 1600, h = 960, pinned) {
   // click the deck segment, let the panel rise, then read the same body.
   const sw = await page.evaluate(async () => {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const seg = document.querySelector('#slots .seg[data-w=structures]');
+    const seg = document.querySelector('#slots .seg[data-cat=situation]');
     if (!seg) return { w: false, rows: 0, chip: 'no segment' };
     seg.click();
     let panel = null;
@@ -348,7 +348,7 @@ async function open(q, w = 1600, h = 960, pinned) {
       step();
     });
     // the battery lives in the fleet panel since the 2026-11-04 deck cutover
-    document.querySelector('#slots .seg[data-w=fleet]')?.click();
+    document.querySelector('#slots .seg[data-cat=resources]')?.click();
     await new Promise((r) => setTimeout(r, 700));
     const low = await poll();
     const probe = document.createElement('i');
@@ -429,10 +429,10 @@ async function open(q, w = 1600, h = 960, pinned) {
     const segs = [...s.querySelectorAll('.seg')];
     const overflow = s.scrollWidth > s.clientWidth + 1;
     const noPill = !document.getElementById('dockMore');
-    const seg = segs.find((x) => x.dataset.w === 'growth') ?? segs[0];
+    const seg = segs.find((x) => x.dataset.cat === 'situation') ?? segs[0];
     seg?.click();
     let panelOpen = false, bodyOk = false;
-    for (let i = 0; i < 20; i++) { await sleep(120); const p = document.getElementById('deckPanel'); if (p && !p.hidden && p.querySelector('.widget')) { panelOpen = true; bodyOk = p.querySelector('.wbody').children.length > 0; break; } }
+    for (let i = 0; i < 20; i++) { await sleep(120); const p = document.getElementById('deckPanel'); if (p && !p.hidden && p.querySelectorAll('.widget').length >= 1) { panelOpen = true; bodyOk = [...p.querySelectorAll('.wbody')].some((w) => w.children.length > 0); break; } }
     const rect = document.getElementById('deckPanel')?.getBoundingClientRect();
     const onscreen = !!rect && rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
     document.querySelector('#deckPanel [data-act=deckclose]')?.click();

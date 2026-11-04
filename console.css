@@ -636,7 +636,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 @keyframes orbAlertRing { from { transform: scale(.96); opacity: .65; } to { transform: scale(1.04); opacity: 1; } }
 
 /* cards — one accent, never a full coloured frame: a 2px edge cue, not an alarm box */
-.card { border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface-card); padding: var(--s-3) var(--s-4) var(--s-4); display: grid; gap: var(--s-3); position: relative; }
+.card { border-radius: var(--r-lg); border: 1px solid var(--border); background: color-mix(in srgb, var(--bg-surface-1) 94%, transparent); /* tactile pass: near-opaque - map features must not bleed through the COA rows */ padding: var(--s-3) var(--s-4) var(--s-4); display: grid; gap: var(--s-3); position: relative; }
 .card.needs::before, .card.critical::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 2px; border-radius: 1px; }
 .card.needs::before { background: var(--needs); }
 .card.critical::before { background: var(--critical); }
@@ -809,7 +809,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .seg.attn .st { background: var(--needs); }
 .seg.attn::after { content: ""; position: absolute; inset: -1px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--needs) 45%, transparent); animation: segpulse 2s var(--ease-in-out) infinite; pointer-events: none; }
 .seg.open { border-color: color-mix(in srgb, var(--talon) 55%, transparent); }
-.seg.ask { border-color: color-mix(in srgb, var(--talon) 40%, transparent); }
+.slots .seg.ask { margin-left: auto; border-color: color-mix(in srgb, var(--talon) 40%, transparent); }
 .seg.ask .ic { background: var(--talon-soft); }
 .seg.ask .asklab { color: var(--talon-ink); }
 .seg.ask .asksub { font: var(--fw-medium) var(--fs-micro)/1 var(--font-sans); color: var(--text-2); font-weight: var(--fw-medium); letter-spacing: 0; }
@@ -833,7 +833,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .slots { display: flex; align-items: flex-end; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; }
 .slots::-webkit-scrollbar { display: none; }
 /* L2 - the category panel, risen above its segment; hosts the old widget body unchanged */
-.deckpanel { position: fixed; z-index: calc(var(--z-dock) + 1); left: calc(var(--gap) + var(--tools-w) + var(--gap)); bottom: calc(var(--deck-h) + var(--gap) * 2); width: 348px; max-height: min(58vh, 560px); overflow-y: auto; scrollbar-width: none; }
+.deckpanel { position: fixed; z-index: calc(var(--z-dock) + 1); left: calc(var(--gap) + var(--tools-w) + var(--gap)); bottom: calc(var(--deck-h) + var(--gap)); width: 348px; /* left is anchored to its segment by renderDeck */ max-height: min(58vh, 560px); overflow-y: auto; scrollbar-width: none; }
 .deckpanel::-webkit-scrollbar { display: none; }
 .deckpanel .widget { height: auto; max-height: none; }
 /* the feed wing: the pip stays hosted when the feed panel is closed */
@@ -978,7 +978,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .field.invalid { animation: fieldShake 180ms ease-out; border-color: var(--needs); }
 .ctip { position: absolute; pointer-events: none; padding: 5px 8px; border-radius: var(--r-xs); background: var(--surface-glass-strong); border: 1px solid var(--border); font-size: var(--fs-micro); white-space: nowrap; box-shadow: var(--shadow-1); }
 .ctip b { font-family: var(--font-mono); }
-.clegend { display: flex; gap: var(--s-3); font-size: var(--fs-micro); color: var(--text-3); }
+.clegend { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-3); font-size: var(--fs-micro); color: var(--text-3); }
 .clegend i { display: inline-block; width: 10px; height: 2px; margin-right: 4px; vertical-align: 3px; }
 
 /* ==========================================================================
