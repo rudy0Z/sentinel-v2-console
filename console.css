@@ -213,8 +213,9 @@
   --btn-primary-bg-hover: #FFFFFF;
   --btn-primary-bg-active: #DCE0E8;
   --btn-primary-border: var(--p-alpha-w-60);
-  --btn-primary-shadow: inset 0 1px 0 var(--p-slate-12), 0 2px 0 var(--p-slate-8), 0 5px 12px var(--p-alpha-b-50);
-  --btn-primary-shadow-active: inset 0 1px 0 var(--p-slate-12), 0 0 0 var(--p-slate-8), 0 1px 3px var(--p-alpha-b-45);
+  /* the inverted pill reads crisp through contrast, not a bevel lip (craft pass 2026-11-11) */
+  --btn-primary-shadow: inset 0 1px 0 var(--p-alpha-w-60), 0 1px 2px var(--p-alpha-b-50), 0 8px 20px -12px var(--p-alpha-b-60);
+  --btn-primary-shadow-active: inset 0 1px 2px var(--p-alpha-b-30), 0 1px 2px var(--p-alpha-b-45);
   --opt-bg: linear-gradient(180deg, var(--p-alpha-w-04) 0%, var(--p-alpha-w-02) 100%);
   --opt-bg-rec: linear-gradient(180deg, var(--p-alpha-w-08) 0%, var(--p-alpha-w-04) 100%);
   --opt-shadow: inset 0 1px 0 var(--p-alpha-w-06), 0 2px 4px var(--p-alpha-b-35);
@@ -262,7 +263,7 @@
   --fs-harness: 10.5px;/* EXERCISE label — harness chrome, never product copy */
   --fs-caption: 11.5px;
   --fs-body: 12.5px;
-  --fs-title: 13.5px;
+  --fs-title: 14px;
   --fs-readout: 18px;
   --fs-heading: 17px;
   --fs-display: 22px;
@@ -273,7 +274,9 @@
   --fw-semibold: 600;
   --fw-bold: 700;
   --tracking-caps: .08em;
+  --tracking-label: .06em;  /* micro-caps and badge labels — one step under caps */
   --tracking-tight: -0.01em;
+  --tracking-brand: .14em;  /* wordmark only */
 
   /* space (4px grid) */
   --s-1: 4px;
@@ -293,6 +296,7 @@
   --r-md: 8px;
   --r-lg: 10px;
   --r-xl: 12px;
+  --r-deck: 11px; /* the crew-deck segment radius: between lg and xl — the deck's own signature */
   --r-pill: 999px;
 
   /* elevation */
@@ -348,11 +352,11 @@
   @keyframes chat-in { from { opacity: 0; } }
   @keyframes widget-in { from { opacity: 0; } }
   @keyframes fade { from { opacity: 0; } }
+  @keyframes panelrise { from { opacity: 0; } }
   /* presses and shakes don't move */
   .btn:active:not(:disabled), .opt:active:not(:disabled), .rbtn:active, .chip:active { transform: none; }
   .rail .statuspill .adot:hover .dot { transform: none; }
   .field.invalid { animation: none; }
-  .cards { transition: none; }
 }
 @media (prefers-reduced-transparency: reduce) {
   .glass, .rail .rbtn, .rail .statuspill, .pop, .tip { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--surface-solid); }
@@ -362,6 +366,7 @@
 @media (prefers-contrast: more) {
   :root { --border-subtle: var(--border-strong); --border-default: var(--border-strong); }
   .glass, .rail .rbtn, .rail .statuspill, .pop, .tip { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--surface-solid); }
+  #map::after { content: none; } /* atmosphere must never dim terrain when the operator asks for contrast */
 }
 /* theme swap: the daylight/dark flip would otherwise smear ~35 simultaneous colour
    transitions — swap instantly, then let transitions come back */
@@ -401,7 +406,7 @@ svg.ic.xs { width: 12px; height: 12px; }
 .btn:disabled { opacity: .4; cursor: default; }
 .btn.primary { background: var(--btn-primary-bg); color: var(--n-0); border-color: var(--btn-primary-border); font-weight: var(--fw-semibold); box-shadow: var(--btn-primary-shadow); }
 .btn.primary:hover:not(:disabled) { background: var(--btn-primary-bg-hover); }
-.btn.primary:active:not(:disabled) { background: var(--btn-primary-bg-active); transform: translateY(2px); box-shadow: var(--btn-primary-shadow-active); }
+.btn.primary:active:not(:disabled) { background: var(--btn-primary-bg-active); transform: translateY(1px); box-shadow: var(--btn-primary-shadow-active); }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--text-2); box-shadow: none; }
 .btn.ghost:hover:not(:disabled) { color: var(--text-1); background: var(--surface-hover); }
 .btn.sm { height: 26px; padding: 0 var(--s-2); font-size: var(--fs-caption); border-radius: var(--r-xs); }
@@ -420,7 +425,7 @@ svg.ic.xs { width: 12px; height: 12px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--idle); }
 .dot.working { background: var(--working); box-shadow: 0 0 0 3px var(--working-soft); animation: breathe 1.6s var(--ease-in-out) infinite; }
 .dot.needs { background: var(--needs); box-shadow: 0 0 0 3px var(--needs-soft); }
-.dot.done { background: var(--done); }
+.dot.done { background: var(--done); box-shadow: 0 0 0 3px var(--done-soft); }
 .dot.critical { background: var(--critical); box-shadow: 0 0 0 3px var(--critical-soft); }
 @keyframes breathe { 50% { box-shadow: 0 0 0 5px transparent; opacity: .7; } }
 .chip { display: inline-flex; align-items: center; gap: var(--s-1); height: 22px; padding: 0 var(--s-2); border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface-raised); color: var(--text-2); font-size: var(--fs-caption); font-weight: var(--fw-medium); white-space: nowrap; transition: transform 120ms var(--ease-out-expo); }
@@ -430,7 +435,7 @@ button.chip:hover { color: var(--text-1); border-color: var(--border-strong); ba
 .chip.critical { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 45%, transparent); background: var(--critical-soft); }
 .chip.ok { color: var(--done); border-color: color-mix(in srgb, var(--done) 40%, transparent); background: var(--done-soft); }
 .chip.working { color: var(--working); border-color: color-mix(in srgb, var(--working) 40%, transparent); background: var(--working-soft); }
-.prov { font: var(--fw-semibold) var(--fs-badge)/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; padding: 3px 5px; border-radius: 4px; border: 1px solid; white-space: nowrap; }
+.prov { font: var(--fw-semibold) var(--fs-badge)/1 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; padding: 3px 4px 3px 5px; border-radius: 4px; border: 1px solid; border-left-width: 2px; background: color-mix(in srgb, currentColor 9%, transparent); white-space: nowrap; } /* tinted capsule with a provenance spine (craft pass 2026-11-11) */
 .prov.measured { color: var(--prov-measured); border-color: color-mix(in srgb, var(--prov-measured) 40%, transparent); }
 .prov.modeled { color: var(--prov-modeled); border-color: color-mix(in srgb, var(--prov-modeled) 40%, transparent); }
 .prov.authored { color: var(--prov-authored); border-color: color-mix(in srgb, var(--prov-authored) 40%, transparent); }
@@ -443,10 +448,18 @@ button.chip:hover { color: var(--text-1); border-color: var(--border-strong); ba
    ========================================================================== */
 .app { position: fixed; inset: 0; }
 #map { position: absolute; inset: 0; z-index: 0; isolation: isolate; }
+#map > canvas { z-index: 0; }
 #map .tte-chip .tte-pill { cursor: pointer; }
+/* atmosphere (craft pass 2026-11-11): the terrain dissolves into the darkroom at the
+   frame edges so the HUD never fights a hard canvas boundary. Token-only scrims,
+   edges ≤ ~40% alpha — data under the cards is never dimmed beyond legibility. */
+#map::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background:
+  radial-gradient(120% 90% at 50% 44%, transparent 46%, color-mix(in srgb, var(--bg-canvas) 30%, transparent) 100%),
+  linear-gradient(180deg, color-mix(in srgb, var(--bg-canvas) 38%, transparent) 0, transparent 12%),
+  linear-gradient(0deg, color-mix(in srgb, var(--bg-canvas) 42%, transparent) 0, transparent 15%); }
 
 .topbar { position: absolute; z-index: var(--z-topbar); top: var(--gap); left: var(--gap); right: var(--gap); height: var(--topbar-h); border-radius: var(--r-lg); display: flex; align-items: center; gap: var(--s-3); padding: 0 var(--s-2) 0 var(--s-4); min-width: 0; }
-.brand { display: flex; align-items: center; gap: var(--s-2); font-weight: var(--fw-bold); font-size: var(--fs-title); letter-spacing: .14em; white-space: nowrap; }
+.brand { display: flex; align-items: center; gap: var(--s-2); font-weight: var(--fw-bold); font-size: var(--fs-title); letter-spacing: var(--tracking-brand); white-space: nowrap; }
 .brand span { background: var(--wordmark-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .brand svg { width: 22px; height: 22px; }
 .vsep { width: 1px; height: 22px; background: var(--border); flex: none; }
@@ -457,28 +470,24 @@ button.chip:hover { color: var(--text-1); border-color: var(--border-strong); ba
 .sitbtn > span { min-width: 0; overflow: hidden; }
 .sitbtn b { font-weight: var(--fw-semibold); display: block; line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sitbtn small { display: block; color: var(--text-3); font-size: var(--fs-caption); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.status-pill { display: inline-flex; align-items: center; gap: var(--s-2); height: 28px; padding: 0 var(--s-3); border-radius: var(--r-pill); font-weight: var(--fw-semibold); font-size: var(--fs-caption); letter-spacing: .02em; white-space: nowrap; border: 1px solid var(--border); color: var(--text-2); }
+.status-pill { display: inline-flex; align-items: center; gap: var(--s-2); height: 28px; padding: 0 var(--s-3); border-radius: var(--r-pill); font-weight: var(--fw-semibold); font-size: var(--fs-caption); letter-spacing: var(--tracking-label); white-space: nowrap; border: 1px solid var(--border); color: var(--text-2); }
 .status-pill.ok { color: var(--done); border-color: color-mix(in srgb, var(--done) 35%, transparent); background: var(--done-soft); }
 .status-pill.warn { color: var(--needs); border-color: color-mix(in srgb, var(--needs) 35%, transparent); background: var(--needs-soft); }
 .status-pill.bad { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 40%, transparent); background: var(--critical-soft); }
-.kpis { display: flex; align-items: center; gap: var(--s-4); min-width: 0; overflow: hidden; }
-.kpi { display: grid; gap: 1px; white-space: nowrap; }
-.kpi b { font: var(--fw-semibold) var(--fs-title)/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
-.kpi small { font-size: var(--fs-micro); color: var(--text-3); display: flex; align-items: center; gap: 5px; }
 .grow { flex: 1; min-width: 0; }
 .clock { display: flex; align-items: center; gap: var(--s-2); height: 36px; padding: 0 var(--s-3); border-radius: var(--r-sm); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: var(--inset-well); white-space: nowrap; }
 .clock b { font: var(--fw-semibold) var(--fs-body)/1 var(--font-mono); }
 .clock span { font: var(--fw-medium) var(--fs-caption)/1 var(--font-mono); color: var(--text-2); }
 /* red discipline: session mode is activity, not life safety — LIVE is working-blue, blink carries liveness */
 .live { display: inline-flex; align-items: center; gap: var(--s-1); font: var(--fw-bold) var(--fs-micro)/1 var(--font-sans); letter-spacing: var(--tracking-caps); color: var(--working); }
-.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.6s steps(2) infinite; }
+.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.6s var(--ease-in-out) infinite; } /* smooth breathe, not a square blink (craft pass 2026-11-11) */
 .live.review { color: var(--talon-ink); }
 .live.review::before, .live.past::before { animation: none; }
 .live.past { color: var(--text-2); }
 @keyframes blink { 50% { opacity: .25; } }
 
-/* ---- map tools (bottom-right, above the board; the top-left stays clean) */
-.tools { position: absolute; z-index: var(--z-map-ui); left: var(--gap); top: 50%; transform: translateY(-50%); display: grid; gap: var(--s-2); } /* moved to the freed left edge (2026-11-04, TrackWise/Aerion grammar) - the right lane never crosses it */
+/* ---- map tools (left edge, since the 2026-11-04 crew-deck cutover — the decision lane is on the right and the two can never collide) */
+.tools { position: absolute; z-index: var(--z-map-ui); left: var(--gap); top: 50%; transform: translateY(-50%); display: grid; gap: var(--s-2); }
 /* tools live on the LEFT edge since the 2026-11-04 crew-deck cutover - the decision lane is on the right and the two can never collide; the old step-aside rules retired with the move */
 .toolgroup { display: grid; border-radius: var(--r-md); overflow: hidden; }
 .toolgroup .btn { width: var(--tools-w); height: var(--tools-w); border-radius: 0; border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; color: var(--icon); padding: 0; box-shadow: var(--highlight-top); }
@@ -560,38 +569,45 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .rail .rbtn .pips i { width: 6px; height: 2.5px; border-radius: 1px; background: var(--pip-off); }
 .rail .rbtn .pips i.on { background: var(--needs); } /* red discipline: interrupt budget pips are amber */
 
-/* chat: a floating card over the map — never a docked panel, the map does not reflow */
+/* TALON's home: a persistent right dock (2026-11-11). The map's right inset follows
+   it from updateInsets — terrain is never hidden behind it. Collapsible to a face
+   tab (.shut, T or the phead chevron) when the operator wants the map back. */
 .chat { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h)); right: calc(var(--gap) * 2 + var(--rail-w2)); width: var(--panel-w); max-height: calc(100vh - var(--topbar-h) - var(--deck-h) - 96px); border-radius: var(--r-xl); display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-2); animation: chat-in var(--dur-base) var(--ease-out); }
 .chat[hidden] { display: none; }
+/* collapsed: the dock keeps its identity — face orb + expand chevron only, parked in the
+   rail lane so the decision lane (cards at --panel-right-w) never overlaps it */
+.chat.shut { width: 44px; right: var(--gap); }
+.chat.shut .phead { flex-direction: column; gap: var(--s-2); padding: var(--s-2) var(--s-1); }
+.chat.shut .phead .mascot { width: 30px; height: 30px; }
+.chat.shut .phead > div, .chat.shut .budget, .chat.shut .ptabs, .chat.shut .pbody, .chat.shut .composer { display: none; }
+.chat.shut .pheadtoggle { width: 30px; }
+.chat.shut .pheadtoggle svg { transform: rotate(180deg); }
+.phead .pheadtoggle { flex: none; }
 /* light catches the top edge of the glass: a 0.5px diagonal rim, masked so only the edge paints */
 .chat::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: .5px; pointer-events: none; background: var(--rim-gradient); -webkit-mask: linear-gradient(var(--mask-opaque) 0 0) content-box, linear-gradient(var(--mask-opaque) 0 0); -webkit-mask-composite: xor; mask: linear-gradient(var(--mask-opaque) 0 0) content-box, linear-gradient(var(--mask-opaque) 0 0); mask-composite: exclude; }
 @keyframes chat-in { from { opacity: 0; transform: translateX(10px); } }
 
 /* posture pill: the operator follows the incident, not the process */
-.posture { appearance: none; display: inline-flex; align-items: center; gap: var(--s-2); height: 30px; padding: 0 var(--s-3); border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface-raised); color: var(--text-1); font-weight: var(--fw-semibold); font-size: var(--fs-caption); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.posture { appearance: none; display: inline-flex; align-items: center; gap: var(--s-2); height: 30px; padding: 0 var(--s-3); border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface-raised); color: var(--text-1); font-weight: var(--fw-semibold); font-size: var(--fs-caption); letter-spacing: var(--tracking-label); text-transform: uppercase; white-space: nowrap; }
 .posture:hover { border-color: var(--border-strong); background: var(--surface-hover); }
 .posture .dot { width: 7px; height: 7px; }
 .posture.ok .dot { background: var(--done); }
 .posture.warn .dot { background: var(--needs); }
 .posture.bad .dot { background: var(--critical); }
-.gatechip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--needs-soft); color: var(--needs); font: var(--fw-semibold) var(--fs-micro)/1.4 var(--font-mono); letter-spacing: .05em; }
+.gatechip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--needs-soft); color: var(--needs); font: var(--fw-semibold) var(--fs-micro)/1.4 var(--font-mono); letter-spacing: var(--tracking-label); }
 
 /* decision cards: appear only while an item is open — tasks surface naturally,
-   anchored to the left of the edge rail */
-.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: calc(var(--gap) * 2 + var(--rail-w2)); width: 372px; display: grid; gap: var(--s-3); max-height: calc(100vh - var(--topbar-h) - var(--deck-h) - 44px); overflow-y: auto; scrollbar-width: none; pointer-events: none; transition: transform var(--dur-base) var(--ease-out-expo); } /* 44px = gap + dock clearance (was 120px — 64px of dead card height; audit 2026-10-30); stack seam = 12px so between ≥ within-card gap */
+   in the right lane left of the TALON dock (the inset var tracks dock/rail state) */
+.cards { position: absolute; z-index: var(--z-talon); top: calc(var(--gap) * 2 + var(--topbar-h) + 4px); right: var(--panel-right-w, 68px); width: 372px; display: grid; gap: var(--s-3); max-height: calc(100vh - var(--topbar-h) - var(--deck-h) - 44px); overflow-y: auto; scrollbar-width: none; pointer-events: none; } /* stack seam = 12px so between ≥ within-card gap */
 .cards > * { pointer-events: auto; }
 .cards:empty { display: none; }
-.cards .card { box-shadow: var(--shadow-2), inset 0 0 0 .5px var(--p-alpha-w-08); }
-/* TALON drawer displacement is a transform, not a layout property: the TS layer
-   toggles .chat-open on the app root (legacy alias) or .cards-shift on the stack. */
-.app.chat-open .cards, .cards.cards-shift { transform: translateX(calc(-1 * (var(--panel-w) + var(--gap)))); }
-.app.chat-open .cards { max-height: calc(100vh - var(--topbar-h) - var(--deck-h) - 44px); }
+.cards .card { box-shadow: var(--highlight-top), var(--shadow-2), inset 0 0 0 .5px var(--p-alpha-w-08); }
 .tip { position: fixed; z-index: var(--z-toast); pointer-events: none; padding: 6px var(--s-3); border-radius: var(--r-pill); background: var(--surface-glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow-1); font-size: var(--fs-caption); white-space: nowrap; display: flex; align-items: center; gap: var(--s-2); opacity: 0; transform: translateX(4px); transition: opacity 80ms var(--ease-out), transform 80ms var(--ease-out); }
 .tip.on { opacity: 1; transform: none; transition-duration: 120ms; } /* enter slower (120ms) than exit (80ms) */
 .tip small { color: var(--text-3); }
 
 .phead { position: relative; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-4) var(--s-4) var(--s-3); }
-.phead h1 { margin: 0; font-size: var(--fs-heading); font-weight: var(--fw-bold); letter-spacing: .1em; line-height: 1; }
+.phead h1 { margin: 0; font-size: var(--fs-heading); font-weight: var(--fw-bold); letter-spacing: var(--tracking-caps); line-height: 1; }
 .phead .line { color: var(--text-2); font-size: var(--fs-caption); margin-top: 5px; display: flex; gap: var(--s-1); align-items: center; }
 .budget { margin-left: auto; display: grid; gap: var(--s-1); justify-items: end; }
 .budget .pips { display: flex; gap: 3px; }
@@ -635,15 +651,17 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 @keyframes orbTriPulse { 0%, 100% { opacity: .95; } 50% { opacity: .45; } }
 @keyframes orbAlertRing { from { transform: scale(.96); opacity: .65; } to { transform: scale(1.04); opacity: 1; } }
 
-/* cards — one accent, never a full coloured frame: a 2px edge cue, not an alarm box */
-.card { border-radius: var(--r-lg); border: 1px solid var(--border); background: color-mix(in srgb, var(--bg-surface-1) 94%, transparent); /* tactile pass: near-opaque - map features must not bleed through the COA rows */ padding: var(--s-3) var(--s-4) var(--s-4); display: grid; gap: var(--s-3); position: relative; }
+/* cards — one accent, never a full coloured frame: a 2px edge cue, not an alarm box.
+   Rim light (craft pass 2026-11-11): the shared --highlight-top token finally lights the
+   card's top chamfer, machined like the rail buttons. Near-opaque guard unchanged. */
+.card { border-radius: var(--r-lg); border: 1px solid var(--border); background: color-mix(in srgb, var(--bg-surface-1) 94%, transparent); /* tactile pass: near-opaque - map features must not bleed through the COA rows */ padding: var(--s-3) var(--s-4) var(--s-4); display: grid; gap: var(--s-3); position: relative; box-shadow: var(--highlight-top); }
 .card.needs::before, .card.critical::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 2px; border-radius: 1px; }
 .card.needs::before { background: var(--needs); }
 .card.critical::before { background: var(--critical); }
 /* decision-surface hierarchy (2026-11-04): the card that needs a hand wears its own edge —
    an inset top stroke in its state colour and a tinted rim — while chrome stays subtle */
-.card.needs { border-color: color-mix(in srgb, var(--needs) 26%, var(--border)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--needs) 60%, transparent); }
-.card.critical { border-color: color-mix(in srgb, var(--critical) 32%, var(--border)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--critical) 65%, transparent); }
+.card.needs { border-color: color-mix(in srgb, var(--needs) 26%, var(--border)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--needs) 60%, transparent), 0 0 24px -8px color-mix(in srgb, var(--needs) 35%, transparent); }
+.card.critical { border-color: color-mix(in srgb, var(--critical) 32%, var(--border)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--critical) 65%, transparent), 0 0 26px -8px color-mix(in srgb, var(--critical) 40%, transparent); } /* the one glow: a state card breathes, chrome stays dark */
 .card.routed { border-color: var(--border); box-shadow: none; }
 .card::after { content: ""; position: absolute; inset: 2px; pointer-events: none; opacity: 0; transition: opacity var(--dur-fast); background:
   linear-gradient(var(--border-strong), var(--border-strong)) left top / 10px 1px no-repeat,
@@ -659,7 +677,11 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .card .meta { display: flex; align-items: center; gap: var(--s-2); }
 .card .meta .caps { color: var(--text-2); }
 .card .meta .grow + * { margin-left: auto; }
-.card h2 { margin: 0; font-size: var(--fs-title); font-weight: var(--fw-semibold); letter-spacing: var(--tracking-tight); line-height: 1.3; }
+/* VA-1 (2026-11-06 audit): the issued banner's meta row crushed its caps label to one
+   word per line when a long ack chip shared the row — let the chip wrap below instead. */
+.card.issued .meta { flex-wrap: wrap; row-gap: 2px; }
+.card.issued .meta .caps { flex-shrink: 0; }
+.card h1, .card h2 { margin: 0; font-size: var(--fs-title); font-weight: var(--fw-semibold); letter-spacing: var(--tracking-tight); line-height: 1.3; } /* h1: the road-cut card emitted a UA-default headline for months (fixed 2026-11-11) */
 .card p { margin: 0; color: var(--text-2); font-size: var(--fs-body); }
 .countdown { font: var(--fw-semibold) var(--fs-caption)/1 var(--font-mono); color: var(--needs); display: inline-flex; align-items: center; gap: var(--s-1); }
 .countdown.low { color: var(--critical); }
@@ -667,6 +689,9 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
    compositor-only scaleX per §6 — the countdown text still carries the words */
 .countdown[data-from] { position: relative; padding-bottom: 3px; }
 .countdown[data-from]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 1px; background: currentColor; opacity: .6; transform: scaleX(var(--fill, 1)); transform-origin: left center; }
+/* readout hierarchy (craft pass 2026-11-11): on a decision card the gate deadline is the
+   stake — the biggest number on the card, not an 11.5px caption beside the metadata */
+.card .meta .countdown { font-size: var(--fs-readout); letter-spacing: -0.02em; }
 .evid { display: flex; flex-wrap: wrap; gap: var(--s-1); }
 .evid .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--talon-ink); }
 .opts { display: grid; gap: var(--s-1); }
@@ -681,7 +706,8 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .opt.rec .k { background: var(--surface-inverse); color: var(--text-inverse); }
 .opt .tag { font-size: var(--fs-micro); color: var(--text-3); }
 .gate { border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--critical) 35%, transparent); background: var(--critical-soft); padding: var(--s-2) var(--s-3); display: grid; gap: var(--s-1); font-size: var(--fs-caption); color: var(--text-2); }
-.gate b { color: var(--text-1); font: var(--fw-semibold) var(--fs-caption)/1.35 var(--font-mono); letter-spacing: .02em; }
+.gate > * { min-width: 0; } /* the gate clips statutory text no more (critique 2026-11-11): children shrink, tokens wrap */
+.gate b { color: var(--text-1); font: var(--fw-semibold) var(--fs-caption)/1.35 var(--font-mono); overflow-wrap: anywhere; } /* mono data: no tracking */
 .gate .check { color: var(--done); display: flex; gap: var(--s-1); align-items: center; }
 .gate .fragility { color: var(--needs); display: flex; gap: var(--s-1); align-items: center; } /* red discipline: a named blind spot is amber, not life-safety */
 .since { color: var(--text-2); font-size: var(--fs-caption); line-height: var(--lh-body); border-left: 2px solid color-mix(in srgb, var(--talon-ink) 45%, transparent); padding: 2px 0 2px var(--s-2); }
@@ -768,6 +794,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 
 /* review */
 .measures { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+.measures .measure:last-child:nth-child(odd) { grid-column: 1 / -1; } /* an odd trailing measure spans the row — never a clipped tile */
 .measure { border-radius: var(--r-md); border: 1px solid var(--border-subtle); background: var(--surface-raised); padding: var(--s-3); display: grid; gap: 2px; }
 .measure b { font: var(--fw-semibold) var(--fs-display)/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
 .measure span { font-size: var(--fs-caption); color: var(--text-2); }
@@ -788,17 +815,17 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
    ========================================================================== */
 .dock { position: absolute; z-index: var(--z-dock); left: var(--gap); right: var(--gap); bottom: var(--gap); }
 /* the crew deck (2026-11-04): independent segments, no container - L1 glance layer */
-.slots { display: flex; align-items: stretch; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; }
+.slots { display: flex; align-items: flex-end; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; }
 .slots .seg { flex: 0 1 auto; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 10px;
   background: var(--surface-glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--border-subtle); border-radius: 11px; box-shadow: var(--glass-shadow);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-deck); box-shadow: var(--glass-shadow);
   position: relative; text-align: left; transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), transform 40ms linear; }
 .seg:hover { border-color: var(--border); background: var(--surface-hover); }
 .seg:active { transform: translateY(1px); }
 .slots .seg .ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-pressed); flex: none; }
 .slots .seg .ic svg { width: 14px; height: 14px; }
 .slots .seg .t { display: grid; gap: 3px; min-width: 0; }
-.slots .seg .t small { font: var(--fw-medium) var(--fs-badge)/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; color: var(--text-4); display: flex; align-items: center; gap: 5px; }
+.slots .seg .t small { font: var(--fw-medium) var(--fs-badge)/1 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-4); display: flex; align-items: center; gap: 5px; }
 .slots .seg .t b { font: var(--fw-medium) var(--fs-caption)/1 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text-1); }
 .slots .seg .t b em { font-style: normal; color: var(--text-4); font-size: var(--fs-badge); }
 .slots .seg .st { width: 7px; height: 7px; border-radius: 50%; background: var(--done); flex: none; }
@@ -807,12 +834,25 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .slots .seg .caret { color: var(--text-4); font-size: 10px; flex: none; }
 .seg.attn { border-color: color-mix(in srgb, var(--needs) 50%, transparent); }
 .seg.attn .st { background: var(--needs); }
-.seg.attn::after { content: ""; position: absolute; inset: -1px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--needs) 45%, transparent); animation: segpulse 2s var(--ease-in-out) infinite; pointer-events: none; }
-.seg.open { border-color: color-mix(in srgb, var(--talon) 55%, transparent); }
-.slots .seg.ask { margin-left: auto; border-color: color-mix(in srgb, var(--talon) 40%, transparent); }
-.seg.ask .ic { background: var(--talon-soft); }
-.seg.ask .asklab { color: var(--talon-ink); }
-.seg.ask .asksub { font: var(--fw-medium) var(--fs-micro)/1 var(--font-sans); color: var(--text-2); font-weight: var(--fw-medium); letter-spacing: 0; }
+.seg.attn::after { content: ""; position: absolute; inset: -1px; border-radius: calc(var(--r-deck) + 1px); border: 1px solid color-mix(in srgb, var(--needs) 45%, transparent); animation: segpulse 2s var(--ease-in-out) infinite; pointer-events: none; }
+/* open segment: unmistakable — violet edge + a lifted fill, so what the panel belongs to is never ambiguous */
+.seg.open { border-color: color-mix(in srgb, var(--talon) 55%, transparent); background: var(--surface-hover); }
+.seg.open .caret { color: var(--text-2); }
+/* category instruments (craft pass 2026-11-11): one micro-instrument per segment,
+   shed with the sub-values at ≤1560 so the 1280 floor never overflows */
+.segviz { display: inline-flex; gap: 2.5px; align-items: center; flex: none; }
+.segviz.cells i { width: 4px; height: 9px; border-radius: 1px; background: var(--track-line); }
+.segviz.cells i.on { background: var(--done); }
+.segviz.cells i.warn { background: var(--needs); }
+.segviz.route i { width: 6px; height: 6px; border-radius: 50%; background: var(--track-line); }
+.segviz.route.ok i:first-child { background: var(--done); }
+.segviz.route.gate i { background: color-mix(in srgb, var(--needs) 30%, transparent); }
+.segviz.route.gate i:first-child { background: var(--needs); }
+.segviz.route.cut i { background: color-mix(in srgb, var(--critical) 40%, transparent); }
+.segviz.route.cut i:first-child { background: var(--critical); }
+.segspark { width: 44px; height: 14px; flex: none; }
+.segspark .sp-a { fill: color-mix(in srgb, var(--viz-1) 16%, transparent); }
+.segspark .sp-l { fill: none; stroke: var(--viz-1); stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
 @keyframes segpulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 /* the deck must fit the 1280 insurance floor without clipping: at narrow widths the
    segments shed their secondary sub-value and prov chip, keep the headline glance */
@@ -820,9 +860,10 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
   .slots .seg { gap: 8px; padding: 8px 10px 8px 9px; }
   .slots .seg .t b em { display: none; }
   .slots .seg .t small .prov { display: none; }
+  .segviz, .segspark { display: none; }
 }
 @media (max-width: 1360px) {
-  .slots .seg .t small { font-size: 9px; letter-spacing: .04em; }
+  .slots .seg .t small { font-size: var(--fs-badge); letter-spacing: var(--tracking-label); } /* lifted from 9px — the legibility floor holds at the 1280 insurance width */
   .slots .seg .ic { width: 22px; height: 22px; }
 }
 /* TRIAL (2026-11-04, re-roll candidate): the dock docks to the frame — instruments attach
@@ -830,22 +871,17 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
    The calm column keeps its floating treatment; timeline spacing rides on --dock-h. */
 .app:not(.calm) .dock { bottom: 0; }
 .app:not(.calm) .slots .widget { border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom-color: transparent; }
-.slots { display: flex; align-items: flex-end; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; }
 .slots::-webkit-scrollbar { display: none; }
 /* L2 - the category panel, risen above its segment; hosts the old widget body unchanged */
-.deckpanel { position: fixed; z-index: calc(var(--z-dock) + 1); left: calc(var(--gap) + var(--tools-w) + var(--gap)); bottom: calc(var(--deck-h) + var(--gap)); width: 348px; /* left is anchored to its segment by renderDeck */ max-height: min(58vh, 560px); overflow-y: auto; scrollbar-width: none; }
-.deckpanel::-webkit-scrollbar { display: none; }
-.deckpanel { scrollbar-width: thin; scrollbar-color: var(--border) transparent; } /* the stacked Situation panel folds - give the fold an affordance */
+.deckpanel { position: fixed; z-index: calc(var(--z-dock) + 1); left: calc(var(--gap) + var(--tools-w) + var(--gap)); bottom: calc(var(--deck-h) + var(--gap)); width: 348px; /* left is anchored to its segment by renderDeck */ max-height: min(58vh, 560px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.deckpanel:not([hidden]) { animation: panelrise 160ms var(--ease-out-expo); } /* the panel belongs to its segment — it rises, it doesn't teleport (2026-11-11) */
+@keyframes panelrise { from { opacity: 0; transform: translateY(6px); } }
 .deckpanel .widget { height: auto; max-height: none; }
-/* the feed wing: the pip stays hosted when the feed panel is closed */
-.feedwing { position: fixed; z-index: calc(var(--z-dock) + 1); right: calc(var(--gap) * 2 + var(--rail-w2)); bottom: calc(var(--deck-h) + var(--gap) * 2); width: 240px; }
+/* the feed wing: the pip stays hosted when the feed panel is closed; it tracks the
+   right lane var so it never slides under the expanded TALON dock */
+.feedwing { position: fixed; z-index: calc(var(--z-dock) + 1); right: var(--panel-right-w, 68px); bottom: calc(var(--deck-h) + var(--gap) * 2); width: 240px; }
 .feedwing .widget { height: auto; }
 .feedwing .wbody { aspect-ratio: 16 / 9; }
-/* "+N more widgets" affordance: rendered by the TS layer only when .slots
-   overflows horizontally (e.g. 2 of 5 widgets clip at 1280px). Click scrolls
-   the hidden widgets into view. */
-.dock-more { position: absolute; z-index: calc(var(--z-dock) + 1); right: var(--s-1); top: 50%; bottom: auto; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid color-mix(in srgb, var(--needs) 45%, transparent); background: var(--surface-glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); color: var(--needs); font: var(--fw-semibold) var(--fs-micro)/1 var(--font-mono); letter-spacing: .04em; white-space: nowrap; box-shadow: var(--shadow-1); cursor: pointer; }
-.dock-more:hover { border-color: var(--needs); }
 /* calm mode: no incident anywhere — the widgets dock as a left column, the map owns the rest */
 /* the calm left column retired with the crew deck (2026-11-04): standby reads the same deck + panels */
 .widget { flex: 0 0 auto; border-radius: var(--r-lg); display: flex; flex-direction: column; min-width: 0; overflow: hidden; animation: widget-in var(--dur-base) var(--ease-out); }
@@ -864,7 +900,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .timeline { position: absolute; z-index: var(--z-dock); left: var(--gap); right: var(--gap); bottom: calc(var(--dock-h, 0px) + var(--gap) * 2); height: var(--timeline-h); border-radius: var(--r-lg); display: flex; align-items: center; gap: var(--s-3); padding: 0 var(--s-3); min-width: 0; }
 .timeline[hidden] { display: none; }
 .exercise { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: var(--r-md); border: 1px dashed var(--border-strong); flex: none; position: relative; }
-.exercise::before { content: "EXERCISE"; position: absolute; top: -7px; left: 8px; padding: 0 4px; background: var(--n-2); font: var(--fw-bold) var(--fs-harness)/1 var(--font-sans); letter-spacing: .12em; color: var(--text-3); border-radius: 3px; }
+.exercise::before { content: "EXERCISE"; position: absolute; top: -7px; left: 8px; padding: 0 4px; background: var(--n-2); font: var(--fw-bold) var(--fs-harness)/1 var(--font-sans); letter-spacing: var(--tracking-caps); color: var(--text-3); border-radius: 3px; }
 .exercise .btn { height: 30px; border: 0; background: transparent; color: var(--text-2); }
 .exercise .btn:hover { color: var(--text-1); background: var(--surface-hover); }
 .exercise .btn[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); }
@@ -891,7 +927,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .widget > header { height: 38px; flex: none; display: flex; align-items: center; gap: var(--s-2); padding: 0 var(--s-2) 0 var(--s-3); }
 .widget > header .btn.ghost { color: var(--icon); }
 .widget > header .btn.ghost:hover { color: var(--icon-strong); background: var(--surface-hover); }
-.widget > header h3 { margin: 0; font-size: var(--fs-caption); font-weight: var(--fw-semibold); letter-spacing: .02em; white-space: nowrap; }
+.widget > header h3 { margin: 0; font-size: var(--fs-body); font-weight: var(--fw-semibold); letter-spacing: var(--tracking-label); white-space: nowrap; } /* lifted from caption size: a header reads above body, not below (critique 2026-11-11) */
 .widget > header .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); color: var(--text-3); }
 .widget .wbody { flex: 1; min-height: 0; padding: 0 var(--s-3) var(--s-3); overflow: auto; scrollbar-width: none; }
 /* the growth chart draws its axis labels at the svg's bottom edge — inside the 32px
@@ -966,7 +1002,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .chart .hov { stroke: var(--text-3); stroke-width: 1; }
 .chart .hdot { stroke: var(--n-2); stroke-width: 2; }
 .chart .evflag { stroke: var(--map-red); stroke-width: 1; stroke-dasharray: 3 3; opacity: .75; }
-.chart .evflag-lbl { fill: var(--map-red); font: var(--fw-semibold) var(--fs-chart) var(--font-mono); letter-spacing: .06em; }
+.chart .evflag-lbl { fill: var(--map-red); font: var(--fw-semibold) var(--fs-chart) var(--font-mono); letter-spacing: var(--tracking-label); }
 /* revision micro-copy: the 2D board echoes the map's earlier projection */
 .srow .was { color: var(--text-3); font: var(--fw-medium) var(--fs-micro)/1.4 var(--font-mono); }
 /* one dot per structure: the loss timeline at a glance (Keyclear texture) */
@@ -1022,7 +1058,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .keys { display: grid; grid-template-columns: auto 1fr; gap: var(--s-2) var(--s-4); text-align: left; width: 100%; font-size: var(--fs-body); color: var(--text-2); align-items: center; }
 .boot { position: absolute; inset: 0; z-index: var(--z-boot); display: grid; place-items: center; background: var(--bg); transition: opacity var(--dur-slow); }
 .boot.gone { opacity: 0; pointer-events: none; visibility: hidden; } /* F9: out of the a11y tree, not just invisible */
-.boot div { display: grid; gap: var(--s-3); justify-items: center; color: var(--text-3); font: var(--fw-medium) var(--fs-caption) var(--font-mono); letter-spacing: .06em; }
+.boot div { display: grid; gap: var(--s-3); justify-items: center; color: var(--text-3); font: var(--fw-medium) var(--fs-caption) var(--font-mono); letter-spacing: var(--tracking-label); }
 .boot .mascot { width: 56px; height: 56px; }
 
 /* ==========================================================================
@@ -1098,14 +1134,13 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 /* 1280px floor: compact the topbar before the posture pill can ever collide
    with the situation meta (extended from 1180px for the 1280x800 target). */
 @media (max-width: 1310px) {
-  .kpis .kpi.opt, .sitbtn small { display: none; }
+  .sitbtn small { display: none; }
+  .clock span { display: none; } /* wall clock yields first — the incident title must survive the 1280 floor */
   .topbar { padding: 0 var(--s-2); gap: var(--s-2); }
 }
 @media (max-width: 980px) {
   :root { --panel-w: min(400px, calc(100vw - 40px)); }
-  .kpis { display: none; }
 }
-@media (max-width: 1500px) { .kpis .kpi.opt { display: none; } }
 /* Target: control-room and desktop displays, 1280 px wide and up. No phone layout. */
 
 .coa .pick { width: 7px; height: 7px; border-radius: 2px; background: var(--talon); display: inline-block; }
@@ -1114,12 +1149,12 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 
 /* Audit fix pass (2026-10-27): unified-command split, doctrinal dissent chips, record refs */
 .authsplit { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0; }
-.auth-pill { display: inline-flex; align-items: center; font: var(--fw-semibold) var(--fs-micro)/1.4 var(--font-mono); letter-spacing: .02em; padding: 1px 6px; border-radius: var(--r-xs); white-space: nowrap; }
+.auth-pill { display: inline-flex; align-items: center; font: var(--fw-semibold) var(--fs-micro)/1.4 var(--font-mono); letter-spacing: var(--tracking-label); padding: 2px 7px; border-radius: var(--r-xs); white-space: normal; overflow-wrap: anywhere; }
 .auth-pill.owned { color: var(--map-cyan); background: color-mix(in srgb, var(--map-cyan) 10%, transparent); border: 1px solid color-mix(in srgb, var(--map-cyan) 28%, transparent); }
 .auth-pill.req { color: var(--needs); background: color-mix(in srgb, var(--needs) 12%, transparent); border: 1px solid color-mix(in srgb, var(--needs) 34%, transparent); }
 .dchips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .dchip { height: 24px; padding: 0 8px; gap: 5px; font-size: var(--fs-caption); color: var(--text-2); }
-.dchip .kbd { font-size: 9px; }
+.dchip .kbd { font-size: var(--fs-badge); } /* lifted from 9px — the 10.5px floor holds (2026-11-11) */
 .dchip:hover { color: var(--text-1); border-color: color-mix(in srgb, var(--talon) 45%, transparent); }
 .refs { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; margin: 4px 0; }
 .refs .chip { height: auto; padding: 3px 8px; text-align: left; white-space: normal; font-size: var(--fs-caption); }
@@ -1236,11 +1271,21 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
   --switch-track-on: var(--talon);
   --switch-knob: #F7F5EF;
   --switch-knob-on: #FFFFFF;
+
+  /* primary CTA inverts for high lux (bug fix 2026-11-11): the dark-theme white pill
+     is ~1:1 against alabaster — the daylight primary is dark ink with alabaster type */
+  --btn-primary-bg: var(--text-1);
+  --btn-primary-bg-hover: color-mix(in srgb, var(--text-1) 88%, var(--p-slate-12));
+  --btn-primary-bg-active: color-mix(in srgb, var(--text-1) 82%, var(--p-slate-12));
+  --btn-primary-border: color-mix(in srgb, var(--text-1) 80%, transparent);
+  --btn-primary-shadow: inset 0 1px 0 var(--p-alpha-b-30), 0 1px 2px var(--p-alpha-b-30);
+  --btn-primary-shadow-active: inset 0 1px 2px var(--p-alpha-b-45);
 }
 
 /* daylight component adjustments that tokens alone can't express
    (track/pip/tick/switch/glass values moved into the token block above — zero-raw-hex contract) */
 :root[data-theme="daylight"] .glass, :root[data-theme="daylight"] .card, :root[data-theme="daylight"] .widget, :root[data-theme="daylight"] .pop { border-width: 2px; } /* structural borders survive high lux (spec's 1.5px quantizes to 1px at DPR 1 in Chromium — 2px delivers the bold intent) */
+:root[data-theme="daylight"] .btn.primary { color: var(--text-inverse); } /* dark ink pill carries alabaster type, not the dark-theme --n-0 */
 :root[data-theme="daylight"] .glass::after { opacity: .03; }
 :root[data-theme="daylight"] .exercise::before { background: var(--bg-surface-1); }
 :root[data-theme="daylight"] .track .mk::before { box-shadow: 0 0 0 2px var(--bg-surface-3); }
@@ -1278,7 +1323,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .tether-svg[data-tone="critical"] .tether-ring { stroke: var(--critical); }
 .tether-pip { fill: var(--talon); }
 .tether-tagbg { fill: var(--bg-surface-1); stroke: var(--border-strong); stroke-width: 1px; }
-.tether-tagtext { font: var(--fw-semibold) var(--fs-badge)/1 var(--font-mono); letter-spacing: .04em; fill: var(--text-1); text-anchor: middle; }
+.tether-tagtext { font: var(--fw-semibold) var(--fs-badge)/1 var(--font-mono); letter-spacing: var(--tracking-label); fill: var(--text-1); text-anchor: middle; }
 @keyframes tether-flow { to { stroke-dashoffset: -20; } }
 @keyframes reticle-pulse { 0% { transform: scale(.85); opacity: .5; } 100% { transform: scale(1.45); opacity: 0; } }
 
@@ -1286,7 +1331,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
    height guard (CARDS-MH at <1000h, dissent forces shut) is untouched. */
 .time-lens { display: grid; gap: 5px; padding: 7px 8px; margin-bottom: var(--s-2); border-radius: var(--r-xs); background: var(--surface-sunken); border: 1px solid var(--border-subtle); box-shadow: var(--inset-well); }
 .tl-stops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; padding: 2px; border-radius: var(--r-xs); background: var(--bg-canvas); border: 1px solid var(--border-subtle); }
-.tl-stop { height: 22px; border: 0; border-radius: 3px; background: transparent; color: var(--text-2); font: var(--fw-medium) var(--fs-badge)/1 var(--font-mono); letter-spacing: .04em; cursor: pointer; transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+.tl-stop { height: 22px; border: 0; border-radius: 3px; background: transparent; color: var(--text-2); font: var(--fw-medium) var(--fs-badge)/1 var(--font-mono); letter-spacing: var(--tracking-label); cursor: pointer; transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
 .tl-stop:hover { color: var(--text-1); background: var(--surface-hover); }
 .tl-stop[aria-pressed="true"] { background: var(--surface-pressed); color: var(--text-1); font-weight: var(--fw-bold); box-shadow: var(--inset-well), 0 0 0 1px var(--border-strong); } /* tactile pass: pressed sinks */
 .tl-read { display: flex; align-items: center; gap: 8px; min-width: 0; font: var(--fw-normal) var(--fs-caption)/1.3 var(--font-mono); color: var(--text-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -1308,7 +1353,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .mpp-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 26px; padding: 0 8px; border-radius: var(--r-xs); border: 1px solid var(--border); background: var(--bg-surface-1); color: var(--text-1); font: var(--fw-medium) var(--fs-caption)/1 var(--font-sans); cursor: pointer; transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform 40ms linear; }
 .mpp-btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
 .mpp-btn:active { transform: translateY(1px); }
-.mpp-btn .k-sub { font: var(--fw-semibold) var(--fs-badge)/1 var(--font-mono); color: var(--text-3); letter-spacing: .06em; }
+.mpp-btn .k-sub { font: var(--fw-semibold) var(--fs-badge)/1 var(--font-mono); color: var(--text-3); letter-spacing: var(--tracking-label); }
 
 /* 4 · Optical HUD frame: corner registration marks + live bearing/range readout.
    The marks are decorative (aria-hidden); the bearing text sits full-opacity on glass. */
@@ -1321,7 +1366,7 @@ button.lrow { appearance: none; background: none; border: 0; color: inherit; fon
 .hud-reg.tr { top: calc(var(--topbar-h) + 4px); right: calc(var(--rail-w2) + 2px); }
 .hud-reg.bl { bottom: calc(var(--dock-h, 0px) + 34px); left: 2px; }
 .hud-reg.br { bottom: calc(var(--dock-h, 0px) + 34px); right: calc(var(--rail-w2) + 2px); }
-#hudBearing { position: absolute; top: calc(var(--topbar-h) + 6px); left: 50%; transform: translateX(-50%); padding: 3px 10px; border-radius: var(--r-pill); background: var(--surface-glass); border: 1px solid var(--border-subtle); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); font: var(--fw-medium) var(--fs-badge)/1.2 var(--font-mono); letter-spacing: .08em; color: var(--text-2); }
+#hudBearing { position: absolute; top: calc(var(--topbar-h) + 6px); left: 50%; transform: translateX(-50%); padding: 3px 10px; border-radius: var(--r-pill); background: var(--surface-glass); border: 1px solid var(--border-subtle); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); font: var(--fw-medium) var(--fs-badge)/1.2 var(--font-mono); letter-spacing: var(--tracking-caps); color: var(--text-2); }
 
 /* 5 · TALON cadence equalizer — panel header only; calm is a flat line, not noise. */
 .cadence { display: inline-flex; align-items: flex-end; gap: 2px; height: 10px; margin-left: 8px; }

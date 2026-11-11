@@ -149,6 +149,15 @@ export class ScenarioPlayer {
     getOverrides() {
         return [...this.overrides];
     }
+    /** F-02 (2026-11-06 audit): re-arm operator decisions recorded in a previous session of
+     *  this situation (record-loop round trips). Decisions are data — restoring the ledger
+     *  and seeking re-derives the whole world (patches, receipts, banners, map) at their
+     *  originally logged times, so nothing the operator authorized is lost off a bookmark. */
+    restoreOverrides(entries) {
+        this.overrides = entries.map((d) => ({ ...d }));
+        this.ctxCache = null;
+        this.changed(0);
+    }
     answerOf(item, t = this.t) {
         for (const d of this.ctx(t).applied)
             if (d.kind === 'answer' && d.item === item)

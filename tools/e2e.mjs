@@ -344,75 +344,50 @@ const quiet = (errs) => errs.length === 0;
   await v2.page.close();
 }
 
-// V3 — the both-open state (chat + decision card): the displaced stack and the tools both travel,
-// so the tools take a SECOND step (−2·(PANEL+GAP)) and stay clickable (2026-11-02 walkthrough audit).
+// V3 — the both-open state (decision card + persistent TALON dock, 2026-11-11): the dock is
+// furniture — the cards park in the lane immediately left of it (no displacement transform;
+// --panel-right-w tracks the dock), the tools stay parked left and clickable, nothing overflows.
 {
   for (const [w, h] of [[1920, 1080], [1280, 800]]) {
     const v3 = await open(`situation=wui-breakout&phase=D`, w, h);
     const r3 = await v3.page.evaluate(async () => {
-      const openChat = () => { const b = document.querySelector('[data-act="panel"]'); if (b && !document.querySelector('.app.chat-open')) b.click(); };
-      openChat();
-      // transitions advance on frames — under software GL a frame can be >1s apart, so
-      // "two identical reads" is not "settled" unless a frame fired in between
-      let frames = 0;
-      const orig = window.requestAnimationFrame.bind(window);
-      window.requestAnimationFrame = (fn) => orig((t) => { frames++; fn(t); });
-      const waitTransitions = async () => {
-        const t0 = Date.now();
-        // a frame must fire after the class flip before the pending transitions even register
-        // in getAnimations — at 1920 under software GL that frame can land after this check's
-        // first two stable reads, which would settle on the pre-click state (V3 1920, 2026-11-04)
-        const f0 = frames;
-        for (;;) {
-          if (frames === f0 && Date.now() - t0 < 5000) { await new Promise((r) => orig((t) => { frames++; r(t); })); continue; }
-          const anims = document.getAnimations ? document.getAnimations().filter((a) => a instanceof CSSTransition) : [];
-          if (!anims.length || Date.now() - t0 > 5000) return;
-          await Promise.race([Promise.all(anims.map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 400))]);
-        }
-      };
-      await waitTransitions();
-      const tx = (el) => { const m = /matrix\(1, 0, 0, 1, (-?[\d.]+),/.exec(getComputedStyle(el).transform); return m ? Math.round(parseFloat(m[1])) : 0; };
-      const read = () => {
-        const tools = document.querySelector('.tools');
-        const cards = document.querySelector('#cards');
-        const tr = tools.getBoundingClientRect(), cr = cards.getBoundingClientRect();
-        const covered = [...tools.querySelectorAll('button')].filter((b) => {
-          const r = b.getBoundingClientRect();
-          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-          return !hit || !b.contains(hit);
-        }).length;
-        const tw = Math.min(tr.right, cr.right) - Math.max(tr.left, cr.left);
-        const th = Math.min(tr.bottom, cr.bottom) - Math.max(tr.top, cr.top);
-        return { bothOpen: !!document.querySelector('.app.chat-open.cards-open'), covered, toolsCovered: tw > 1 && th > 1, toolsTx: tx(tools), cardsTx: tx(cards), tools: [tr.left, tr.right].map(Math.round), cards: [cr.left, cr.right].map(Math.round), overflow: document.documentElement.scrollWidth > innerWidth + 1 };
-      };
-      // settle: rects stable across at least one fired animation frame — and no CSSTransition
-      // still live, so a frozen mid-flight transform can't masquerade as the settled state
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      // ensure the dock is expanded (it boots expanded; a prior step may have collapsed it)
+      if (document.querySelector('#panel')?.classList.contains('shut')) document.querySelector('#rail [data-act=panel]')?.click();
       const t0 = Date.now();
-      let prev = '', framesAtPrev = 0, v = read();
       for (;;) {
-        v = read();
-        const key = JSON.stringify([v.tools, v.cards, v.toolsTx, v.cardsTx]);
-        const liveTx = document.getAnimations ? document.getAnimations().filter((a) => a instanceof CSSTransition).length : 0;
-        if (v.bothOpen && v.covered === 0 && !v.toolsCovered && !v.overflow && key === prev && frames !== framesAtPrev && liveTx === 0) break;
-        if (key !== prev) framesAtPrev = frames;
-        prev = key;
-        if (Date.now() - t0 > 10000) break;
-        await new Promise((r) => setTimeout(r, 100));
+        if (!document.querySelector('#panel')?.classList.contains('shut')) break;
+        if (Date.now() - t0 > 5000) break;
+        await sleep(100);
       }
-      const panel = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--panel-w'));
-      // since the 2026-11-04 crew-deck cutover the tools live on the LEFT edge: they never
-      // translate for the right lane, and the displaced stack must still clear the deck
-      const singleShift = Math.abs(v.cardsTx + (panel + 12)) <= 2;
-      const toolsParked = Math.abs(v.toolsTx) <= 1;
-      const deckTop = document.querySelector('.dock').getBoundingClientRect().top;
-      const deckClear = v.cards[3] === undefined || true;
-      const r = { ...v, singleShift, toolsParked };
-      delete r.deckClear;
-      void deckTop;
-      return r;
+      await sleep(400); // one render + the inset tween settle
+      const tx = (el) => { const m = /matrix\(1, 0, 0, 1, (-?[\d.]+),/.exec(getComputedStyle(el).transform); return m ? Math.round(parseFloat(m[1])) : 0; };
+      const tools = document.querySelector('.tools');
+      const cards = document.querySelector('#cards');
+      const dock = document.querySelector('#panel');
+      const tr = tools.getBoundingClientRect(), cr = cards.getBoundingClientRect(), dr = dock.getBoundingClientRect();
+      const covered = [...tools.querySelectorAll('button')].filter((b) => {
+        const r = b.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return !hit || !b.contains(hit);
+      }).length;
+      const gap = cr.width ? Math.round(dr.left - cr.right) : null;
+      return {
+        dockOpen: !dock.classList.contains('shut'),
+        cardsLeftOfDock: !cr.width || cr.right <= dr.left + 1,
+        gap,
+        covered,
+        toolsTx: tx(tools),
+        cardsTx: tx(cards),
+        tools: [tr.left, tr.right].map(Math.round),
+        cards: [cr.left, cr.right].map(Math.round),
+        dock: [dr.left, dr.right].map(Math.round),
+        overflow: document.documentElement.scrollWidth > innerWidth + 1,
+      };
     });
     await shot(v3.page, `bothopen-${w}`);
-    check(`V3 ${w}×${h}: chat + card both open — tools parked left (never translate), every tool clickable, stack shifted one step, no overflow`, r3.bothOpen && r3.singleShift && r3.toolsParked && r3.covered === 0 && !r3.toolsCovered && r3.overflow === false, JSON.stringify(r3));
+    check(`V3 ${w}×${h}: persistent dock + card — cards park left of the dock (no displacement), tools parked left and clickable, no overflow`,
+      r3.dockOpen && r3.cardsLeftOfDock && r3.gap !== null && r3.gap >= 8 && r3.gap <= 16 && r3.covered === 0 && Math.abs(r3.toolsTx) <= 1 && Math.abs(r3.cardsTx) <= 1 && !r3.overflow, JSON.stringify(r3));
     await v3.page.close();
   }
 }

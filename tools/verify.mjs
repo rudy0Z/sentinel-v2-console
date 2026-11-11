@@ -37,7 +37,7 @@ async function open(q, w = 1600, h = 960, pinned) {
       const step = () => { const v = fn(); if (v) resolve(true); else if (Date.now() - t0 > ms) resolve(false); else setTimeout(step, 100); };
       step();
     });
-    const live = { rail: !!document.querySelector('#rail .rbtn.face'), boardhead: !!document.querySelector('#boardhead'), exhandle: !!document.querySelector('#exhandle'), tlHidden: document.querySelector('#timeline')?.hidden, segs: [...document.querySelectorAll('#slots .seg')].map((w) => w.dataset.w), chatHidden: document.querySelector('#panel')?.hidden, calm: document.getElementById('app').classList.contains('calm') };
+    const live = { rail: !!document.querySelector('#rail .rbtn.face'), boardhead: !!document.querySelector('#boardhead'), exhandle: !!document.querySelector('#exhandle'), tlHidden: document.querySelector('#timeline')?.hidden, segs: [...document.querySelectorAll('#slots .seg')].map((w) => w.dataset.w), chatShut: document.querySelector('#panel')?.classList.contains('shut'), calm: document.getElementById('app').classList.contains('calm') };
     document.dispatchEvent(new KeyboardEvent('keydown', { key: '`', bubbles: true }));
     await new Promise((r) => setTimeout(r, 400));
     const dev = !!document.getElementById('pop') && document.getElementById('pop').textContent.includes('Dev · exercise harness');
@@ -45,9 +45,11 @@ async function open(q, w = 1600, h = 960, pinned) {
     await new Promise((r) => setTimeout(r, 300));
     player.setTime(1.5); // the detection ask is open
     const askCards = await poll(() => document.querySelectorAll('#cards .card').length >= 1);
+    // persistent TALON dock: boots expanded, the face button collapses then re-expands it
     document.querySelector('#rail [data-act=panel]')?.click();
-    const chat = await poll(() => !document.querySelector('#panel')?.hidden && !!document.querySelector('#panel h1'), 4000);
+    const chatShut2 = await poll(() => document.querySelector('#panel')?.classList.contains('shut'), 4000);
     document.querySelector('#rail [data-act=panel]')?.click();
+    const chat = await poll(() => !document.querySelector('#panel')?.classList.contains('shut') && !!document.querySelector('#panel h1'), 4000);
     document.querySelector('#rail .statuspill')?.click();
     await new Promise((r) => setTimeout(r, 500));
     const taskpop = !!document.getElementById('pop') && document.getElementById('pop').textContent.includes('TALON agents');
@@ -55,9 +57,9 @@ async function open(q, w = 1600, h = 960, pinned) {
     document.querySelector('[data-act=review]')?.click();
     const reviewTl = await poll(() => !document.querySelector('#timeline')?.hidden, 8000);
     document.querySelector('[data-act=review]')?.click();
-    return { ...live, dev, askCards, chat, taskpop, reviewTl };
+    return { ...live, dev, askCards, chatShut2, chat, taskpop, reviewTl };
   });
-  check('surfaces v2.2: mascot rail, no board bar, no exercise on live surface, dev menu, calm crew deck, cards only when open, floating chat', surf.rail && !surf.boardhead && !surf.exhandle && surf.tlHidden && surf.calm && surf.segs.length >= 4 && surf.chatHidden && surf.dev && surf.askCards && surf.chat && surf.taskpop && surf.reviewTl, JSON.stringify(surf));
+  check('surfaces v2.2: mascot rail, no board bar, no exercise on live surface, dev menu, calm crew deck, cards only when open, persistent TALON dock (boots expanded, face toggles collapse)', surf.rail && !surf.boardhead && !surf.exhandle && surf.tlHidden && surf.calm && surf.segs.length >= 4 && !surf.chatShut && surf.dev && surf.askCards && surf.chatShut2 && surf.chat && surf.taskpop && surf.reviewTl, JSON.stringify(surf));
 
   // Governance: TALON never acts without a citation; no interrupt over budget anywhere in the run.
   const gov = await page.evaluate(() => {
@@ -491,10 +493,12 @@ async function open(q, w = 1600, h = 960, pinned) {
   await sleep(900);
   const rec = await rp.evaluate(() => ({ mode: document.querySelector('.clock .live')?.textContent, ret: !!document.querySelector('[data-act="return-live"]') }));
   await rp.evaluate(() => window.sentinelBoot.preempt());
-  await sleep(1000);
+  // poll, don't sleep: the preempt completes across a tween + render cycle (software GL
+  // under load can land it well past 1s — fixed sleeps raced it into a false negative)
+  await rp.waitForFunction(() => document.querySelector('.clock .live')?.textContent === 'LIVE' && !!document.querySelector('.bmchip'), { timeout: 15000 }).catch(() => {});
   const live = await rp.evaluate(() => ({ mode: document.querySelector('.clock .live')?.textContent, pill: !!document.querySelector('.bmchip'), title: document.querySelector('.sitbtn b')?.textContent ?? '' }));
   await rp.evaluate(() => document.querySelector('.bmchip')?.click());
-  await sleep(1000);
+  await rp.waitForFunction(() => document.querySelector('.clock .live')?.textContent === 'REPLAY', { timeout: 15000 }).catch(() => {});
   const back = await rp.evaluate(() => ({ mode: document.querySelector('.clock .live')?.textContent }));
   check('record loop: boots into the S-04 replay, preempts to live S-05 with bookmark, resumes', rec.mode === 'REPLAY' && rec.ret && live.mode === 'LIVE' && live.pill && /WUI/.test(live.title) && back.mode === 'REPLAY', JSON.stringify({ rec, live, back }));
   await rp.close();
@@ -546,7 +550,8 @@ async function open(q, w = 1600, h = 960, pinned) {
   await page.evaluate(() => player.setTime(90));
   await page.waitForFunction(() => !!document.querySelector('.gatechip.drift'), { timeout: 10000 }).catch(() => {});
   const drift = await page.evaluate(() => document.querySelector('.gatechip.drift')?.textContent ?? 'none');
-  await page.evaluate(() => document.querySelector('.rail [data-act="panel"]')?.click());
+  // the TALON dock is persistent: only expand it if the operator (or a prior step) collapsed it
+  await page.evaluate(() => { if (document.querySelector('#panel')?.classList.contains('shut')) document.querySelector('.rail [data-act="panel"]')?.click(); });
   await sleep(500);
   await page.evaluate(() => document.querySelector('.entry .chip.modmea')?.click());
   // poll, don't sleep: the re-render lands on the next rAF render (software GL under load)

@@ -10,3 +10,8 @@ mirasim-conversation-*.md
 DIRECTION-*.md
 task-*.html
 .hallmark/
+.commandcode/
+.impeccable/
+.zcode/
+vp-*.png
+

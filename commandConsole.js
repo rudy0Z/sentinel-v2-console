@@ -291,8 +291,9 @@ export async function mountConsole(app) {
     }
     const ui = {
         sit: (params.get('situation') === 'random' ? SITUATIONS[Math.floor(Math.random() * SITUATIONS.length)].id : params.get('situation')) ?? store.get('situation', 'wui-breakout'),
-        // The chat card is on demand — the edge rail is the only persistent TALON surface (One reference). ?talon=open starts it open.
-        panel: params.get('talon') === 'open',
+        // TALON's home is the right dock (2026-11-11): expanded by default, collapsible to a
+        // slim tab (T / phead chevron). ?talon=shut boots it collapsed for narrow checks.
+        panel: params.get('talon') !== 'shut',
         tab: 'now',
         // Counterfactual time lens: focused spread-model horizon in minutes (0 = NOW, view state only).
         lens: 0,
@@ -409,6 +410,10 @@ export async function mountConsole(app) {
         if (!bm || ui.recordMode)
             return;
         bm.liveT = ui.liveT;
+        // F-02: carry the operator's record across the round trip — the ledger and the
+        // working-memory anchor survive; the rebuilt live scene re-arms with them.
+        bm.overrides = player.getOverrides();
+        bm.lastDecisionT = ui.lastDecisionT;
         await mount(bm.sit);
         ui.recordMode = true;
         ui.review = true;
@@ -420,7 +425,14 @@ export async function mountConsole(app) {
         const bm = ui.bookmark;
         if (!bm || !ui.recordMode)
             return;
+        const restored = bm.overrides ?? [];
         const t0 = (await mount('wui-breakout'), sit.phases[0]?.t ?? sit.clock.start);
+        // F-02: decisions are data — re-arm the ledger BEFORE seeking, so the rebuilt scene
+        // re-derives with the operator's authorizations intact (patches, receipts, banner).
+        if (restored.length) {
+            player.restoreOverrides(restored);
+            ui.lastDecisionT = bm.lastDecisionT ?? ui.lastDecisionT;
+        }
         if (Number.isFinite(bm.liveT) && bm.liveT > t0) {
             player.setTime(bm.liveT);
             ui.liveT = bm.liveT;
@@ -428,6 +440,8 @@ export async function mountConsole(app) {
             for (const o of talon.state(bm.liveT).open)
                 ui.seen.add(o.item.id);
         }
+        if (restored.length)
+            toast(`Returned to live · your ${restored.length} decision${restored.length === 1 ? ' is' : 's are'} on the record.`);
     }
     // ------------------------------------------------------------------ render scheduling
     let queued = false;
@@ -474,10 +488,9 @@ export async function mountConsole(app) {
         renderInspector(ps);
         renderAttention(ts);
         updateCountdowns(ps);
-        app.classList.toggle('chat-open', ui.panel);
-        // the decision lane is occupied — the map tools step aside (review C3)
-        app.classList.toggle('cards-open', $('#cards').children.length > 0);
-        // micro-fix M3: the transient inspector yields the top-left to the chat card on
+        // The TALON dock is persistent — the map's right inset follows it from updateInsets,
+        // so the decision lane never needs a displacement transform.
+        // micro-fix M3: the transient inspector yields the top-left to the dock on
         // laptop widths — at ≤1360 both open would squeeze the map between two glass walls
         if (ui.panel && innerWidth <= 1360 && ui.sel)
             ui.sel = null;
@@ -576,38 +589,47 @@ export async function mountConsole(app) {
     // ------------------------------------------------------------------ edge rail (One reference): the TALON mascot, agent dots only while active, controls
     function renderRail(ts) {
         const mine = ts.open.filter((o) => !o.item.reraise).length;
+        // the derived cut card counts as pending work everywhere the queue is announced
+        const cutPending = !ui.cutAcked && engine.getOverlayLayerIds().some((id) => id === 'route-a-cut' || id === 'cut-marker');
+        const waiting = mine + (cutPending ? 1 : 0);
         const active = ts.agents.filter((a) => a.status !== 'idle');
         const orbMood = ui.listening ? 'listening' : ts.mood === 'calm' && active.some((a) => a.status === 'working') ? 'working' : ts.mood;
-        const k = [ts.agents.map((a) => a.status), mine, ui.panel, ui.pop, ui.listening, ts.budget.used, ui.micMuted];
+        const k = [ts.agents.map((a) => a.status), waiting, ui.panel, ui.pop, ui.listening, ts.budget.used, ui.micMuted];
         if (!changed('rail', k))
             return;
         $('#rail').innerHTML = `
-      ${active.length ? `<button class="statuspill" data-act="pop" data-pop="agents" aria-haspopup="menu" aria-expanded="${ui.pop === 'agents'}" aria-label="TALON agents — ${mine ? `${mine} need${mine > 1 ? '' : 's'} you` : 'working'}">
+      ${active.length ? `<button class="statuspill" data-act="pop" data-pop="agents" aria-haspopup="menu" aria-expanded="${ui.pop === 'agents'}" aria-label="TALON agents — ${waiting ? `${waiting} need${waiting > 1 ? '' : 's'} you` : 'working'}">
         ${active.map((a) => `<span class="adot" data-tip="${esc(a.name)} · ${a.status === 'needs' ? 'needs you' : a.status}|${esc(a.line)}"><i class="dot ${a.status}"></i></span>`).join('')}
       </button>` : ''}
-      <button class="rbtn face${mine ? ' attn' : ''}" data-act="panel" aria-pressed="${ui.panel}" aria-label="TALON chat (T)" data-tip="TALON|thread · log · review (T)">${mascot(orbMood)}${mine ? `<span class="badge">${mine}</span>` : ''}<span class="pips" aria-hidden="true">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</span></button>
+      <button class="rbtn face${waiting ? ' attn' : ''}" data-act="panel" aria-pressed="${ui.panel}" aria-label="TALON chat (T)" data-tip="TALON|thread · log · review (T)">${mascot(orbMood)}${waiting ? `<span class="badge">${waiting}</span>` : ''}<span class="pips" aria-hidden="true">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</span></button>
       <button class="rbtn mic${ui.micMuted && !ui.listening ? ' muted' : ''}" data-act="mic" aria-pressed="${ui.listening}" aria-label="${ui.micMuted ? 'Mic muted — click to put TALON on the net' : ui.listening ? 'Transmitting — TALON ducked' : 'TALON on the net — click to mute, V to transmit'}" data-tip="${ui.listening ? 'Transmitting|TALON ducked' : ui.micMuted ? 'Mic muted|[M] or click to un-mute' : 'On the net|click to mute · V to transmit'}">${ic('mic')}</button>
       <button class="rbtn" data-act="pop" data-pop="authority" aria-pressed="${ui.pop === 'authority'}" aria-label="What TALON may do" data-tip="Authority|what TALON may do alone">${ic('shield')}</button>
       <button class="rbtn" data-act="pop" data-pop="settings" aria-pressed="${ui.pop === 'settings'}" aria-label="Settings" data-tip="Settings · live model">${ic('gear')}</button>`;
     }
-    // ------------------------------------------------------------------ TALON chat (a floating card — the rail is the only persistent surface)
-    let lastFocus = null;
+    // ------------------------------------------------------------------ TALON chat (the persistent right dock — the map's inset follows it)
     function renderChat(ps, ts) {
         const dr = $('#panel');
-        dr.hidden = !ui.panel;
+        // The dock is persistent: never hidden, only collapsed to its face tab (.shut).
+        dr.hidden = false;
+        dr.classList.toggle('shut', !ui.panel);
         // G3: PTT interrupt lockout — violet, near the composer, while the mic is hot.
         const ptt = $('#ptt');
         if (ptt)
             ptt.hidden = !ui.listening;
         const mine = ts.open.filter((o) => !o.item.reraise);
-        const head = [ts.mood, ui.listening, mine.length, ts.agents.filter((a) => a.status === 'working').length, ts.budget, ui.tab, ui.hoverEv ? 1 : 0, ui.review];
+        // The derived road-cut card is a real pending item the operator must ACK — count it,
+        // or the dock says "nothing needs you" under a red alert card (critique 2026-11-11).
+        const cutPending = !ui.cutAcked && engine.getOverlayLayerIds().some((id) => id === 'route-a-cut' || id === 'cut-marker');
+        const waiting = mine.length + (cutPending ? 1 : 0);
+        const head = [ts.mood, ui.listening, waiting, ts.agents.filter((a) => a.status === 'working').length, ts.budget, ui.tab, ui.hoverEv ? 1 : 0, ui.review, ui.panel];
         if (changed('phead', head)) {
             const working = ts.agents.filter((a) => a.status === 'working').length;
             const orbMood = ui.listening ? 'listening' : ts.mood === 'calm' && working ? 'working' : ts.mood;
-            const line = ui.review ? 'After-action review · read-only' : mine.length ? `${mine.length} need${mine.length > 1 ? '' : 's'} you · cards on the map` : working ? `${working} agent${working > 1 ? 's' : ''} working · nothing needs you` : 'Watching · nothing needs you';
+            const line = ui.review ? 'After-action review · read-only' : waiting ? `${waiting} need${waiting > 1 ? '' : 's'} you · cards on the map` : working ? `${working} agent${working > 1 ? 's' : ''} working · nothing needs you` : 'Watching · nothing needs you';
             $('#phead').innerHTML = `${mascot(orbMood, 'talonFaceMain')}
-        <div><h1>TALON</h1><div class="line">${mine.length ? '<i class="dot needs"></i>' : working ? '<i class="dot working"></i>' : '<i class="dot done"></i>'}${esc(line)}${cadenceHtml(ts.mood, ui.listening)}</div></div>
-        <div class="budget" title="Interrupt budget: at most ${ts.budget.max} per ${ts.budget.windowMin} min (ISA-18.2). Over budget, TALON holds an interrupt to an ask and logs it. Life-safety interrupts are exempt and always come through."><div class="pips">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</div><small>Interrupts ${ts.budget.used}/${ts.budget.max} · ${ts.budget.windowMin} min</small></div>`;
+        <div><h1>TALON</h1><div class="line">${waiting ? '<i class="dot needs"></i>' : working ? '<i class="dot working"></i>' : '<i class="dot done"></i>'}${esc(line)}${cadenceHtml(ts.mood, ui.listening)}</div></div>
+        <div class="budget" title="Interrupt budget: at most ${ts.budget.max} per ${ts.budget.windowMin} min (ISA-18.2). Over budget, TALON holds an interrupt to an ask and logs it. Life-safety interrupts are exempt and always come through."><div class="pips">${Array.from({ length: ts.budget.max }, (_, i) => `<i class="${i < ts.budget.used ? 'on' : ''}"></i>`).join('')}</div><small>Interrupts ${ts.budget.used}/${ts.budget.max} · ${ts.budget.windowMin} min</small></div>
+        <button class="btn icon sm ghost pheadtoggle" data-act="panel" aria-expanded="${ui.panel}" aria-label="${ui.panel ? 'Collapse TALON panel' : 'Expand TALON panel'} (T)" title="${ui.panel ? 'Collapse' : 'Expand'} (T)">${ic(ui.panel ? 'down' : 'up', 'sm')}</button>`;
             $('#ptabs').innerHTML = ['now', 'log', 'review'].map((t) => `<button role="tab" aria-selected="${ui.tab === t}" data-act="tab" data-tab="${t}">${t === 'now' ? 'Thread' : t === 'log' ? 'Log' : 'Review'}</button>`).join('');
         }
         // The header is cheap and always rendered (the chat card keeps its identity when closed);
@@ -1075,14 +1097,49 @@ export async function mountConsole(app) {
         // the live cut layers - it exists while the threat exists and closes on ACK ONLY,
         // never on timeout (the 2026-10-27 operator diary's first condition).
         const cutLive = engine.getOverlayLayerIds().some((id) => id === 'route-a-cut' || id === 'cut-marker');
+        // F-03 (2026-11-06 audit): both cut layers carry MODEL provenance ('TALON spread model
+        // v3, corrected') — the old card asserted a projection as measured present-tense truth.
+        // The card now keys on the realized cut (the scripted 'Rd is cut' record entry), renders
+        // future tense while only the projection exists, and always wears the mod badge.
+        const tsCut = talon.state(ps.t);
+        const cutLog = tsCut.log.find((e) => /Rd is cut/i.test(e.title));
+        const cutRealized = !!cutLog;
+        const cutAt = cutLog ? fmtT(cutLog.t) : null;
+        let projectedCutAt = null;
+        for (const e of tsCut.log)
+            for (const ev of e.evidence ?? []) {
+                const m = /^New cut ·\s*(.+)$/.exec(ev.label);
+                if (m)
+                    projectedCutAt = m[1];
+            }
+        for (const o of tsCut.open)
+            for (const ev of o.item.evidence ?? []) {
+                const m = /^New cut ·\s*(.+)$/.exec(ev.label);
+                if (m)
+                    projectedCutAt = m[1];
+            }
+        // F-04: the reroute clause derives from state — never assert an order that is not in force.
+        const rerouteClause = ps.draft
+            ? 'The upper canyon north reroute is still a draft order on your desk — it needs your approval.'
+            : ps.committed
+                ? esc(talon.text('The upper canyon north reroute is committed and in force.', ps.t))
+                : esc(talon.text('No alternate order is in force — Route A is the only egress for now.', ps.t));
         const cutCard = cutLive && !ui.cutAcked
-            ? `<article class="card needs" role="alert" aria-live="assertive">
+            ? (cutRealized
+                ? `<article class="card needs" role="alert" aria-live="assertive">
         <div class="meta"><i class="dot critical"></i><span class="caps"><span class="mono">${fmtT(ps.t)}</span> · Route · Threat</span></div>
         <h1>Encinal Canyon Rd is cut</h1>
-        <p>The primary egress is gone. ${esc(talon.text('Anyone still south of the hairpin cannot use Route A.', ps.t))} The draft route (upper canyon north) is the live alternate - its order was already approved.</p>
-        <div class="basis"><span class="prov measured"${provTitle('measured')}>mea</span> <span>FT-02 IR pass · the cut marker is on the map</span></div>
+        <p>${esc(talon.text('The projected cut time has arrived — treat Route A as gone for anyone still south of the hairpin.', ps.t))} ${rerouteClause}</p>
+        <div class="basis"><span class="prov modeled"${provTitle('modeled')}>mod</span> <span>TALON spread model v3 (corrected) · projected cut reached at ${cutAt} — no ground confirmation yet</span></div>
         <div class="row"><button class="btn sm" data-act="cutack" aria-label="Acknowledge the route loss">Acknowledge</button></div>
       </article>`
+                : `<article class="card needs" role="alert" aria-live="assertive">
+        <div class="meta"><i class="dot critical"></i><span class="caps"><span class="mono">${fmtT(ps.t)}</span> · Route · Projection</span></div>
+        <h1>Route A is projected cut</h1>
+        <p>${esc(talon.text('The corrected spread model projects the primary egress cut at the hairpin — plan on Route A closing; anyone still south of it moves now.', ps.t))} ${rerouteClause}</p>
+        <div class="basis"><span class="prov modeled"${provTitle('modeled')}>mod</span> <span>TALON spread model v3 (corrected) · projected cut${projectedCutAt ? ' at ' + esc(projectedCutAt) : ''} — ground confirmation pending</span></div>
+        <div class="row"><button class="btn sm" data-act="cutack" aria-label="Acknowledge the projected route loss">Acknowledge</button></div>
+      </article>`)
             : '';
         if (!mine.length && !routed.length) {
             // an emptied stack still carries the state that matters: the statutory receipt
@@ -1102,7 +1159,7 @@ export async function mountConsole(app) {
             if (queued.length) {
                 const locked = mine[0].item.level === 'interrupt';
                 const dead = locked || !canDecide();
-                html += `<div class="mini"><span class="caps">Also waiting</span>${locked ? `<span class="caps" style="color:var(--critical);letter-spacing:.06em" title="A P0 life-safety interrupt holds the focus card (ISA-18.2 preemption) — queued items cannot preempt it">Locked by P0 life-safety preemption</span>` : ''}${queued.map((o, i) => `<button class="row" data-act="promote" data-item="${o.item.id}" ${dead ? 'disabled' : ''} style="${dead ? 'opacity:.55;cursor:default;' : ''}grid-template-columns:8px 1fr auto auto" aria-label="Bring ${esc(talon.text(o.item.title, ps.t))} to the focus card"><i class="dot needs"></i><span><b>${esc(talon.text(o.item.title, ps.t))}</b>${esc(talon.agentName(o.item.agent))}</span><span class="countdown" data-until="${Number.isFinite(o.closesAt) ? o.closesAt : o.expiresAt ?? 0}"></span><span class="kbd" aria-hidden="true">Alt+${i + 1}</span></button>`).join('')}</div>`;
+                html += `<div class="mini"><span class="caps">Also waiting · ${mine.length - 1}</span>${locked ? `<span class="caps" style="color:var(--critical);letter-spacing:.06em" title="A P0 life-safety interrupt holds the focus card (ISA-18.2 preemption) — queued items cannot preempt it">Locked by P0 life-safety preemption</span>` : ''}${queued.map((o, i) => `<button class="row" data-act="promote" data-item="${o.item.id}" ${dead ? 'disabled' : ''} style="${dead ? 'opacity:.55;cursor:default;' : ''}grid-template-columns:8px 1fr auto auto" aria-label="Bring ${esc(talon.text(o.item.title, ps.t))} to the focus card"><i class="dot needs"></i><span><b>${esc(talon.text(o.item.title, ps.t))}</b>${esc(talon.agentName(o.item.agent))}</span><span class="countdown" data-until="${Number.isFinite(o.closesAt) ? o.closesAt : o.expiresAt ?? 0}"></span><span class="kbd" aria-hidden="true">Alt+${i + 1}</span></button>`).join('')}</div>`;
             }
         }
         html += routed.map((o) => `<div class="mini"><div class="row" style="cursor:default"><i class="dot working"></i><span><b>${esc(o.item.title)}</b>routed to ${esc(o.item.reraise.to)} · you are copied</span></div></div>`).join('');
@@ -1425,7 +1482,50 @@ export async function mountConsole(app) {
         comms: { label: 'Comms', glyph: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 9 C4 5 12 5 14 9 M4.5 11 C5.8 8.8 10.2 8.8 11.5 11 M8 13.2 V13.3" stroke-linecap="round"/></svg>' },
     };
     const SHIELD_GLYPH = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5 L13.5 3.5 V8 C13.5 11.5 11 13.5 8 14.5 C5 13.5 2.5 11.5 2.5 8 V3.5 Z"/><path d="M5.8 8 L7.3 9.5 L10.2 6.4"/></svg>';
-    const SPARK_GLYPH = '<svg viewBox="0 0 16 16" fill="none" stroke="var(--talon-ink)" stroke-width="1.5"><path d="M8 2.5 L9.6 6.4 L13.5 8 L9.6 9.6 L8 13.5 L6.4 9.6 L2.5 8 L6.4 6.4 Z" stroke-linejoin="round"/></svg>';
+    /** C5 deck instruments (2026-11-11): one zero-width-cost instrument per category —
+     *  a growth spark on Situation, a battery capsule on Resources, a route-state strip
+     *  on Egress. Values re-derived from state each render, never stored; the CSS sheds
+     *  them with the sub-values at ≤1560 so the 1280 floor never overflows. */
+    function segSpark(ps) {
+        if (!growth || growth.t.length < 2)
+            return '';
+        const cur = growth.switchAt !== null && ps.t >= growth.switchAt && growth.b ? growth.b : growth.a;
+        const pts = growth.t.map((tt, i) => [tt, cur[i]]).filter(([tt]) => tt <= ps.t);
+        if (pts.length < 2)
+            return '';
+        const W = 44, H = 14;
+        const t0 = growth.t[0];
+        const span = Math.max(1e-6, ps.t - t0);
+        const max = Math.max(...pts.map((p) => p[1]), 1e-9);
+        if (max <= 1)
+            return ''; // standby: no fire, no spark — a flat zero line is noise
+        const x = (tt) => 1 + ((tt - t0) / span) * (W - 2);
+        const y = (v) => H - 2 - (v / max) * (H - 4);
+        const line = pts.map(([tt, v], i) => `${i ? 'L' : 'M'}${x(tt).toFixed(1)},${y(v).toFixed(1)}`).join('');
+        const area = `${line}L${x(pts[pts.length - 1][0]).toFixed(1)},${H - 1}L${x(pts[0][0]).toFixed(1)},${H - 1}Z`;
+        return `<svg class="segspark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path class="sp-a" d="${area}"/><path class="sp-l" d="${line}"/></svg>`;
+    }
+    function segViz(cat, ps) {
+        switch (cat) {
+            case 'situation':
+                return segSpark(ps);
+            case 'resources': {
+                const bats = ps.units.filter((u) => u.kind === 'drone' && typeof u.info.battery === 'number').map((u) => u.info.battery);
+                const worst = bats.length ? Math.min(...bats) : null;
+                if (worst == null)
+                    return '';
+                const filled = Math.max(0, Math.min(4, Math.ceil(worst / 25)));
+                const cls = worst < 55 ? 'warn' : 'on';
+                return `<span class="segviz cells" aria-hidden="true">${[0, 1, 2, 3].map((i) => `<i class="${i < filled ? cls : ''}"></i>`).join('')}</span>`;
+            }
+            case 'egress': {
+                const cut = engine.getOverlayLayerIds().some((id) => id === 'route-a-cut' || id === 'cut-marker');
+                return `<span class="segviz route ${cut ? 'cut' : ps.gate?.open ? 'gate' : 'ok'}" aria-hidden="true"><i></i><i></i><i></i></span>`;
+            }
+            default:
+                return '';
+        }
+    }
     /** The deck's one glance per category - the same live state the panel body renders,
      * cheaply re-derived. Provenance travels with it: the deck never shows bare numbers. */
     function deckGlance(w, ps, ts) {
@@ -1434,7 +1534,7 @@ export async function mountConsole(app) {
                 const T = ps.telemetry;
                 const wv = T.wind?.value ?? '\u2013';
                 const gust = /G\s*(\d+)/i.exec(wv)?.[1];
-                return { v: wv.split(' ').slice(0, 2).join(' ') || '\u2013', sub: gust ? 'G' + gust : T.rh?.value ?? '', st: Number(gust ?? 0) >= 42 ? 'needs' : 'done', prov: 'mea' };
+                return { v: wv.split(' ').slice(0, 2).join(' ') || '\u2013', sub: gust ? 'gust ' + gust : T.rh?.value ? 'RH ' + T.rh.value : '', st: Number(gust ?? 0) >= 42 ? 'needs' : 'done', prov: 'mea' };
             }
             case 'fleet': {
                 const bats = ps.units.filter((u) => u.kind === 'drone' && typeof u.info.battery === 'number').map((u) => u.info.battery);
@@ -1445,22 +1545,26 @@ export async function mountConsole(app) {
                 // F1 (2026-11-05): the glance is threat-aware - a cut primary route is never
                 // 'clear', whatever the plan state says
                 const cut = engine.getOverlayLayerIds().some((id) => id === 'route-a-cut' || id === 'cut-marker');
+                // F-03: the layers are model provenance — the glance mirrors the card's realized/projected split.
+                const cutRealized = ts.log.some((e) => /Rd is cut/i.test(e.title));
+                if (cut && cutRealized)
+                    return { v: 'Route A cut', sub: 'projected cut time reached', st: 'needs', prov: 'mod' };
                 if (cut)
-                    return { v: 'Route A cut', sub: 'primary egress gone', st: 'needs', prov: 'mea' };
+                    return { v: 'Route A closing', sub: 'projected cut · unconfirmed', st: 'needs', prov: 'mod' };
                 const plan = ts.open.find((o) => o.item.kind === 'proposal');
                 return { v: ps.gate?.open ? 'gate open' : plan ? 'plan proposed' : 'clear', sub: ps.gate?.open ? fmtDur(Math.max(0, ps.gate.expires - ps.t)) : plan ? 'on the table' : 'no active plan', st: ps.gate?.open ? 'needs' : plan ? 'working' : 'done', prov: 'aut' };
             }
             case 'growth': {
                 const now = engine.reachedAreaAt(0);
                 const h60 = engine.reachedAreaAt(60);
-                return { v: now != null ? (now / 4046.86).toFixed(1) + ' ac' : 'not sized', sub: h60 != null ? (h60 / 4046.86).toFixed(0) + ' ac +60m' : 'no projection', st: 'working', prov: 'mod' };
+                return { v: now != null ? (now / 4046.86).toFixed(1) + ' ac' : 'not sized', sub: h60 != null ? (h60 / 4046.86).toFixed(0) + ' ac +60 min' : 'no projection', st: 'working', prov: 'mod' };
             }
             case 'structures': {
                 const risk = structureRisk(ps);
                 const now = ps.t;
                 const reached = risk ? risk.filter((x) => x.t <= now).length : 0;
                 const in60 = risk ? risk.filter((x) => x.t > now && x.t <= now + 60).length : 0;
-                return { v: in60 + ' in +60', sub: reached + ' reached', st: in60 > 0 ? 'working' : 'done', prov: 'mod' };
+                return { v: in60 + ' in +60 min', sub: reached + ' reached', st: in60 > 0 ? 'working' : 'done', prov: 'mod' };
             }
             case 'events':
                 return { v: talon.markers(ps.t, Math.max(ui.liveT, ps.t)).length + ' marks', sub: 'timeline', st: 'done', prov: null };
@@ -1474,12 +1578,13 @@ export async function mountConsole(app) {
                 return { v: WIDGETS[w] ? WIDGETS[w].title : w, sub: '', st: 'done', prov: null };
         }
     }
-    function segHtml(c2, g, pulse = false) {
+    function segHtml(c2, g, pulse = false, viz = '') {
         const promoted = c2.members.find((m) => m.by === 'talon');
         const title = promoted ? 'TALON put this here: ' + esc(promoted.reason) : esc(CAT_META[c2.cat].label) + ' - ' + c2.members.map((m) => WIDGETS[m.w] ? WIDGETS[m.w].title : m.w).join(', ');
         return '<button class="seg' + (c2.attn && pulse ? ' attn' : '') + (ui.deckPanel === c2.cat ? ' open' : '') + '" data-act="deck" data-cat="' + c2.cat + '" aria-expanded="' + (ui.deckPanel === c2.cat) + '" title="' + title + '">'
             + '<span class="ic" aria-hidden="true">' + CAT_META[c2.cat].glyph + '</span>'
             + '<span class="t"><small>' + esc(CAT_META[c2.cat].label) + (g.prov ? ' <span class="prov ' + g.prov + '">' + g.prov + '</span>' : '') + '</small><b>' + esc(g.v) + (g.sub ? ' <em>\u00b7 ' + esc(g.sub) + '</em>' : '') + '</b></span>'
+            + viz
             + '<span class="st st-' + g.st + '" aria-hidden="true"></span><span class="caret" aria-hidden="true">' + (ui.deckPanel === c2.cat ? '\u25be' : '\u25b4') + '</span>'
             + '</button>';
     }
@@ -1526,9 +1631,8 @@ export async function mountConsole(app) {
         const attn = cats.map((c2, i2) => (c2.attn && glances[i2].st === 'needs') || (c2.cat === 'egress' && cutLive));
         const key = cats.map((c2) => c2.cat + ':' + c2.members.map((m) => m.w + m.by).join('+')).join('|') + '#' + String(ui.deckPanel) + '#' + glances.map((g) => g.v + g.sub + g.st).join('|');
         if (changed('deck', key)) {
-            slots.innerHTML = cats.map((c2, i) => segHtml(c2, glances[i], attn[i])).join('')
-                + '<button class="seg seg-auth" data-act="pop" data-pop="authority" aria-haspopup="dialog" title="What TALON may do alone - standing orders, budget"><span class="ic" aria-hidden="true">' + SHIELD_GLYPH + '</span><span class="t"><small>Authority</small><b>' + ts.budget.used + '/' + ts.budget.max + ' <em>\u00b7 ' + ts.log.filter((e) => e.authority === 'standing').length + ' standing</em></b></span></button>'
-                + '<button class="seg ask" data-act="deckask" aria-label="Open the TALON thread"><span class="ic ask" aria-hidden="true">' + SPARK_GLYPH + '</span><span class="t"><small class="asklab">Ask TALON</small><b class="asksub">thread \u00b7 log \u00b7 review</b></span></button>';
+            slots.innerHTML = cats.map((c2, i) => segHtml(c2, glances[i], attn[i], segViz(c2.cat, ps))).join('')
+                + '<button class="seg seg-auth" data-act="pop" data-pop="authority" aria-haspopup="dialog" title="What TALON may do alone - standing orders, budget"><span class="ic" aria-hidden="true">' + SHIELD_GLYPH + '</span><span class="t"><small>Authority</small><b>' + ts.budget.used + '/' + ts.budget.max + ' <em>\u00b7 ' + ts.log.filter((e) => e.authority === 'standing').length + ' standing</em></b></span></button>';
         }
         // L2 - the open category panel stacks the SAME widget bodies the dock used.
         const panel = $('#deckPanel');
@@ -1593,7 +1697,7 @@ export async function mountConsole(app) {
     let widgetChrome = 'panel';
     function widgetHeader(w, by, reason, extra = '') {
         const title = WIDGETS[w]?.title ?? w;
-        const collapse = widgetChrome === 'panel' ? `<button class="btn icon sm ghost" data-act="deckclose" data-w="${w}" aria-label="Close the ${title} panel" title="Close">${ic('up', 'sm')}</button>` : '';
+        const collapse = widgetChrome === 'panel' ? `<button class="btn icon sm ghost" data-act="deckclose" data-w="${w}" aria-label="Close the ${title} panel" title="Close">${ic('close', 'sm')}</button>` : ''; // an X, not a second chevron — the title button owns the menu chevron (distill 2026-11-11)
         return by === 'talon'
             ? `<h3 title="TALON put this here${reason ? `: ${esc(reason)}` : ''}">${title}</h3><span class="grow" title="TALON put this here${reason ? `: ${esc(reason)}` : ''}">${reason ? `TALON · ${esc(reason)}` : ''}</span>${extra}${collapse}`
             : `<button class="btn ghost sm" data-act="pop" data-pop="slot:${w}" style="padding:0 4px;margin-left:-4px" aria-haspopup="menu"><h3>${title}</h3>${ic('down', 'xs')}</button><span class="grow"></span>${extra}${collapse}`;
@@ -2000,28 +2104,48 @@ export async function mountConsole(app) {
                 engine.setLayerVisible(l.id, !hide);
         }
     }
-    // ------------------------------------------------------------------ insets: the map centres between topbar, rail and board
+    // ------------------------------------------------------------------ insets: the map centres between topbar, the right lane and the dock
     let insetKey = '';
     function updateInsets() {
         const top = $('#topbar').getBoundingClientRect().bottom + 6;
         const dock = $('#dock').getBoundingClientRect();
-        const right = innerWidth - ($('#rail').getBoundingClientRect().left) + 6;
+        const rail = $('#rail').getBoundingClientRect();
+        const expanded = ui.panel;
+        const lane = expanded
+            ? $('#panel').getBoundingClientRect()
+            : rail;
+        const right = innerWidth - lane.left + 6;
         const bottom = innerHeight - dock.top;
         const calm = app.classList.contains('calm');
-        document.documentElement.style.setProperty('--talon-w', `${Math.round(right)}px`);
+        // Cards and the feed wing track the right lane: the dock's left edge when
+        // expanded, the rail's when collapsed (legacy 68px offset = gap*2 + rail-w2).
+        document.documentElement.style.setProperty('--panel-right-w', `${Math.round(expanded ? innerWidth - lane.left + 12 : 68)}px`);
         document.documentElement.style.setProperty('--dock-h', `${bottom}px`);
         const k = `${Math.round(top)}|${Math.round(right)}|${Math.round(bottom)}|${calm ? 1 : 0}`;
         if (k === insetKey)
             return;
         const first = !insetKey;
         insetKey = k;
-        // In calm mode the widget column occupies the left, so the map centres between it and the rail.
-        engine.setViewInsets({ top, right, bottom, left: calm ? 356 : 0 }, first ? 0 : 280);
+        // Calm mode no longer reserves a phantom left column — the retired left widgets
+        // left a 356px dead strip the map centred into (fixed 2026-11-11).
+        engine.setViewInsets({ top, right, bottom, left: 0 }, first ? 0 : 280);
     }
     new ResizeObserver(() => {
         keys.delete('layout');
         schedule();
     }).observe(app);
+    // The dock auto-collapses once when the viewport crosses below the laptop floor
+    // (same breakpoint as the inspector yield) — a deliberate expand at that width sticks.
+    let narrowDocked = innerWidth <= 1360;
+    window.addEventListener('resize', () => {
+        const narrow = innerWidth <= 1360;
+        if (narrow && !narrowDocked && ui.panel) {
+            ui.panel = false;
+            keys.delete('phead');
+            schedule();
+        }
+        narrowDocked = narrow;
+    });
     // ------------------------------------------------------------------ toasts
     function toast(msg, tone = '', item) {
         const el = document.createElement('div');
@@ -2049,7 +2173,13 @@ export async function mountConsole(app) {
             ui.dissent = { item: itemId, option: optId };
             keys.delete('now');
             schedule();
-            setTimeout(() => document.getElementById('dissentText')?.focus(), 30);
+            // F-01: the old 30ms timer raced the rAF render that creates the box, so focus
+            // intermittently never landed — double-rAF deterministically follows the commit.
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                const ta = document.getElementById('dissentText');
+                if (ta && document.activeElement !== ta)
+                    ta.focus();
+            }));
             return;
         }
         const row = $('#cards').querySelector(`.opt[data-item="${itemId}"][data-opt="${optId}"]`);
@@ -2233,7 +2363,7 @@ export async function mountConsole(app) {
         $('#overlay .btn.primary').focus();
     }
     function shortcuts() {
-        const rows = [['1 – 3', 'Answer the card TALON is asking'], ['Alt+1 / Alt+2', 'Promote a queued card to the focus'], ['/', 'Type to TALON'], ['V', 'Voice command'], ['M', 'Mic — on the net / muted'], ['T', 'TALON chat — thread, log, review'], ['R', 'After-action review'], ['C', '2D / 3D map'], ['L', 'Day / night'], ['I', 'Thermal map'], ['Ctrl+Shift+D', 'Dev menu — situations, phases, harness'], ['Esc', 'Close chat, popovers, highlight'], ['Space', 'Exercise clock (harness)'], ['.', 'Next beat (harness)']];
+        const rows = [['1 – 3', 'Answer the card TALON is asking'], ['Alt+1 / Alt+2', 'Promote a queued card to the focus'], ['/', 'Type to TALON'], ['V', 'Voice command'], ['M', 'Mic — on the net / muted'], ['Q / W / E', 'Doctrinal dissent chips (in the dissent box)'], ['T', 'TALON chat — thread, log, review'], ['R', 'After-action review'], ['C', '2D / 3D map'], ['L', 'Day / night'], ['I', 'Drone feed · IR / EO sensor'], ['Ctrl+Shift+D', 'Dev menu — situations, phases, harness'], ['Esc', 'Close chat, popovers, highlight'], ['Space', 'Exercise clock (harness)'], ['.', 'Next beat (harness)']];
         $('#overlay').innerHTML = `<div class="scrim" data-act="overlay-close"><div class="modal glass" role="dialog" aria-label="Keyboard shortcuts"><h2>Shortcuts</h2><div class="keys">${rows.map(([k, d]) => `<span class="kbd">${k}</span><span>${d}</span>`).join('')}</div><div class="row"><button class="btn primary" data-act="overlay-close">Done</button></div></div></div>`;
     }
     // ------------------------------------------------------------------ input wiring
@@ -2317,16 +2447,11 @@ export async function mountConsole(app) {
                 return schedule();
             }
             case 'panel': {
-                const wasOpen = ui.panel;
+                // The dock toggles expanded ↔ collapsed; on expand the thread tabs get focus.
                 ui.panel = !ui.panel;
-                if (ui.panel && !wasOpen) {
-                    lastFocus = document.activeElement;
+                if (ui.panel)
                     setTimeout(() => $('#ptabs button')?.focus(), 30);
-                }
-                else if (!ui.panel && lastFocus) {
-                    lastFocus.focus();
-                    lastFocus = null;
-                }
+                keys.delete('phead');
                 return schedule();
             }
             case 'scrub':
@@ -2377,11 +2502,6 @@ export async function mountConsole(app) {
                 ui.deckPanel = null;
                 keys.delete('deck');
                 return schedule();
-            case 'deckask': {
-                ui.panel = true;
-                keys.delete('now');
-                return schedule();
-            }
             case 'probe-close':
                 closeProbe();
                 return;
@@ -2801,11 +2921,7 @@ export async function mountConsole(app) {
             closeProbe();
             closePop();
             $('#overlay').innerHTML = '';
-            if (ui.panel) {
-                ui.panel = false;
-                lastFocus?.focus();
-                lastFocus = null;
-            }
+            // The TALON dock is persistent furniture — Esc clears state around it, not the dock.
             ui.dissent = null;
             ui.sel = null;
             ui.hoverEv = null;
@@ -2841,17 +2957,41 @@ export async function mountConsole(app) {
             return;
         }
         if (tgt.closest('input, textarea') || ev.metaKey || ev.ctrlKey || ev.altKey) {
-            // Glove flow: dissent box open + empty note → Q/W/E drops a doctrinal reason and arms the record button.
+            // Glove flow: dissent box open + empty note → Q/W/E drops a doctrinal reason. Focus
+            // stays in the note (F-01): jumping to the record button turned the rest of the
+            // operator's prose into global single-key commands.
             if (tgt.id === 'dissentText' && ui.dissent && !tgt.value && (ev.key === 'q' || ev.key === 'w' || ev.key === 'e')) {
                 ev.preventDefault();
                 const chip = DISSENT_CHIPS[{ q: 0, w: 1, e: 2 }[ev.key.toLowerCase()]];
                 tgt.value = chip[1];
-                $('.dissent [data-act="dissent-ok"]')?.focus();
+                tgt.focus();
                 return;
             }
             if (tgt.id === 'dissentText' && ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey) && ui.dissent)
                 answer(ui.dissent.item, ui.dissent.option, tgt.value);
             return;
+        }
+        // F-01 (2026-11-06 audit): while the dissent box is open it owns the keyboard. A
+        // stranded focus (body, buttons) must never turn prose into global commands —
+        // printable characters route into the note, everything else is dead until the box
+        // closes. Escape (handled above), Tab, and button-activation keys stay live.
+        if (ui.dissent && !ev.ctrlKey && !ev.metaKey && !ev.altKey && ev.key !== 'Escape' && ev.key !== 'Tab') {
+            const ae = document.activeElement;
+            const onButton = ae?.tagName === 'BUTTON';
+            const safeOnButton = ev.key === 'Enter' || ev.key === ' ' || ev.key.startsWith('Arrow') || ev.key === 'Home' || ev.key === 'End';
+            if (!onButton || !safeOnButton) {
+                ev.preventDefault();
+                const ta = document.getElementById('dissentText');
+                if (ta && ev.key.length === 1) {
+                    if (document.activeElement !== ta)
+                        ta.focus();
+                    const start = ta.selectionStart ?? ta.value.length;
+                    const end = ta.selectionEnd ?? start;
+                    ta.value = ta.value.slice(0, start) + ev.key + ta.value.slice(end);
+                    ta.selectionStart = ta.selectionEnd = start + 1;
+                }
+                return;
+            }
         }
         const k = ev.key.toLowerCase();
         // Dev menu (harness): Ctrl+Shift+D or backtick. Keyboard actions get no animation — instant.
@@ -2879,7 +3019,10 @@ export async function mountConsole(app) {
             schedule();
             setTimeout(() => $('#cmd').focus(), 20);
         }
-        else if (k === ' ') {
+        else if (k === ' ' && !tgt.closest('button, [role="tab"], a[href]')) {
+            // A focused control owns Space — the browser activates the button; the global
+            // play/pause must never steal it (critique 2026-11-11: Space on a decision
+            // option paused the exercise instead of pressing the operator's choice).
             ev.preventDefault();
             ui.playing ? stopPlay() : startPlay();
         }
@@ -2907,16 +3050,11 @@ export async function mountConsole(app) {
         else if (k === 'l')
             engine.setLighting(engine.getLighting() === 'day' ? 'night' : 'day', 1400);
         else if (k === 'i') {
-            const b = app.querySelector('[data-act=ir]');
-            b.click();
-        }
-        else if (ui.dissent && (k === 'q' || k === 'w' || k === 'e')) {
-            const chip = DISSENT_CHIPS[{ q: 0, w: 1, e: 2 }[k]];
-            const ta = document.getElementById('dissentText');
-            if (chip && ta) {
-                ta.value = ta.value ? `${ta.value} ${chip[1]}` : chip[1];
-                ta.focus();
-            }
+            // XC-1 (2026-11-06 audit): the sensor buttons render data-act="sensor" data-s="ir" —
+            // the old [data-act=ir] selector matched nothing, so every press threw. No feed up: no-op.
+            const b = app.querySelector('[data-act="sensor"][data-s="ir"]');
+            if (b)
+                b.click();
         }
         else if (k === '?')
             shortcuts();
@@ -2989,7 +3127,7 @@ const SHELL = `
 <div class="feedwing" id="feedWing" role="complementary" aria-label="Drone feed" hidden></div>
 <nav class="rail" id="rail" aria-label="TALON"></nav>
 <div class="cards" id="cards" role="region" aria-label="TALON decision cards" aria-live="polite"></div>
-<aside class="chat glass" id="panel" aria-label="TALON chat" hidden>
+<aside class="chat glass" id="panel" aria-label="TALON chat">
   <header class="phead" id="phead"></header>
   <nav class="ptabs" id="ptabs" role="tablist"></nav>
   <div class="pbody" id="pbody" aria-live="polite" tabindex="0"></div>

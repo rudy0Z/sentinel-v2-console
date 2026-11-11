@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sentinel · Screen Navigator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0B0D12; --panel: #10131A; --panel2: #141824; --line: rgba(255,255,255,.08);
+    --t1: #E8EAF2; --t2: #9AA3B8; --t3: #5F6880; --cyan: #00E5FF; --amber: #FF8A4A; --peri: #8FB8FF;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--t1);
+    font: 13px/1.45 "Geist", "Inter", system-ui, sans-serif;
+    display: grid; grid-template-columns: 300px 1fr; grid-template-rows: 52px 1fr auto;
+    grid-template-areas: "brand top" "side stage" "side dev";
+  }
+  .brand {
+    grid-area: brand; display: flex; align-items: center; gap: 10px; padding: 0 16px;
+    border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); background: var(--panel);
+  }
+  .brand .mark { width: 22px; height: 22px; border-radius: 6px; background: conic-gradient(from 210deg, var(--cyan), transparent 55%), var(--panel2); border: 1px solid var(--line); position: relative; }
+  .brand .mark::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  .brand b { letter-spacing: .14em; font-size: 12px; }
+  .brand small { color: var(--t3); font-size: 11px; letter-spacing: .08em; }
+  .top {
+    grid-area: top; display: flex; align-items: center; gap: 12px; padding: 0 16px;
+    border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  .top .ttl { font-weight: 600; }
+  .top .num { font-family: ui-monospace, monospace; color: var(--cyan); font-size: 12px; }
+  .top .desc { color: var(--t2); font-size: 12px; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top .grow { flex: 1; }
+  .btn {
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01)), var(--panel2);
+    border: 1px solid var(--line); color: var(--t1); border-radius: 6px; padding: 5px 10px;
+    font: inherit; font-size: 12px; cursor: pointer; user-select: none;
+  }
+  .btn:hover { border-color: rgba(255,255,255,.2); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { border-color: color-mix(in srgb, var(--cyan) 45%, transparent); color: var(--cyan); }
+  .btn[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+  .side { grid-area: side; overflow-y: auto; border-right: 1px solid var(--line); background: var(--panel); padding: 10px 0 24px; }
+  .cat { padding: 12px 14px 4px; }
+  .cat b { font-size: 11px; letter-spacing: .12em; color: var(--t2); text-transform: uppercase; }
+  .cat b em { color: var(--cyan); font-style: normal; font-family: ui-monospace, monospace; margin-right: 6px; }
+  .cat p { color: var(--t3); font-size: 11px; margin-top: 2px; }
+  .scr {
+    display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left; padding: 6px 14px;
+    background: none; border: 0; color: var(--t1); font: inherit; cursor: pointer; border-left: 2px solid transparent;
+  }
+  .scr:hover { background: var(--panel2); }
+  .scr.on { background: var(--panel2); border-left-color: var(--cyan); }
+  .scr .n { font-family: ui-monospace, monospace; font-size: 11px; color: var(--t3); min-width: 30px; }
+  .scr.on .n { color: var(--cyan); }
+  .scr .t { flex: 1; font-size: 12.5px; }
+  .scr .v { font-size: 10px; color: var(--t3); font-family: ui-monospace, monospace; }
+  .stage { grid-area: stage; position: relative; overflow: hidden; display: grid; place-items: center; background:
+    radial-gradient(1200px 500px at 50% -10%, rgba(0,229,255,.05), transparent), var(--bg); }
+  .frameWrap { position: relative; box-shadow: 0 20px 60px rgba(0,0,0,.5), 0 0 0 1px var(--line); border-radius: 8px; overflow: hidden; background: #000; }
+  iframe { border: 0; display: block; transform-origin: top left; background: #0B0D12; }
+  .stage .hint { position: absolute; left: 14px; bottom: 10px; color: var(--t3); font-size: 11px; font-family: ui-monospace, monospace; }
+  .dev {
+    grid-area: dev; border-top: 1px solid var(--line); background: var(--panel); padding: 8px 16px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .dev .grp { display: flex; align-items: center; gap: 6px; padding-right: 10px; border-right: 1px solid var(--line); }
+  .dev .grp:last-child { border-right: 0; }
+  .dev label { color: var(--t3); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+  .dev .clock { font-family: ui-monospace, monospace; color: var(--cyan); font-size: 12px; min-width: 64px; text-align: center; }
+  .dev .status { color: var(--t3); font-size: 11px; font-family: ui-monospace, monospace; margin-left: auto; }
+  .dev .status.err { color: var(--amber); }
+  select {
+    background: var(--panel2); color: var(--t1); border: 1px solid var(--line); border-radius: 6px;
+    font: inherit; font-size: 12px; padding: 4px 6px;
+  }
+  input[type="number"] { width: 64px; background: var(--panel2); border: 1px solid var(--line); color: var(--t1); border-radius: 6px; font: ui-monospace, monospace 12px; padding: 4px 6px; }
+</style>
+</head>
+<body>
+  <div class="brand"><div class="mark"></div><div><b>SENTINEL</b><br><small>SCREEN NAVIGATOR · DEV MODE</small></div></div>
+
+  <div class="top">
+    <span class="num" id="tNum">—</span>
+    <span class="ttl" id="tTitle">Pick a screen</span>
+    <span class="desc" id="tDesc"></span>
+    <span class="grow"></span>
+    <button class="btn" id="bCopy" title="Copy the navigator deep link">Copy link</button>
+    <button class="btn primary" id="bFull" title="Open this exact state full-page">Open full ↗</button>
+  </div>
+
+  <nav class="side" id="side"></nav>
+
+  <div class="stage" id="stage">
+    <div class="frameWrap" id="wrap"><iframe id="frame" title="Console screen"></iframe></div>
+    <div class="hint" id="hint"></div>
+  </div>
+
+  <div class="dev">
+    <div class="grp"><label>Clock</label>
+      <button class="btn" data-nudge="-5">−5</button><button class="btn" data-nudge="-1">−1</button>
+      <span class="clock" id="clock">T−0:00</span>
+      <button class="btn" data-nudge="1">+1</button><button class="btn" data-nudge="5">+5</button>
+      <input type="number" id="goT" step="0.5" placeholder="min"><button class="btn" id="bGo">Go</button>
+    </div>
+    <div class="grp"><label>Transport</label>
+      <button class="btn" id="bPlay" title="Space">Play/Pause</button>
+      <button class="btn" data-key="r" title="Review mode">Review</button>
+    </div>
+    <div class="grp"><label>Scene</label>
+      <button class="btn" id="bLux" title="Toggle Field High-Lux">High-Lux</button>
+      <button class="btn" id="bThermal" title="Thermal on/off">Thermal</button>
+      <button class="btn" id="bCam" title="2D nadir / 3D perspective">2D/3D</button>
+      <button class="btn" data-key="m" title="Mute mic">[M] Mic</button>
+    </div>
+    <div class="grp"><label>Record</label>
+      <button class="btn" id="bPreempt">Preempt</button>
+      <button class="btn" id="bResume">Record</button>
+      <button class="btn" id="bLive">Live</button>
+    </div>
+    <div class="grp"><label>Situation</label>
+      <select id="sitSel">
+        <option value="wui-breakout">S-05 · wui-breakout</option>
+        <option value="contain">contain</option>
+        <option value="small-incident">small-incident</option>
+        <option value="falsepos">S-04 · falsepos</option>
+        <option value="standby">standby</option>
+      </select>
+    </div>
+    <div class="grp"><label>Dialogs</label>
+      <button class="btn" data-key="/">Panel</button>
+      <button class="btn" data-key="?">Shortcuts</button>
+      <button class="btn" data-key="`">Dev</button>
+    </div>
+    <div class="status" id="status">ready</div>
+  </div>
+
+<script type="module">
+  import { CATALOG, ALL_SCREENS, SCREEN_COUNT } from './tools/screens.catalog.mjs';
+
+  const $ = (s) => document.querySelector(s);
+  const frame = $('#frame'), wrap = $('#wrap'), stage = $('#stage');
+  const status = (msg, err) => { const el = $('#status'); el.textContent = msg; el.className = 'status' + (err ? ' err' : ''); };
+
+  // ---------- sidebar ----------
+  const side = $('#side');
+  for (const c of CATALOG) {
+    const h = document.createElement('div');
+    h.className = 'cat';
+    h.innerHTML = `<b><em>${c.letter}</em>${c.name}</b><p>${c.blurb}</p>`;
+    side.appendChild(h);
+    for (const s of c.screens) {
+      const b = document.createElement('button');
+      b.className = 'scr'; b.dataset.num = s.num;
+      b.innerHTML = `<span class="n">${s.num}</span><span class="t">${s.title}</span><span class="v">${s.vp[0]}×${s.vp[1]}</span>`;
+      b.addEventListener('click', () => load(s.num));
+      side.appendChild(b);
+    }
+  }
+  document.querySelectorAll('[data-key]').forEach((b) => b.addEventListener('click', () => pressKey(b.dataset.key)));
+
+  // ---------- boot + action runner (mirror of tools/figma-export.mjs) ----------
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  async function waitBoot(win, doc) {
+    for (let i = 0; i < 300; i++) {
+      try { if (win.player && win.talon && doc.querySelector('.boot.gone')) return true; } catch {}
+      await sleep(200);
+    }
+    return false;
+  }
+  const w = (win) => win;
+  async function runActions(win, doc, actions) {
+    for (const a of actions ?? []) {
+      if (a.wait !== undefined) { await sleep(a.wait); continue; }
+      if (a.t !== undefined) { win.player.setTime(a.t); await sleep(300); continue; }
+      if (a.click) { doc.querySelector(a.click)?.click(); await sleep(250); continue; }
+      if (a.clickPop) { doc.querySelector(`[data-pop="${a.clickPop}"]`)?.click(); await sleep(400); continue; }
+      if (a.clickMatch) {
+        const m = /^\/(.*)\/([a-z]*)$/.exec(a.clickMatch); const re = new RegExp(m[1], m[2]);
+        const el = [...doc.querySelectorAll('button, .opt, .chip, [role="button"]')].find((b) => re.test(b.textContent || ''));
+        if (!el) throw new Error('clickMatch no hit: ' + a.clickMatch);
+        el.click(); await sleep(350); continue;
+      }
+      if (a.key) { pressKey(a.key); await sleep(350); continue; }
+      if (a.eval) { win.eval(a.eval); await sleep(250); continue; }
+    }
+  }
+  function pressKey(key) {
+    const win = frame.contentWindow, doc = frame.contentDocument;
+    if (!win) return;
+    doc.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  }
+
+  // ---------- load a screen ----------
+  let current = null;
+  async function load(num) {
+    const s = ALL_SCREENS.find((x) => x.num === num);
+    if (!s) return;
+    current = s;
+    document.querySelectorAll('.scr').forEach((b) => b.classList.toggle('on', b.dataset.num === num));
+    $('#tNum').textContent = s.num;
+    $('#tTitle').textContent = s.title;
+    $('#tDesc').textContent = s.desc;
+    $('#hint').textContent = `export: node tools/figma-export.mjs --only=${s.num}  →  qa/figma-screens/${s.num}-${s.id}.png`;
+    history.replaceState(null, '', '?screen=' + num);
+    status('booting…');
+    thermal = false;
+    $('#bThermal').setAttribute('aria-pressed', 'false');
+    frame.style.width = s.vp[0] + 'px'; frame.style.height = s.vp[1] + 'px';
+    frame.src = 'index.html' + (s.url ? '?' + s.url : '');
+    const ok = await (async () => { for (let i = 0; i < 300; i++) { try { const w2 = frame.contentWindow; if (w2.player && w2.talon && frame.contentDocument.querySelector('.boot.gone')) return true; } catch {} await sleep(200); } return false; })();
+    if (!ok) { status('boot timed out', true); return; }
+    try { await runActions(frame.contentWindow, frame.contentDocument, s.actions); status('live · ' + s.num); }
+    catch (e) { status(String(e).slice(0, 120), true); }
+    fit();
+  }
+
+  // ---------- scaling ----------
+  function fit() {
+    if (!current) return;
+    const pad = 28;
+    const scale = Math.min((stage.clientWidth - pad) / current.vp[0], (stage.clientHeight - pad) / current.vp[1], 1);
+    frame.style.transform = `scale(${scale})`;
+    wrap.style.width = current.vp[0] * scale + 'px';
+    wrap.style.height = current.vp[1] * scale + 'px';
+  }
+  new ResizeObserver(fit).observe(stage);
+
+  // ---------- dev controls ----------
+  setInterval(() => {
+    try { const t = frame.contentWindow?.player?.getTime?.(); if (t !== undefined) $('#clock').textContent = 'T' + (t >= 0 ? '+' : '−') + Math.floor(Math.abs(t)) + ':' + String(Math.round((Math.abs(t) % 1) * 60)).padStart(2, '0'); } catch {}
+  }, 400);
+  document.querySelectorAll('[data-nudge]').forEach((b) => b.addEventListener('click', () => {
+    const w2 = frame.contentWindow; if (!w2?.player) return;
+    w2.player.setTime(w2.player.getTime() + Number(b.dataset.nudge));
+  }));
+  $('#bGo').addEventListener('click', () => { const v = parseFloat($('#goT').value); if (Number.isFinite(v)) frame.contentWindow?.player?.setTime?.(v); });
+  $('#bPlay').addEventListener('click', () => pressKey(' '));
+  let thermal = false;
+  $('#bThermal').addEventListener('click', () => { thermal = !thermal; frame.contentWindow?.eval(`engine.setThermal(${thermal})`); $('#bThermal').setAttribute('aria-pressed', String(thermal)); });
+  $('#bCam').addEventListener('click', () => frame.contentWindow?.eval("engine.setCamera(engine.getCameraMode() === 'perspective' ? 'topdown' : 'perspective', 600)"));
+  $('#bLux').addEventListener('click', async () => {
+    const doc = frame.contentDocument; if (!doc) return;
+    doc.querySelector('[data-pop="settings"]')?.click(); await sleep(400);
+    const btn = [...doc.querySelectorAll('button')].find((b) => /high-lux|dark room|darkroom/i.test(b.textContent || ''));
+    btn?.click(); await sleep(600);
+  });
+  $('#bPreempt').addEventListener('click', () => { try { frame.contentWindow.sentinelBoot.preempt(); status('preempted → live'); } catch (e) { status(String(e), true); } });
+  $('#bResume').addEventListener('click', () => { try { frame.contentWindow.sentinelBoot.resume(); status('in the record'); } catch (e) { status(String(e), true); } });
+  $('#bLive').addEventListener('click', () => { try { frame.contentWindow.sentinelBoot.live(); status('back to live'); } catch (e) { status(String(e), true); } });
+  $('#sitSel').addEventListener('change', (e) => {
+    if (!current) return;
+    const s = current;
+    const url = s.url ? ('&' + s.url).replace(/(^|&)situation=[^&]+/, '').replace(/^&/, '') : '';
+    frame.src = 'index.html?situation=' + e.target.value + '&intro=0&boot=live' + (url ? '&' + url : '');
+    status('rebooting into ' + e.target.value + '…');
+  });
+  $('#bCopy').addEventListener('click', () => { navigator.clipboard?.writeText(location.origin + location.pathname + '?screen=' + (current?.num ?? '')); status('link copied'); });
+  $('#bFull').addEventListener('click', () => {
+    if (!current) return;
+    window.open('index.html' + (current.url ? '?' + current.url : ''), '_blank');
+  });
+
+  const initial = new URLSearchParams(location.search).get('screen');
+  load(initial && ALL_SCREENS.some((s) => s.num === initial) ? initial : 'A02');
+  document.title = `Sentinel · Screen Navigator — ${SCREEN_COUNT} screens`;
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@ import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.bin': 'application/octet-stream', '.ts': 'text/plain; charset=utf-8', '.png': 'image/png', '.css': 'text/css; charset=utf-8', '.md': 'text/plain; charset=utf-8' };
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json', '.bin': 'application/octet-stream', '.ts': 'text/plain; charset=utf-8', '.png': 'image/png', '.css': 'text/css; charset=utf-8', '.md': 'text/plain; charset=utf-8' };
 
 export function serve(port = 8130) {
   const server = createServer(async (req, res) => {

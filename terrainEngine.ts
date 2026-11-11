@@ -2296,7 +2296,7 @@ const CSS = `
 .tte-item[hidden]{display:none}
 .tte-chip .tte-pill{position:absolute;bottom:calc(13px + var(--lift,0px));left:0;transform:translateX(calc(-50% + var(--dx,0px)));display:flex;align-items:center;gap:6px;height:22px;padding:0 8px 0 7px;background:rgba(10,14,20,.93);border:1px solid rgba(150,170,195,.26);border-radius:6px;color:#D7E0EA;font:500 11px/1 var(--tte-mono);letter-spacing:.01em;white-space:nowrap;pointer-events:auto;cursor:default;box-shadow:0 2px 12px rgba(0,0,0,.5);transition:border-color .15s,background .15s}
 .tte-chip .tte-pill b{font-weight:600;color:#EEF3F8}
-.tte-chip .tte-pill i{font-style:normal;color:#5B6878}
+.tte-chip .tte-pill i{font-style:normal;color:#8194A8}
 .tte-chip .tte-pill span{color:#9AA8B8}
 .tte-chip .tte-pill em{display:none;font-style:normal;color:#7E8C9C;padding-left:6px;margin-left:2px;border-left:1px solid rgba(150,170,195,.22)}
 .tte-chip .tte-pill:hover em{display:inline}
@@ -2313,7 +2313,7 @@ const CSS = `
 .tte-label[data-kind=peak] svg{width:8px;height:8px;fill:#B8C4D2;margin-right:4px;vertical-align:0}
 .tte-label[data-kind=place]{font:600 10px/1 var(--tte-sans);letter-spacing:.16em;color:#8C9BAD}
 .tte-label[data-kind=area]{font:italic 500 11px/1 var(--tte-sans);color:#6F8196;letter-spacing:.03em}
-.tte-label[data-kind=water]{font:italic 500 12px/1 var(--tte-sans);color:#4E6A86;letter-spacing:.12em}
+.tte-label[data-kind=water]{font:italic 500 12px/1 var(--tte-sans);color:#6E8095;letter-spacing:.12em}
 .tte-label.is-occluded{opacity:.25}
 .tte-day .tte-label{color:#1E2A36;text-shadow:0 0 2px rgba(255,255,255,.95),0 0 6px rgba(255,255,255,.85),0 0 10px rgba(255,255,255,.6)}
 .tte-day .tte-label small{color:#3A4757}

@@ -257,3 +257,15 @@ One sentence each. A ruling is coverage; silence is not.
 - **Expiry has a receipt (F2).** An ungated ask that closes its window logs "Closed without a decision" - "handled" and "dropped" are never the same silence.
 - **The road cut is a first-class event (F1).** A cut primary route overrides the Egress glance ("Route A cut · primary egress gone", needs, pulsing) and raises an awareness card that closes on ACK ONLY, never on timeout. The map layer is the truth; the deck is its peripheral voice.
 
+
+## 10 · Layout constitution (2026-11-11 · the dock pass)
+
+One sentence each. These are load-bearing invariants — `updateInsets`, the verify suite and the e2e V-checks assume them.
+
+- **The crew deck stays.** The bottom taxonomy deck (Situation / Resources / Egress / Comms + Authority) is the founder's own concept: L1 glance segments, L2 category panel risen above its segment. It is clarified, never removed — instruments (spark, battery capsule, route strip) ride *inside* segments and shed at ≤1560 with the sub-values.
+- **TALON's home is the right dock.** `#panel` is persistent furniture: boots expanded, collapses to a 44px face tab in the rail lane (T / phead chevron / `?talon=shut`), auto-collapses once when the viewport crosses ≤1360. Esc never closes it.
+- **The map insets follow the right lane.** `updateInsets` reads the dock's live rect when expanded, the rail's when collapsed, and writes `--panel-right-w`; decision cards and the feed wing position from that var. There is no displacement transform anywhere — the 2026-10-30 chat-open shift is retired.
+- **No phantom columns.** Calm mode reserves left inset 0 — the retired calm widget column's 356px reservation is gone; the map centers on the true frame.
+- **Bottom stacking is bounded.** The deck is the only always-on bottom bar; the timeline appears in replay/review only; the feed wing tracks the right lane var. Nothing else bottom-anchors.
+- **Dose caps.** One glow (the needs/critical card bloom), one atmosphere layer (the `#map::after` vignette, skipped under prefers-contrast), rim light from the shared `--highlight-top` token, cards stay near-opaque (94%) — glass never spreads to cards.
+- **The gate deadline is the stake.** On a decision card the countdown renders at `--fs-readout` (18px) — the biggest number on the card, per the hierarchy-inversion fix.
